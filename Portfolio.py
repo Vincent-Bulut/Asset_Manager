@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
+import Tools
 from datetime import date
 import matplotlib.pyplot as plt
 from pandas_datareader import data as pdr
 import yfinance as yf
-import Utils
 import seaborn as sns
 
 
@@ -35,7 +35,7 @@ class Portfolio:
 
         returns = ((data / data.shift(1)) - 1) * 100
         returns_a = returns.mean() * 250
-        self.arithmetic_return_a = Utils.reformatRateWith2D(np.dot(returns_a, weights))
+        self.arithmetic_return_a = Tools.reformatRateWith2D(np.dot(returns_a, weights))
 
     def computeLogReturn_a(self, date_from='1995-1-1', date_to=date.today()):
         data = pd.DataFrame()
@@ -51,7 +51,7 @@ class Portfolio:
 
         returns = np.log(data / data.shift(1)) * 100
         returns_a = returns.mean() * 250
-        self.log_return_a = Utils.reformatRateWith2D(np.dot(returns_a, weights))
+        self.log_return_a = Tools.reformatRateWith2D(np.dot(returns_a, weights))
 
     def displayAssetEvolutions(self, date_from='1995-1-1', date_to=date.today()):
         data = pd.DataFrame()
@@ -120,7 +120,7 @@ class Portfolio:
 
         weights = np.array(weights)
         returns = ((data / data.shift(1)) - 1) * 100
-        self.volatility_a = Utils.reformatRateWith2D(np.dot(weights.T, np.dot(returns.cov() * 250, weights)) ** 0.5)
+        self.volatility_a = Tools.reformatRateWith2D(np.dot(weights.T, np.dot(returns.cov() * 250, weights)) ** 0.5)
 
     # Diversifiable risk ~ Unsystematic Risk
     def computeSystematicRisks(self, date_from='1995-1-1', date_to=date.today()):
@@ -147,3 +147,37 @@ class Portfolio:
 
         self.unsystematicRisk = dr
         self.systematicRisk = pFolio_var - dr
+
+    def getMostCorrelAsset(self, stock, date_from='1995-1-1', date_to=date.today()):
+        data = pd.DataFrame()
+        yf.pdr_override()
+
+        for code in self.assets.keys():
+            data[code] = pd.DataFrame(pdr.get_data_yahoo(code,
+                                                         start=date_from,
+                                                         end=date_to,
+                                                         progress=False))['Adj Close']
+
+        returns = ((data / data.shift(1)) - 1) * 100
+        corr_matrix = returns.corr()
+
+        dico = {}
+        for ind in corr_matrix.index:
+            if ind != stock:
+                continue
+
+            for c in corr_matrix.columns:
+                if c == stock or corr_matrix[c][ind] < 0:
+                    continue
+                dico[c] = corr_matrix[c][ind]
+
+            if len(dico) == 0:
+                return []
+            else:
+                tmpList = []
+                mostCorrelAsset = max(dico, key=dico.get)
+                tmpList.append(mostCorrelAsset)
+                tmpList.append(dico[mostCorrelAsset])
+                mostCorrelAsset = tmpList
+
+                return mostCorrelAsset
