@@ -1,5 +1,5 @@
 #Portfolio Management
 
-##`Analytics`
+##Find the market portfolio
 
-Todo: Find the market portfolio
+##Factorize GetPricesFromYahoo
