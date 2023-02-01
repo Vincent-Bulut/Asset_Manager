@@ -1,5 +1,5 @@
-#Portfolio Management
+# Portfolio Management
 
-##Find the market portfolio
+## Find the market portfolio
 
-##Factorize GetPricesFromYahoo
+## Factorize GetPricesFromYahoo
