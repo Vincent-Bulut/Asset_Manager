@@ -241,4 +241,63 @@ class Portfolio:
 
         df.to_excel('perfMon.xlsx')
 
+    def displayAssetAllocations(self, date_from='1995-1-1', date_to=date.today()):
+        data = pd.DataFrame()
+        yf.pdr_override()
 
+        for code in self.assets.keys():
+            data[code] = pd.DataFrame(pdr.get_data_yahoo(code,
+                                                         start=date_from,
+                                                         end=date_to,
+                                                         progress=False))['Adj Close']
+
+        log_returns = np.log(data / data.shift(1))
+        num_assets = len(pd.unique(log_returns.columns))
+
+        pfolio_returns = []
+        pfolio_volatilities = []
+
+        i = 0
+
+        pfolio_id = []
+        pfolio_ret_a = []
+        pfolio_vol_a = []
+        pfolioAssets = []
+        weightAssets = []
+
+        for x in range(1000):
+            weights = np.random.random(num_assets)
+            weights /= np.sum(weights)
+            pfolio_returns.append(np.sum(weights * log_returns.mean()) * 250)
+            pfolio_volatilities.append(np.sqrt(np.dot(weights.T, np.dot(log_returns.cov() * 250, weights))))
+            pfolio_id.append('P' + str(i))
+            pfolio_ret_a.append(pfolio_returns[i])
+            pfolio_vol_a.append(pfolio_volatilities[i])
+            pfolioAssets.append(' '.join(log_returns.columns))
+            weightAssets.append(' '.join(str(weights)))
+            i += 1
+
+        pfolio_returns = np.array(pfolio_returns)
+        pfolio_volatilities = np.array(pfolio_volatilities)
+
+        dic = {'Portfolio': pfolio_id,
+               'Returns': pfolio_ret_a,
+               'Volatilities': pfolio_vol_a,
+               'Assets': pfolioAssets,
+               'Weights': weightAssets
+               }
+
+        df = pd.DataFrame(dic, columns=['Portfolio',
+                                        'Returns',
+                                        'Volatilities',
+                                        'Assets',
+                                        'Weights'])
+
+        df.to_excel('results.xlsx')
+
+        portfolios = pd.DataFrame({'Return': pfolio_returns, 'volatilities': pfolio_volatilities})
+        portfolios.plot(x='volatilities', y='Return', kind='scatter', figsize=(10, 6))
+
+        plt.xlabel('Expected Volatility')
+        plt.ylabel('Expected Return')
+        plt.show()
