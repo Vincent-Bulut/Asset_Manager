@@ -30,7 +30,7 @@ class Asset:
         endingValue = data.tail(1)['Adj Close'].iloc[0]
         beginningValue = data.head(1)['Adj Close'].iloc[0]
 
-        return endingValue / beginningValue - 1
+        return (endingValue / beginningValue - 1) * 100
 
     @staticmethod
     def compute_Volatility(stock, date_from, date_to):

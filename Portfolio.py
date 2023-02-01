@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from pandas_datareader import data as pdr
 import yfinance as yf
 import seaborn as sns
+from Asset import Asset
 
 
 class Portfolio:
@@ -181,3 +182,63 @@ class Portfolio:
                 mostCorrelAsset = tmpList
 
                 return mostCorrelAsset
+
+    def resumeRiskReturn_IntoXl(self, dateRef):
+        listOfAssetCodes = []
+        listOfAssetNames = []
+
+        nbOfPeriod = 9
+
+        returns = []
+        volatilities = []
+
+        data = {'Code': [], 'Name': [], 'Period': [], 'From': [], 'To': [], 'Rt': [], 'Vol': []}
+
+        dicoPeriods = Tools.getPeriodsFrom(dateRef)
+
+        for code in self.assets.keys():
+            listOfAssetCodes.append(code)
+            listOfAssetNames.append(self.assets[code].name)
+
+            listOfAssetCodes += [' - '] * (nbOfPeriod - 1)
+            listOfAssetNames += [' - '] * (nbOfPeriod - 1)
+
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['YTD'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['1M'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['3M'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['6M'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['1Y'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['2Y'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['3Y'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['5Y'], dateRef), 2))
+            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['10Y'], dateRef), 2))
+
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['YTD'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['1M'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['3M'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['6M'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['1Y'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['2Y'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['3Y'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['5Y'], dateRef), 2))
+            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['10Y'], dateRef), 2))
+
+            data['Code'] = listOfAssetCodes
+            data['Name'] = listOfAssetNames
+            data['Period'] += dicoPeriods.keys()
+            data['From'] += dicoPeriods.values()
+            data['To'] += [dateRef] * nbOfPeriod
+            data['Rt'] = returns
+            data['Vol'] = volatilities
+
+        df = pd.DataFrame(data, columns=['Code',
+                                         'Name',
+                                         'Period',
+                                         'From',
+                                         'To',
+                                         'Rt',
+                                         'Vol'])
+
+        df.to_excel('perfMon.xlsx')
+
+

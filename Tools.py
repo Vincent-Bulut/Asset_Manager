@@ -67,8 +67,3 @@ def getPeriodsFrom(dateRef):
     return dico_periods
 
 
-# dtt = '2023-01-29'
-# dico = getPeriodsFrom(dtt)
-#
-# for k, v in dico.items():
-#     print(k + ': ' + v)
