@@ -16,9 +16,9 @@ class Asset:
         self.weight = 0
 
     @staticmethod
-    def display_Ichimoku(stock, date_from='1995-1-1', date_to=date.today()):
+    def display_Ichimoku(stock, date_from='1995-1-1', date_to=date.today().strftime("%Y-%m-%d"), horizon='1d'):
         yf.pdr_override()
-        data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, progress=False))
+        data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, interval=horizon, progress=False))
         high9 = data.High.rolling(9).max()
         low9 = data.High.rolling(9).min()
         high26 = data.High.rolling(26).max()
