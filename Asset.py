@@ -2,6 +2,7 @@ from datetime import date
 import matplotlib.pyplot as plt
 import pandas as pd
 import yfinance as yf
+import mplfinance as mpf
 from pandas_datareader import data as pdr
 
 
@@ -47,6 +48,12 @@ class Asset:
                           color='lightcoral')
         plt.grid()
         plt.show()
+
+    @staticmethod
+    def display_volume_candles(stock, date_from='1995-1-1', date_to=date.today().strftime("%Y-%m-%d"), horizon='1d'):
+        yf.pdr_override()
+        data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, interval=horizon, progress=False))
+        mpf.plot(data, type='candle', title='Price & Volume ' + str(stock), mav=(20), volume=True)
 
     @staticmethod
     def displayDailyReturnNoiseSingleStock(stock, date_from='1995-1-1', date_to=date.today()):
