@@ -7,25 +7,31 @@ from pandas_datareader import data as pdr
 
 
 class Asset:
-    """This class represent a financial asset like stocks, bonds, etc"""
+    """This class represent a quoted asset (mainly ETFs)
+       Entry point of several static analytical methods relative to a stock
+    """
 
     def __init__(self):
         self.ticker = ''
         self.name = ''
         self.isin = ''
         self.id_yahoo = ''
-        self.weight = 0
+        self.weight = 0.0
 
     @staticmethod
-    def display_Ichimoku(stock, date_from='1995-1-1', date_to=date.today().strftime("%Y-%m-%d"), horizon='1d'):
+    def display_Ichimoku(stock: str,
+                         date_from: str = '1995-1-1',
+                         date_to: str = date.today().strftime("%Y-%m-%d"),
+                         horizon: str = '1d') \
+            -> None:
         yf.pdr_override()
         data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, interval=horizon, progress=False))
         high9 = data.High.rolling(9).max()
-        low9 = data.High.rolling(9).min()
+        low9 = data.Low.rolling(9).min()
         high26 = data.High.rolling(26).max()
-        low26 = data.High.rolling(26).min()
+        low26 = data.Low.rolling(26).min()
         high52 = data.High.rolling(52).max()
-        low52 = data.High.rolling(52).min()
+        low52 = data.Low.rolling(52).min()
 
         data['tenkan_sen'] = (high9 + low9) / 2
         data['kijun_sen'] = (high26 + low26) / 2
@@ -50,13 +56,18 @@ class Asset:
         plt.show()
 
     @staticmethod
-    def display_volume_candles(stock, date_from='1995-1-1', date_to=date.today().strftime("%Y-%m-%d"), horizon='1d'):
+    def display_volume_candles(stock: str,
+                               date_from: str = '1995-1-1',
+                               date_to: str = date.today().strftime("%Y-%m-%d"),
+                               horizon: str = '1d') \
+            -> None:
         yf.pdr_override()
         data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, interval=horizon, progress=False))
         mpf.plot(data, type='candle', title='Price & Volume ' + str(stock), mav=(20), volume=True)
 
     @staticmethod
-    def displayDailyReturnNoiseSingleStock(stock, date_from='1995-1-1', date_to=date.today()):
+    def displayDailyReturnNoiseSingleStock(stock: str, date_from: str = '1995-1-1', date_to: str = date.today()) \
+            -> None:
         yf.pdr_override()
         data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, progress=False))
         data[stock] = ((data['Adj Close'] / data['Adj Close'].shift(1)) - 1) * 100
@@ -64,7 +75,7 @@ class Asset:
         plt.show()
 
     @staticmethod
-    def compute_Arith_return(stock, date_from, date_to):
+    def compute_Arith_return(stock: str, date_from: str, date_to: str) -> float:
         yf.pdr_override()
         data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, progress=False))
         endingValue = data.tail(1)['Adj Close'].iloc[0]
@@ -73,15 +84,10 @@ class Asset:
         return (endingValue / beginningValue - 1) * 100
 
     @staticmethod
-    def compute_Volatility(stock, date_from, date_to):
+    def compute_Volatility(stock: str, date_from: str, date_to: str) -> float:
         yf.pdr_override()
         data = pd.DataFrame(pdr.get_data_yahoo(stock, start=date_from, end=date_to, progress=False))['Adj Close']
         returns = ((data / data.shift(1)) - 1) * 100
         returns.std()
 
         return returns.std()
-
-
-
-
-

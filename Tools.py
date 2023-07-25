@@ -1,17 +1,21 @@
 import pandas as pd
-import Asset
+import Asset as a
 from dateutil.relativedelta import relativedelta
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from pandas.tseries.offsets import BDay
 
 
-def getAllAssetFromXlFile(xlPath, shtName):
-    data = pd.read_excel(xlPath, sheet_name=shtName)
+def getAllAssetFromXlFile(xlPath: str, sheetName: str) -> dict:
+    """Get Assets'features from Excel source
+       Headers: Bloomberg Ticker|Product Name|ISIN|Code|Weight
+    """
+
+    data = pd.read_excel(xlPath, sheet_name=sheetName)
     data.columns = data.columns.str.replace(' ', '_')
     dicoAssets = dict()
 
     for row in data.itertuples():
-        anAsset = Asset.Asset()
+        anAsset = a.Asset()
         anAsset.ticker = getattr(row, 'Bloomberg_Ticker')
         anAsset.name = getattr(row, 'Product_Name')
         anAsset.isin = getattr(row, 'ISIN')
@@ -22,22 +26,9 @@ def getAllAssetFromXlFile(xlPath, shtName):
     return dicoAssets
 
 
-def reformatRateWith2D(val):
-    return str(round(val, 2)) + ' %'
+def getPeriodsFrom(dateRef: str) -> dict:
+    """Get the exact date from a reference date relative to a period"""
 
-
-def displayObjectAttributes(obj):
-    return list(set(dir(obj)) - set(dir(object)))
-
-
-def adjustWorkingDayFormat(dateRef : datetime):
-    if dateRef.weekday() < 5:
-        return dateRef.strftime("%Y-%m-%d")
-    else:
-        return (dateRef - BDay(1)).strftime("%Y-%m-%d")
-
-
-def getPeriodsFrom(dateRef):
     dico_periods = {}
     dt_to = datetime.strptime(dateRef, "%Y-%m-%d").date()
 
@@ -65,5 +56,17 @@ def getPeriodsFrom(dateRef):
         dico_periods[k] = adjustWorkingDayFormat(dico_periods[k])
 
     return dico_periods
+
+
+def reformatRateWith2D(val: float) -> str:
+    return str(round(val, 2)) + ' %'
+
+
+def adjustWorkingDayFormat(dateRef: datetime) -> str:
+    if dateRef.weekday() < 5:
+        return dateRef.strftime("%Y-%m-%d")
+    else:
+        return (dateRef - BDay(1)).strftime("%Y-%m-%d")
+
 
 

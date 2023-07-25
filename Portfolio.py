@@ -12,17 +12,18 @@ from Asset import Asset
 class Portfolio:
     """This class represent all assets managed portfolio"""
 
-    def __init__(self, pfolioName, pfolioAum):
+    def __init__(self, pfolioName: str, pfolioAum: float) -> None:
         self.name = pfolioName
         self.aum = pfolioAum
         self.assets = dict()
         self.arithmetic_return_a = '0%'
         self.log_return_a = '0%'
         self.volatility_a = '0%'
-        self.unsystematicRisk = 0
-        self.systematicRisk = 0
+        self.unsystematicRisk = 0.0
+        self.systematicRisk = 0.0
 
-    def computeArithReturn_a(self, date_from='1995-1-1', date_to=date.today()):
+    def computeArithReturn_a(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
+        # annualized arithmetic return
         data = pd.DataFrame()
         weights = []
         yf.pdr_override()
@@ -38,7 +39,8 @@ class Portfolio:
         returns_a = returns.mean() * 250
         self.arithmetic_return_a = Tools.reformatRateWith2D(np.dot(returns_a, weights))
 
-    def computeLogReturn_a(self, date_from='1995-1-1', date_to=date.today()):
+    def computeLogReturn_a(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
+        # annualized log return
         data = pd.DataFrame()
         weights = []
         yf.pdr_override()
@@ -54,7 +56,7 @@ class Portfolio:
         returns_a = returns.mean() * 250
         self.log_return_a = Tools.reformatRateWith2D(np.dot(returns_a, weights))
 
-    def displayAssetEvolutions(self, date_from='1995-1-1', date_to=date.today()):
+    def displayAssetEvolutions(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
         data = pd.DataFrame()
         yf.pdr_override()
 
@@ -67,7 +69,7 @@ class Portfolio:
         (data / data.iloc[0] * 100).plot(figsize=(15, 6))
         plt.show()
 
-    def displayAssetRiskReturn_a(self, date_from='1995-1-1', date_to=date.today()):
+    def displayAssetRiskReturn_a(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
         data = pd.DataFrame()
         tickers = []
         yf.pdr_override()
@@ -87,12 +89,12 @@ class Portfolio:
 
         plt.subplot(111)
         plt.bar(tickers, vol_a, color='red', label='Volatility')
-        plt.bar(tickers, returns_a, color='blue', label='Return')
+        plt.bar(tickers, returns_a, color='blue', label='Return', alpha=0.5)
         plt.legend(loc="upper right")
         plt.xticks(rotation=90)
         plt.show()
 
-    def displayCorrelationMatrix(self, date_from='1995-1-1', date_to=date.today()):
+    def displayCorrelationMatrix(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
         data = pd.DataFrame()
         yf.pdr_override()
 
@@ -107,7 +109,8 @@ class Portfolio:
         sns.heatmap(corr_matrix, cmap="Greens")
         plt.show()
 
-    def computePfolioVolatility_a(self, date_from='1995-1-1', date_to=date.today()):
+    def computePfolioVolatility_a(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
+        # annualized volatility of the portfolio
         data = pd.DataFrame()
         weights = []
         yf.pdr_override()
@@ -123,8 +126,8 @@ class Portfolio:
         returns = ((data / data.shift(1)) - 1) * 100
         self.volatility_a = Tools.reformatRateWith2D(np.dot(weights.T, np.dot(returns.cov() * 250, weights)) ** 0.5)
 
-    # Diversifiable risk ~ Unsystematic Risk
-    def computeSystematicRisks(self, date_from='1995-1-1', date_to=date.today()):
+    def computeSystematicRisks(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
+        # Diversifiable risk ~ Unsystematic Risk
         data = pd.DataFrame()
         weights = []
         tickers = []
@@ -149,7 +152,7 @@ class Portfolio:
         self.unsystematicRisk = dr
         self.systematicRisk = pFolio_var - dr
 
-    def getMostCorrelAsset(self, stock, date_from='1995-1-1', date_to=date.today()):
+    def getMostCorrelAsset(self, stock: str, date_from: str = '1995-1-1', date_to: str = date.today()) -> list:
         data = pd.DataFrame()
         yf.pdr_override()
 
@@ -183,7 +186,7 @@ class Portfolio:
 
                 return mostCorrelAsset
 
-    def resumeRiskReturn_IntoXl(self, dateRef):
+    def resumeRiskReturn_IntoXl(self, dateRef: str = date.today().strftime("%Y-%m-%d")) -> None:
         listOfAssetCodes = []
         listOfAssetNames = []
 
@@ -241,7 +244,11 @@ class Portfolio:
 
         df.to_excel('perfMon.xlsx')
 
-    def displayAssetAllocations(self, date_from='1995-1-1', date_to=date.today()):
+    def displayAssetAllocationSimulations(self, date_from: str = '1995-1-1', date_to: str = date.today()) -> None:
+        """Get a thousand simulations of risk/returns relative to a combination of asset allocations
+           Put the result into xl file
+        """
+
         data = pd.DataFrame()
         yf.pdr_override()
 
@@ -264,10 +271,12 @@ class Portfolio:
         pfolio_vol_a = []
         pfolioAssets = []
         weightAssets = []
+        weightAssets_std = []
 
         for x in range(1000):
             weights = np.random.random(num_assets)
             weights /= np.sum(weights)
+            weights_std = np.std(weights)
             pfolio_returns.append(np.sum(weights * log_returns.mean()) * 250)
             pfolio_volatilities.append(np.sqrt(np.dot(weights.T, np.dot(log_returns.cov() * 250, weights))))
             pfolio_id.append('P' + str(i))
@@ -275,6 +284,7 @@ class Portfolio:
             pfolio_vol_a.append(pfolio_volatilities[i])
             pfolioAssets.append(' '.join(log_returns.columns))
             weightAssets.append(' '.join(str(weights)))
+            weightAssets_std.append(weights_std)
             i += 1
 
         pfolio_returns = np.array(pfolio_returns)
@@ -284,14 +294,16 @@ class Portfolio:
                'Returns': pfolio_ret_a,
                'Volatilities': pfolio_vol_a,
                'Assets': pfolioAssets,
-               'Weights': weightAssets
+               'Weights': weightAssets,
+               'Weights_std': weightAssets_std
                }
 
         df = pd.DataFrame(dic, columns=['Portfolio',
                                         'Returns',
                                         'Volatilities',
                                         'Assets',
-                                        'Weights'])
+                                        'Weights',
+                                        'Weights_std'])
 
         df.to_excel('results.xlsx')
 
@@ -301,3 +313,20 @@ class Portfolio:
         plt.xlabel('Expected Volatility')
         plt.ylabel('Expected Return')
         plt.show()
+
+    def info(self, dt_from: str, dt_to: str = date.today()) -> None:
+        products = [x.name for x in self.assets.values()]
+        print(f"Managed Portfolio : {self.name}\n")
+        print(f"Portfolio Assets period from {dt_from} to {dt_to}")
+        for stock, code in zip(products, list(self.assets.keys())):
+            print(f"-{stock}")
+            print(f"   Arithmetic return: {Tools.reformatRateWith2D(Asset.compute_Arith_return(code,dt_from,dt_to))}")
+            print(f"   Volatility from: {Tools.reformatRateWith2D(Asset.compute_Volatility(code,dt_from,dt_to))}")
+        self.computeArithReturn_a(dt_from, dt_to)
+        self.computePfolioVolatility_a(dt_from, dt_to)
+        print(f"\nannualized portfolio return: {self.arithmetic_return_a}")
+        print(f"annualized portfolio volatility: {self.volatility_a}")
+
+
+
+
