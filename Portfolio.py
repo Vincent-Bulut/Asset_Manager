@@ -198,6 +198,7 @@ class Portfolio:
         data = {'Code': [], 'Name': [], 'Period': [], 'From': [], 'To': [], 'Rt': [], 'Vol': []}
 
         dicoPeriods = Tools.getPeriodsFrom(dateRef)
+        periods = ['YTD', '1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '10Y']
 
         for code in self.assets.keys():
             listOfAssetCodes.append(code)
@@ -206,25 +207,9 @@ class Portfolio:
             listOfAssetCodes += [' - '] * (nbOfPeriod - 1)
             listOfAssetNames += [' - '] * (nbOfPeriod - 1)
 
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['YTD'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['1M'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['3M'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['6M'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['1Y'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['2Y'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['3Y'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['5Y'], dateRef), 2))
-            returns.append(round(Asset.compute_Arith_return(code, dicoPeriods['10Y'], dateRef), 2))
-
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['YTD'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['1M'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['3M'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['6M'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['1Y'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['2Y'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['3Y'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['5Y'], dateRef), 2))
-            volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods['10Y'], dateRef), 2))
+            for per in periods:
+                returns.append(round(Asset.compute_Arith_return(code, dicoPeriods[per], dateRef), 2))
+                volatilities.append(round(Asset.compute_Volatility(code, dicoPeriods[per], dateRef), 2))
 
             data['Code'] = listOfAssetCodes
             data['Name'] = listOfAssetNames
