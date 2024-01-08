@@ -1,42 +1,68 @@
 <script>
-  let users = ['Admin', 'Moderator', 'Visitor']; // Les options pour le dropdown
-  let selectedUser = 'Admin'; // L'option sélectionnée par défaut
+  let users = [
+    { utCode: 'ut0000', firstName: 'robot', lastName: '0000' },
+    { utCode: 'user01', firstName: 'vital', lastName: 'septfonds' },
+    // Ajoutez d'autres utilisateurs ici...
+  ];
 
-  // Fonction pour ajouter un utilisateur
   function addUser() {
-    // Ici, vous pouvez ajouter la logique pour traiter l'ajout d'un nouvel utilisateur
-    console.log("Ajouter un utilisateur");
+    // Logique pour ajouter un nouvel utilisateur
+  }
+
+  function updateUser(user) {
+    // Logique pour mettre à jour l'utilisateur
+    console.log(`Mettre à jour l'utilisateur: ${user.utCode}`);
   }
 </script>
 
 <style>
-  .container {
-    display: flex;
-    flex-direction: column; /* Aligner les éléments verticalement */
+  table {
+    width: 100%;
+    border-collapse: collapse;
   }
-  .dropdown-container {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.5em; /* Espacement entre le dropdown et le bouton */
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
   }
-  select, button {
-    margin: 0.5em;
+  th {
+    background-color: #f4f4f4;
   }
   .add-user-button {
-    margin-left: 2em; /* Ajuster selon le style souhaité */
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .update-button {
+    /* Styles for update buttons, similar to the add-user-button class */
   }
 </style>
 
-<div class="container">
-  <div class="dropdown-container">
-    <select bind:value={selectedUser}>
-      {#each users as user}
-        <option value={user}>{user}</option>
-      {/each}
-    </select>
-    
-    <button on:click={addUser} class="add-user-button">+User</button>
-  </div>
-  
-  <button>Update</button>
+<div>
+  <h2>Users</h2>
+  <button on:click={addUser} class="add-user-button">Add One User</button>
+  <table>
+    <tr>
+      <th>UT Code</th>
+      <th>First Name</th>
+      <th>Last Name</th>
+      <th>Actions</th>
+    </tr>
+    {#each users as user}
+    <tr>
+      <td>{user.utCode}</td>
+      <td>{user.firstName}</td>
+      <td>{user.lastName}</td>
+      <td><button on:click={() => updateUser(user)} class="update-button">Update</button></td>
+    </tr>
+    {/each}
+  </table>
 </div>
