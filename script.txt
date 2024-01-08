@@ -1,0 +1,27 @@
+<script>
+  let users = ['Admin', 'Moderator', 'Visitor']; // Les options pour le dropdown
+  let selectedUser = 'Admin'; // L'option sélectionnée par défaut
+  let userName = ''; // La valeur du champ de texte pour le nom d'utilisateur
+</script>
+
+<style>
+  .container {
+    display: flex;
+    align-items: center;
+  }
+  select, input, button {
+    margin: 0.5em;
+  }
+</style>
+
+<div class="container">
+  <select bind:value={selectedUser}>
+    {#each users as user}
+      <option value={user}>{user}</option>
+    {/each}
+  </select>
+  
+  <input type="text" bind:value={userName} placeholder="+User">
+  
+  <button>Update</button>
+</div>
