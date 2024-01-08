@@ -1,27 +1,42 @@
 <script>
   let users = ['Admin', 'Moderator', 'Visitor']; // Les options pour le dropdown
   let selectedUser = 'Admin'; // L'option sélectionnée par défaut
-  let userName = ''; // La valeur du champ de texte pour le nom d'utilisateur
+
+  // Fonction pour ajouter un utilisateur
+  function addUser() {
+    // Ici, vous pouvez ajouter la logique pour traiter l'ajout d'un nouvel utilisateur
+    console.log("Ajouter un utilisateur");
+  }
 </script>
 
 <style>
   .container {
     display: flex;
-    align-items: center;
+    flex-direction: column; /* Aligner les éléments verticalement */
   }
-  select, input, button {
+  .dropdown-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5em; /* Espacement entre le dropdown et le bouton */
+  }
+  select, button {
     margin: 0.5em;
+  }
+  .add-user-button {
+    margin-left: 2em; /* Ajuster selon le style souhaité */
   }
 </style>
 
 <div class="container">
-  <select bind:value={selectedUser}>
-    {#each users as user}
-      <option value={user}>{user}</option>
-    {/each}
-  </select>
-  
-  <input type="text" bind:value={userName} placeholder="+User">
+  <div class="dropdown-container">
+    <select bind:value={selectedUser}>
+      {#each users as user}
+        <option value={user}>{user}</option>
+      {/each}
+    </select>
+    
+    <button on:click={addUser} class="add-user-button">+User</button>
+  </div>
   
   <button>Update</button>
 </div>
