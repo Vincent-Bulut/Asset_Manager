@@ -1,31 +1,28 @@
 <script>
-  import { goto } from '$app/navigation';
+  import { userDetails } from '$lib/stores';
   import { onMount } from 'svelte';
 
-  let users = [];
+  let form = {
+    utUser: '',
+    role: '',
+    email: '',
+    fullName: '',
+    startDate: '',
+    disabled: false
+  };
 
-  onMount(async () => {
-    const response = await fetch('http://localhost:8000/admin/users/');
-    users = await response.json();
+  const unsubscribe = userDetails.subscribe(data => {
+    if (data) {
+      form = { ...data };
+    }
   });
 
-  async function updateUser(userId) {
-    // Appel API pour récupérer les détails de l'utilisateur
-    const response = await fetch(`http://localhost:8000/admin/users/${userId}`);
-    const userDetails = await response.json();
+  onMount(() => {
+    // Nettoyez l'abonnement lorsque le composant est détruit
+    return unsubscribe;
+  });
 
-    // Rediriger vers la page de mise à jour avec les détails de l'utilisateur
-    // Vous pouvez utiliser les props de page ou une solution de gestion d'état global comme $session
-    goto(`/Admin/create-user`, { state: { userDetails } });
-  }
+  // ... votre logique de soumission de formulaire ...
 </script>
 
-<table>
-  <!-- ... -->
-  {#each users as user}
-    <tr>
-      <!-- ... autres cellules ... -->
-      <td><button on:click={() => updateUser(user.id)}>Update</button></td>
-    </tr>
-  {/each}
-</table>
+<!-- ... votre formulaire ... -->
