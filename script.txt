@@ -35,7 +35,26 @@
       disabled: disabled === 'true'
     };
 
-    // API call logic here...
+    try {
+      const response = await fetch('http://localhost:8000/admin/users/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Error: ${response.status} - ${errorData.message}`);
+      }
+
+      // Si la requête réussit, vous pouvez gérer la réponse ici
+      console.log('User created successfully');
+    } catch (error) {
+      console.error('Error creating user:', error);
+      // Affichez un message d'erreur approprié à l'utilisateur
+    }
   }
 </script>
 
