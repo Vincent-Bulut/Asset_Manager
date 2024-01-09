@@ -2,6 +2,7 @@
   let searchQuery = '';
   let users = [];
   let isSearching = false;
+  const endpoint = 'http://localhost:8000/admin/users';
 
   async function searchUsers() {
     if (searchQuery.trim().length === 0) {
@@ -11,7 +12,8 @@
 
     isSearching = true;
     try {
-      const response = await fetch(`http://localhost:3000/search?q=${encodeURIComponent(searchQuery)}`);
+      // Adjust the endpoint URL according to how your API expects to receive the search query
+      const response = await fetch(`${endpoint}?search=${encodeURIComponent(searchQuery)}`);
       if (response.ok) {
         users = await response.json();
       } else {
@@ -24,6 +26,13 @@
     }
     isSearching = false;
   }
+
+  // Optional: Debounce the search to avoid too many API calls
+  let timeout;
+  function handleInput() {
+    clearTimeout(timeout);
+    timeout = setTimeout(searchUsers, 500); // Wait 500ms after the user stops typing to call the function
+  }
 </script>
 
 <div class="search-bar-container">
@@ -32,8 +41,7 @@
     type="text"
     placeholder="Search users..."
     bind:value={searchQuery}
-    on:input={searchUsers} />
-  <!-- Vous pouvez également utiliser on:keyup pour lancer la recherche lorsqu'un utilisateur tape -->
+    on:input={handleInput} />
   {#if isSearching}
     <p>Searching...</p>
   {/if}
@@ -42,7 +50,7 @@
 {#if users.length > 0}
   <ul>
     {#each users as user}
-      <li>{user.full_name}</li>
+      <li>{user.full_name}</li> <!-- Replace 'full_name' with the actual property name from your JSON response -->
     {/each}
   </ul>
 {/if}
