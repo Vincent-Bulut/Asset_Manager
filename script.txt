@@ -1,28 +1,17 @@
-<script>
-  import { userDetails } from '$lib/stores';
-
-  let form = {
-    utUser: '',
-    role: '',
-    email: '',
-    fullName: '',
-    startDate: '',
-    disabled: false
-  };
-
-  const unsubscribe = userDetails.subscribe(details => {
-    if (details) {
-      form = {
-        utUser: details.ut,
-        role: details.role,
-        email: details.email,
-        fullName: details.full_name,
-        startDate: details.start_date,
-        disabled: details.disabled
-      };
-      console.log(form); // Assurez-vous que cela imprime les détails du formulaire mis à jour.
-    }
-  });
-
-  // ... votre logique de soumission de formulaire ...
-</script>
+<form on:submit|preventDefault={handleSubmit}>
+  <input bind:value={form.utUser} placeholder="ut user" />
+  <select bind:value={form.role}>
+    <option value="" disabled>Select role</option>
+    <option value="admin">admin</option>
+    <option value="user">user</option>
+    <option value="trader">trader</option>
+    <option value="pcm">pcm</option>
+  </select>
+  <input type="email" bind:value={form.email} placeholder="email" />
+  <input bind:value={form.fullName} placeholder="full name" />
+  <input type="date" bind:value={form.startDate} placeholder="start date" />
+  <label>
+    <input type="checkbox" bind:checked={form.disabled} /> disabled
+  </label>
+  <button type="submit">Create User</button>
+</form>
