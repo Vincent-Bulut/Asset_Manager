@@ -81,17 +81,18 @@
 <style>
   form {
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: max-content auto;
     gap: 10px;
     align-items: center;
   }
   form label {
-    grid-column: 1;
+    justify-self: end; /* Aligner les labels à droite pour que les inputs soient alignés à gauche */
   }
-  form input, form select, form button {
-    grid-column: 2;
+  form input, form select, form button, form checkbox {
+    justify-self: start; /* Aligner les éléments de saisie à gauche */
   }
   form button {
-    justify-self: start;
+    justify-self: start; /* Aligner spécifiquement le bouton à gauche s'il ne l'est pas déjà */
+    grid-column: span 2; /* Faire en sorte que le bouton s'étende sur deux colonnes */
   }
 </style>
