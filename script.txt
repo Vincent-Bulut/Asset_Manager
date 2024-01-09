@@ -1,41 +1,43 @@
 <script>
-  import { onMount } from 'svelte';
-  import axios from 'axios'; // Assurez-vous d'installer axios avec npm ou yarn
+  let utUser = '';
+  let role = '';
+  let email = '';
+  let fullName = '';
+  let startDate = '';
+  let disabled = '';
 
-  let users = [];
+  async function handleSubmit() {
+    // Vérifiez les champs ici ...
+    // Si tout est valide, envoyez une requête POST à votre API
+    try {
+      const response = await fetch('http://localhost:8000/admin/users/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ut: utUser,
+          role: role,
+          email: email,
+          full_name: fullName,
+          start_date: startDate,
+          disabled: disabled === 'true'
+        })
+      });
 
-  onMount(async () => {
-    const response = await axios.get('http://localhost:8000/admin/users');
-    users = response.data;
-  });
-</script>
-
-<table>
-  <thead>
-    <tr>
-      <th>Id</th>
-      <th>Full Name</th>
-      <th>Role</th>
-      <th>Disabled</th>
-      <th>Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    {#each users as user}
-      <tr>
-        <td>{user.ut}</td>
-        <td>{user.full_name}</td>
-        <td>{user.role}</td>
-        <td>{user.disabled ? 'true' : 'false'}</td>
-        <td><button on:click={() => updateAction(user)}>Update</button></td>
-      </tr>
-    {/each}
-  </tbody>
-</table>
-
-<script>
-  function updateAction(user) {
-    // Logique pour gérer l'action de mise à jour
-    console.log('Updating user', user);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Handle your response here
+      console.log("User created successfully", await response.json());
+    } catch (error) {
+      console.error("Error creating user", error);
+    }
   }
 </script>
+
+<form on:submit|preventDefault={handleSubmit}>
+  <!-- ... Votre formulaire avec les champs et les validations ... -->
+  <button type="submit">Create User</button>
+</form>
