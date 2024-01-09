@@ -1,6 +1,5 @@
 <script>
   import { userDetails } from '$lib/stores';
-  import { onMount } from 'svelte';
 
   let form = {
     utUser: '',
@@ -11,18 +10,19 @@
     disabled: false
   };
 
-  const unsubscribe = userDetails.subscribe(data => {
-    if (data) {
-      form = { ...data };
+  const unsubscribe = userDetails.subscribe(details => {
+    if (details) {
+      form = {
+        utUser: details.ut,
+        role: details.role,
+        email: details.email,
+        fullName: details.full_name,
+        startDate: details.start_date,
+        disabled: details.disabled
+      };
+      console.log(form); // Assurez-vous que cela imprime les détails du formulaire mis à jour.
     }
-  });
-
-  onMount(() => {
-    // Nettoyez l'abonnement lorsque le composant est détruit
-    return unsubscribe;
   });
 
   // ... votre logique de soumission de formulaire ...
 </script>
-
-<!-- ... votre formulaire ... -->
