@@ -1,0 +1,71 @@
+<script>
+  import UserSearchBar from './UserSearchBar.svelte';
+  import AdminUsers from './AdminUsers.svelte';
+</script>
+
+<style>
+  /* todo */
+</style>
+
+<UserSearchBar />
+<AdminUsers />
+
+<script>
+  // Ajoutez ici la logique JavaScript pour la barre de recherche
+</script>
+
+<div>
+  <input type="text" placeholder="Search users..." />
+  <button>Add New User</button>
+  <select>
+    <option value="">Select option</option>
+    <!-- Ajoutez d'autres options ici -->
+  </select>
+  <button>Go Details</button>
+</div>
+
+<style>
+  /* Ajoutez ici les styles CSS pour la barre de recherche */
+</style>
+
+<script>
+  let users = [
+    { id: 'ut5xxx', fullName: 'vb', role: 'admin', disabled: false },
+    { id: 'ut3yyyy', fullName: 'gdhdhd', role: 'user', disabled: true },
+    // Ajoutez d'autres utilisateurs ici
+  ];
+
+  // Fonction pour gérer la mise à jour d'un utilisateur
+  function updateUser(id) {
+    // Implémentez la logique de mise à jour ici
+  }
+</script>
+
+<table>
+  <thead>
+    <tr>
+      <th>Id</th>
+      <th>Full Name</th>
+      <th>Role</th>
+      <th>Disabled</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {#each users as user}
+      <tr>
+        <td>{user.id}</td>
+        <td>{user.fullName}</td>
+        <td>{user.role}</td>
+        <td>{user.disabled ? 'true' : 'false'}</td>
+        <td><button on:click={() => updateUser(user.id)}>Update</button></td>
+      </tr>
+    {/each}
+  </tbody>
+</table>
+
+<button>Add New Admin</button>
+
+<style>
+  /* todo */
+</style>
