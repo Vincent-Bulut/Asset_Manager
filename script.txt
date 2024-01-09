@@ -1,117 +1,31 @@
 <script>
-  let utUser = '';
-  let role = '';
-  let email = '';
-  let fullName = '';
-  let startDate = '';
-  let disabled = 'false';
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
 
-  const roles = ['admin', 'user', 'trader', 'pcm'];
+  let users = [];
 
-  function validateForm() {
-    // Validez ici chaque champ du formulaire selon les exigences
-    return (
-      utUser.length === 6 &&
-      roles.includes(role) &&
-      /^\S+@\S+\.\S+$/.test(email) &&
-      /^\d{4}-\d{2}-\d{2}$/.test(startDate) &&
-      ['true', 'false'].includes(disabled)
-    );
-  }
+  onMount(async () => {
+    const response = await fetch('http://localhost:8000/admin/users/');
+    users = await response.json();
+  });
 
-  async function handleSubmit() {
-    if (!validateForm()) {
-      alert('Please fill in the form correctly.');
-      return;
-    }
+  async function updateUser(userId) {
+    // Appel API pour récupérer les détails de l'utilisateur
+    const response = await fetch(`http://localhost:8000/admin/users/${userId}`);
+    const userDetails = await response.json();
 
-    // L'objet à envoyer
-    const requestBody = {
-      ut: utUser,
-      role: role,
-      email: email,
-      full_name: fullName,
-      start_date: startDate,
-      disabled: disabled === 'true'
-    };
-
-    try {
-      const response = await fetch('http://localhost:8000/admin/users/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Error: ${response.status} - ${errorData.message}`);
-      }
-
-      // Si la requête réussit, vous pouvez gérer la réponse ici
-      console.log('User created successfully');
-    } catch (error) {
-      console.error('Error creating user:', error);
-      // Affichez un message d'erreur approprié à l'utilisateur
-    }
+    // Rediriger vers la page de mise à jour avec les détails de l'utilisateur
+    // Vous pouvez utiliser les props de page ou une solution de gestion d'état global comme $session
+    goto(`/Admin/create-user`, { state: { userDetails } });
   }
 </script>
 
-<form on:submit|preventDefault={handleSubmit}>
-  <label>
-    ut user:
-    <input type="text" bind:value={utUser} />
-  </label>
-
-  <label>
-    role:
-    <select bind:value={role}>
-      <option value="" disabled>Select role</option>
-      {#each roles as r}
-        <option value={r}>{r}</option>
-      {/each}
-    </select>
-  </label>
-
-  <label>
-    email:
-    <input type="email" bind:value={email} />
-  </label>
-
-  <label>
-    full name:
-    <input type="text" bind:value={fullName} />
-  </label>
-
-  <label>
-    start date:
-    <input type="date" bind:value={startDate} />
-  </label>
-
-  <label>
-    disabled:
-    <input type="checkbox" bind:checked={disabled} value="true" />
-  </label>
-
-  <button type="submit">Create User</button>
-</form>
-
-<style>
-  form {
-    display: grid;
-    grid-template-columns: max-content auto;
-    gap: 10px;
-    align-items: center;
-  }
-  form label {
-    justify-self: end; /* Aligner les labels à droite pour que les inputs soient alignés à gauche */
-  }
-  form input, form select, form button, form checkbox {
-    justify-self: start; /* Aligner les éléments de saisie à gauche */
-  }
-  form button {
-    justify-self: start; /* Aligner spécifiquement le bouton à gauche s'il ne l'est pas déjà */
-    grid-column: span 2; /* Faire en sorte que le bouton s'étende sur deux colonnes */
-  }
-</style>
+<table>
+  <!-- ... -->
+  {#each users as user}
+    <tr>
+      <!-- ... autres cellules ... -->
+      <td><button on:click={() => updateUser(user.id)}>Update</button></td>
+    </tr>
+  {/each}
+</table>
