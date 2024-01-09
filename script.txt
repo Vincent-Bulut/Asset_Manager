@@ -1,82 +1,41 @@
 <script>
-  let searchQuery = '';
+  import { onMount } from 'svelte';
+  import axios from 'axios'; // Assurez-vous d'installer axios avec npm ou yarn
+
   let users = [];
-  let isSearching = false;
-  let errorMessage = '';
-  const endpoint = 'http://localhost:8000/admin/users';
 
-  async function searchUsers() {
-    if (searchQuery.trim().length === 0) {
-      users = [];
-      return;
-    }
-
-    isSearching = true;
-    errorMessage = '';
-
-    try {
-      const response = await fetch(`${endpoint}?search=${encodeURIComponent(searchQuery)}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Assuming the API returns an array of users.
-        users = data.filter(user => user.full_name.includes(searchQuery) || user.ut.includes(searchQuery));
-      } else {
-        errorMessage = `Error: ${response.statusText}`;
-        console.error('Error fetching users:', response.statusText);
-      }
-    } catch (error) {
-      errorMessage = 'Network error occurred';
-      console.error('Network error:', error);
-    } finally {
-      isSearching = false;
-    }
-  }
-
-  // Debounce the search to avoid too many API calls
-  let timeout;
-  function handleInput() {
-    clearTimeout(timeout);
-    timeout = setTimeout(searchUsers, 300); // Wait 300ms after the user stops typing to call the function
-  }
+  onMount(async () => {
+    const response = await axios.get('http://localhost:8000/admin/users');
+    users = response.data;
+  });
 </script>
 
-<div class="search-bar-container">
-  <input
-    class="search-input"
-    type="text"
-    placeholder="Search users..."
-    bind:value={searchQuery}
-    on:input={handleInput}
-  />
-  {#if isSearching}
-    <p>Searching...</p>
-  {/if}
-  {#if errorMessage}
-    <p class="error">{errorMessage}</p>
-  {/if}
-</div>
-
-{#if users.length > 0}
-  <ul class="search-results">
+<table>
+  <thead>
+    <tr>
+      <th>Id</th>
+      <th>Full Name</th>
+      <th>Role</th>
+      <th>Disabled</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
     {#each users as user}
-      <li>{user.full_name} ({user.ut})</li>
+      <tr>
+        <td>{user.ut}</td>
+        <td>{user.full_name}</td>
+        <td>{user.role}</td>
+        <td>{user.disabled ? 'true' : 'false'}</td>
+        <td><button on:click={() => updateAction(user)}>Update</button></td>
+      </tr>
     {/each}
-  </ul>
-{/if}
+  </tbody>
+</table>
 
-<style>
-  /* Add your CSS styles here */
-  .search-bar-container {
-    /* Styling for the search bar container */
+<script>
+  function updateAction(user) {
+    // Logique pour gérer l'action de mise à jour
+    console.log('Updating user', user);
   }
-  .search-input {
-    /* Styling for the search input */
-  }
-  .search-results {
-    /* Styling for the search results */
-  }
-  .error {
-    color: red;
-    /* Additional error message styling */
-  }
-</style>
+</script>
