@@ -1,17 +1,67 @@
-<form on:submit|preventDefault={handleSubmit}>
-  <input bind:value={form.utUser} placeholder="ut user" />
-  <select bind:value={form.role}>
-    <option value="" disabled>Select role</option>
-    <option value="admin">admin</option>
-    <option value="user">user</option>
-    <option value="trader">trader</option>
-    <option value="pcm">pcm</option>
-  </select>
-  <input type="email" bind:value={form.email} placeholder="email" />
-  <input bind:value={form.fullName} placeholder="full name" />
-  <input type="date" bind:value={form.startDate} placeholder="start date" />
-  <label>
-    <input type="checkbox" bind:checked={form.disabled} /> disabled
-  </label>
-  <button type="submit">Create User</button>
-</form>
+<script>
+  let currentDate = new Date();
+  let currentMonth = currentDate.getMonth();
+  let desks = [
+    {
+      name: 'Desk 1',
+      traders: ['Trader 1', 'Trader N'],
+      entities: [
+        {
+          name: 'Entity 1',
+          cdrs: ['CDR1', 'CDR2']
+        },
+        {
+          name: 'Entity N',
+          cdrs: ['CDR1', 'CDR2']
+        }
+      ]
+    },
+    // ... Vous pouvez ajouter d'autres desks ici
+  ];
+
+  // Fonction pour vérifier si la cellule doit être éditable
+  const isEditable = (monthIndex) => {
+    return monthIndex >= currentMonth - 2;
+  };
+</script>
+
+<style>
+  .non-editable {
+    background-color: #ccc;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: center;
+  }
+</style>
+
+{#each desks as desk}
+  <h2>{desk.name}</h2>
+  <table>
+    <tr>
+      <th>time dedicated in</th>
+      {#each desk.traders as trader}
+        <th>{trader}</th>
+      {/each}
+    </tr>
+    {#each desk.entities as entity}
+      {#each entity.cdrs as cdr}
+        <tr>
+          <td>{entity.name} - {cdr}</td>
+          {#each Array(3) as _, monthIndex}
+            <td class:non-editable={!isEditable(monthIndex)}>
+              {isEditable(monthIndex)
+                ? `<input type="text" size="1">`
+                : ''}
+            </td>
+          {/each}
+        </tr>
+      {/each}
+    {/each}
+  </table>
+{/each}
