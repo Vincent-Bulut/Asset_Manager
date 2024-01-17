@@ -1,58 +1,27 @@
 
-<script>
-  let availableClients = ['client 1', 'client 2', 'client 3'];
-  let addedClients = [];
-
-  function addToAdded(client) {
-    addedClients = [...addedClients, client];
-    availableClients = availableClients.filter(c => c !== client);
-  }
-
-  function removeFromAdded(client) {
-    availableClients = [...availableClients, client];
-    addedClients = addedClients.filter(c => c !== client);
-  }
-</script>
-
 <style>
-  .container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .list-container {
+    height: 200px; /* Adjust as needed */
+    overflow-y: auto;
   }
-
-  .list-box {
-    border: 1px solid grey;
-    padding: 10px;
-    margin: 10px;
+  .list-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
   }
-
-  .list-title {
-    text-align: center;
-  }
-
   button {
-    margin-left: 10px;
+    /* Style your buttons */
   }
 </style>
 
-<div class="container">
-  <div>
-    <h3 class="list-title">Liste clients</h3>
-    <div class="list-box">
-      {#each availableClients as client}
-        <p>{client} <button on:click={() => addToAdded(client)}> &gt;&gt; </button></p>
-      {/each}
-    </div>
-  </div>
-
-  <div>
-    <h3 class="list-title">Clients ajoutés</h3>
-    <div class="list-box
-    >
-      {#each addedClients as client}
-        <p>{client} <button on:click={() => removeFromAdded(client)}> &lt;&lt; </button></p>
-      {/each}
-    </div>
-  </div>
+<div class="list-header">
+  Recherche Client...
+  <input type="text" bind:value={searchQuery} placeholder="Search clients...">
+</div>
+<div class="list-container">
+  {#each filteredClients() as client}
+    <div>{client}</div>
+    <button on:click={() => addClient(client)}>Add</button>
+  {/each}
 </div>
