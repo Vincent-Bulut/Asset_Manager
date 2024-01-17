@@ -2,22 +2,31 @@
 <script>
   let clients = ['client 1', 'client 2', 'client 3', 'client 4', 'client 5', 'client 6', 'client 7'];
   let addedClients = ['client 19', 'client 20'];
-  let selectedClient = '';
-  let selectedAddedClient = '';
+  let selectedClients = new Set();
+  let selectedAddedClients = new Set();
 
-  function addClient() {
-    if (selectedClient && !addedClients.includes(selectedClient)) {
-      addedClients = [...addedClients, selectedClient];
-      clients = clients.filter(c => c !== selectedClient);
-      selectedClient = '';
-    }
+  function addSelectedClients() {
+    selectedClients.forEach(client => {
+      addedClients.push(client);
+      clients = clients.filter(c => c !== client);
+    });
+    selectedClients.clear();
   }
 
-  function removeClient() {
-    if (selectedAddedClient && !clients.includes(selectedAddedClient)) {
-      clients = [...clients, selectedAddedClient];
-      addedClients = addedClients.filter(c => c !== selectedAddedClient);
-      selectedAddedClient = '';
+  function removeSelectedAddedClients() {
+    selectedAddedClients.forEach(client => {
+      clients.push(client);
+      addedClients = addedClients.filter(c => c !== client);
+    });
+    selectedAddedClients.clear();
+  }
+
+  function toggleSelection(client, listType) {
+    let selectedSet = listType === 'clients' ? selectedClients : selectedAddedClients;
+    if (selectedSet.has(client)) {
+      selectedSet.delete(client);
+    } else {
+      selectedSet.add(client);
     }
   }
 </script>
@@ -25,47 +34,57 @@
 <style>
   .container {
     display: flex;
-    align-items: start;
-    gap: 10px;
+    align-items: center;
+    gap: 20px;
   }
   .list {
-    width: 200px; /* Adjust width as necessary */
-    height: 200px; /* Adjust height as necessary */
+    width: 200px;
+    height: 200px;
     border: 1px solid black;
     overflow-y: auto;
+  }
+  .list-item {
+    padding: 5px;
+    cursor: pointer;
+  }
+  .selected {
+    background-color: #add8e6;
   }
   .button-container {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 5px; /* Adjust gap as necessary */
-  }
-  button {
-    width: 50px; /* Adjust width as necessary */
+    gap: 10px;
   }
 </style>
 
 <div class="container">
-  <div>
+  <div class="list">
     <div>List Clients 1</div>
-    <div class="list">
-      {#each clients as client}
-        <div on:click={() => selectedClient = client}>{client}</div>
-      {/each}
-    </div>
+    {#each clients as client}
+      <div 
+        class="list-item {selectedClients.has(client) ? 'selected' : ''}" 
+        on:click={() => toggleSelection(client, 'clients')}
+      >
+        {client}
+      </div>
+    {/each}
   </div>
 
   <div class="button-container">
-    <button on:click={addClient}>&gt;&gt;</button>
-    <button on:click={removeClient}>&lt;&lt;</button>
+    <button on:click={addSelectedClients}>&gt;&gt;</button>
+    <button on:click={removeSelectedAddedClients}>&lt;&lt;</button>
   </div>
 
-  <div>
+  <div class="list">
     <div>Clients ajoutés</div>
-    <div class="list">
-      {#each addedClients as client}
-        <div on:click={() => selectedAddedClient = client}>{client}</div>
-      {/each}
-    </div>
+    {#each addedClients as client}
+      <div 
+        class="list-item {selectedAddedClients.has(client) ? 'selected' : ''}" 
+        on:click={() => toggleSelection(client, 'added')}
+      >
+        {client}
+      </div>
+    {/each}
   </div>
 </div>
