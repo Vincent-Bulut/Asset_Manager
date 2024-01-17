@@ -1,90 +1,41 @@
 
 <script>
-  let clients = ['client 1', 'client 2', 'client 3', 'client 4', 'client 5', 'client 6', 'client 7'];
-  let addedClients = ['client 19', 'client 20'];
-  let selectedClients = new Set();
-  let selectedAddedClients = new Set();
+  let users = [
+    { id: 'ut3k8g', firstName: 'vincent', lastName: 'bulut', role: 'admin', disabled: false }
+    // ... vous pouvez ajouter plus d'utilisateurs ici
+  ];
+  
+  let searchQuery = '';
 
-  function addSelectedClients() {
-    selectedClients.forEach(client => {
-      addedClients.push(client);
-      clients = clients.filter(c => c !== client);
-    });
-    selectedClients.clear();
-  }
-
-  function removeSelectedAddedClients() {
-    selectedAddedClients.forEach(client => {
-      clients.push(client);
-      addedClients = addedClients.filter(c => c !== client);
-    });
-    selectedAddedClients.clear();
-  }
-
-  function toggleSelection(client, listType) {
-    let selectedSet = listType === 'clients' ? selectedClients : selectedAddedClients;
-    if (selectedSet.has(client)) {
-      selectedSet.delete(client);
-    } else {
-      selectedSet.add(client);
-    }
-  }
+  // Cette fonction retourne les utilisateurs filtrés en fonction de la requête de recherche
+  $: filteredUsers = users.filter(user => {
+    return user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           user.id.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 </script>
 
-<style>
-  .container {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .list {
-    width: 200px;
-    height: 200px;
-    border: 1px solid black;
-    overflow-y: auto;
-  }
-  .list-item {
-    padding: 5px;
-    cursor: pointer;
-  }
-  .selected {
-    background-color: #add8e6;
-  }
-  .button-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 10px;
-  }
-</style>
+<!-- Barre de recherche -->
+<input type="text" bind:value={searchQuery} placeholder="Search users..." />
 
-<div class="container">
-  <div class="list">
-    <div>List Clients 1</div>
-    {#each clients as client}
-      <div 
-        class="list-item {selectedClients.has(client) ? 'selected' : ''}" 
-        on:click={() => toggleSelection(client, 'clients')}
-      >
-        {client}
-      </div>
-    {/each}
-  </div>
-
-  <div class="button-container">
-    <button on:click={addSelectedClients}>&gt;&gt;</button>
-    <button on:click={removeSelectedAddedClients}>&lt;&lt;</button>
-  </div>
-
-  <div class="list">
-    <div>Clients ajoutés</div>
-    {#each addedClients as client}
-      <div 
-        class="list-item {selectedAddedClients.has(client) ? 'selected' : ''}" 
-        on:click={() => toggleSelection(client, 'added')}
-      >
-        {client}
-      </div>
-    {/each}
-  </div>
-</div>
+<!-- Tableau des utilisateurs -->
+<table>
+  <tr>
+    <th>Id</th>
+    <th>First Name</th>
+    <th>Last Name</th>
+    <th>Role</th>
+    <th>Disabled</th>
+    <th>Action</th>
+  </tr>
+  {#each filteredUsers as user}
+    <tr>
+      <td>{user.id}</td>
+      <td>{user.firstName}</td>
+      <td>{user.lastName}</td>
+      <td>{user.role}</td>
+      <td>{user.disabled.toString()}</td>
+      <td><button>Update</button></td>
+    </tr>
+  {/each}
+</table>
