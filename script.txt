@@ -1,56 +1,71 @@
 
 <script>
-  let clients = ['Client 1', 'Client 2', 'Client 3'];
-  let addedClients = ['client 4', 'client 5'];
+  let clients = ['client 1', 'client 2', 'client 3', 'client 4', 'client 5', 'client 6', 'client 7'];
+  let addedClients = ['client 19', 'client 20'];
+  let selectedClient = '';
+  let selectedAddedClient = '';
 
-  function moveToAdded(client) {
-    addedClients = [...addedClients, client];
-    clients = clients.filter(c => c !== client);
+  function addClient() {
+    if (selectedClient && !addedClients.includes(selectedClient)) {
+      addedClients = [...addedClients, selectedClient];
+      clients = clients.filter(c => c !== selectedClient);
+      selectedClient = '';
+    }
   }
 
-  function moveToClients(client) {
-    clients = [...clients, client];
-    addedClients = addedClients.filter(c => c !== client);
+  function removeClient() {
+    if (selectedAddedClient && !clients.includes(selectedAddedClient)) {
+      clients = [...clients, selectedAddedClient];
+      addedClients = addedClients.filter(c => c !== selectedAddedClient);
+      selectedAddedClient = '';
+    }
   }
 </script>
 
 <style>
-  .list {
-    height: 150px; /* Votre hauteur fixe */
-    overflow-y: auto;
-    border: 1px solid black;
+  .container {
+    display: flex;
+    align-items: start;
+    gap: 10px;
   }
-  .list-header {
-    position: sticky;
-    top: 0;
-    background: white;
+  .list {
+    width: 200px; /* Adjust width as necessary */
+    height: 200px; /* Adjust height as necessary */
+    border: 1px solid black;
+    overflow-y: auto;
   }
   .button-container {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 10px;
+    gap: 5px; /* Adjust gap as necessary */
   }
   button {
-    margin: 5px;
+    width: 50px; /* Adjust width as necessary */
   }
 </style>
 
-<div class="list">
-  <div class="list-header">List Clients 1</div>
-  {#each clients as client}
-    <div>{client}</div>
-  {/each}
-</div>
+<div class="container">
+  <div>
+    <div>List Clients 1</div>
+    <div class="list">
+      {#each clients as client}
+        <div on:click={() => selectedClient = client}>{client}</div>
+      {/each}
+    </div>
+  </div>
 
-<div class="button-container">
-  <button on:click={() => moveToAdded(clients[0])}>&gt;&gt;</button>
-  <button on:click={() => moveToClients(addedClients[0])}>&lt;&lt;</button>
-</div>
+  <div class="button-container">
+    <button on:click={addClient}>&gt;&gt;</button>
+    <button on:click={removeClient}>&lt;&lt;</button>
+  </div>
 
-<div class="list">
-  <div class="list-header">Clients ajoutés</div>
-  {#each addedClients as client}
-    <div>{client}</div>
-  {/each}
+  <div>
+    <div>Clients ajoutés</div>
+    <div class="list">
+      {#each addedClients as client}
+        <div on:click={() => selectedAddedClient = client}>{client}</div>
+      {/each}
+    </div>
+  </div>
 </div>
