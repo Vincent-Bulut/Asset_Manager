@@ -1,27 +1,56 @@
 
+<script>
+  let clients = ['Client 1', 'Client 2', 'Client 3'];
+  let addedClients = ['client 4', 'client 5'];
+
+  function moveToAdded(client) {
+    addedClients = [...addedClients, client];
+    clients = clients.filter(c => c !== client);
+  }
+
+  function moveToClients(client) {
+    clients = [...clients, client];
+    addedClients = addedClients.filter(c => c !== client);
+  }
+</script>
+
 <style>
-  .list-container {
-    height: 200px; /* Adjust as needed */
+  .list {
+    height: 150px; /* Votre hauteur fixe */
     overflow-y: auto;
+    border: 1px solid black;
   }
   .list-header {
     position: sticky;
     top: 0;
     background: white;
-    z-index: 10;
+  }
+  .button-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px;
   }
   button {
-    /* Style your buttons */
+    margin: 5px;
   }
 </style>
 
-<div class="list-header">
-  Recherche Client...
-  <input type="text" bind:value={searchQuery} placeholder="Search clients...">
-</div>
-<div class="list-container">
-  {#each filteredClients() as client}
+<div class="list">
+  <div class="list-header">List Clients 1</div>
+  {#each clients as client}
     <div>{client}</div>
-    <button on:click={() => addClient(client)}>Add</button>
+  {/each}
+</div>
+
+<div class="button-container">
+  <button on:click={() => moveToAdded(clients[0])}>&gt;&gt;</button>
+  <button on:click={() => moveToClients(addedClients[0])}>&lt;&lt;</button>
+</div>
+
+<div class="list">
+  <div class="list-header">Clients ajoutés</div>
+  {#each addedClients as client}
+    <div>{client}</div>
   {/each}
 </div>
