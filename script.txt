@@ -1,41 +1,38 @@
 
-<script>
-  let users = [
-    { id: 'ut3k8g', firstName: 'vincent', lastName: 'bulut', role: 'admin', disabled: false }
-    // ... vous pouvez ajouter plus d'utilisateurs ici
-  ];
-  
-  let searchQuery = '';
+.form-group {
+  display: flex;
+  align-items: center; /* Alignement vertical */
+  justify-content: flex-start; /* Alignement horizontal au début */
+  margin-bottom: 10px; /* Espacement entre les groupes de formulaire */
+}
 
-  // Cette fonction retourne les utilisateurs filtrés en fonction de la requête de recherche
-  $: filteredUsers = users.filter(user => {
-    return user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           user.id.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-</script>
+.form-group label {
+  margin-right: 10px; /* Espace entre le label et l'input */
+  white-space: nowrap; /* Empêche le texte du label de passer à la ligne */
+}
 
-<!-- Barre de recherche -->
-<input type="text" bind:value={searchQuery} placeholder="Search users..." />
+.form-group input {
+  flex-grow: 1; /* Les champs de saisie grandiront pour remplir l'espace disponible */
+  margin-right: 20px; /* Espace après le champ de saisie si vous en avez besoin */
+}
 
-<!-- Tableau des utilisateurs -->
-<table>
-  <tr>
-    <th>Id</th>
-    <th>First Name</th>
-    <th>Last Name</th>
-    <th>Role</th>
-    <th>Disabled</th>
-    <th>Action</th>
-  </tr>
-  {#each filteredUsers as user}
-    <tr>
-      <td>{user.id}</td>
-      <td>{user.firstName}</td>
-      <td>{user.lastName}</td>
-      <td>{user.role}</td>
-      <td>{user.disabled.toString()}</td>
-      <td><button>Update</button></td>
-    </tr>
-  {/each}
-</table>
+/* Assurez-vous que le form a une largeur maximale pour éviter l'étirement excessif */
+form {
+  max-width: 600px; /* ou la largeur maximale que vous désirez */
+}
+
+
+
+<form>
+  <div class="form-group">
+    <label for="user">ut user:</label>
+    <input type="text" id="user" name="user">
+  </div>
+  <!-- Répétez cela pour chaque groupe label-input -->
+  <div class="form-group">
+    <label for="email">email:</label>
+    <input type="email" id="email" name="email">
+  </div>
+  <!-- ... autres groupes de champs ... -->
+</form>
+   
