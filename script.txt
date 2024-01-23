@@ -1,38 +1,28 @@
 
-.form-group {
+.form-container {
   display: flex;
-  align-items: center; /* Alignement vertical */
-  justify-content: flex-start; /* Alignement horizontal au début */
-  margin-bottom: 10px; /* Espacement entre les groupes de formulaire */
+  justify-content: space-between; /* aligne les éléments aux deux extrémités */
 }
 
-.form-group label {
-  margin-right: 10px; /* Espace entre le label et l'input */
-  white-space: nowrap; /* Empêche le texte du label de passer à la ligne */
+.input-group {
+  display: flex;
+  flex-direction: column; /* aligne les étiquettes et les champs de formulaire verticalement */
+  align-items: flex-start; /* aligne les étiquettes et les champs de formulaire à gauche */
 }
 
-.form-group input {
-  flex-grow: 1; /* Les champs de saisie grandiront pour remplir l'espace disponible */
-  margin-right: 20px; /* Espace après le champ de saisie si vous en avez besoin */
+.input-group:last-child {
+  align-items: flex-end; /* aligne les étiquettes et les champs de formulaire à droite */
 }
 
-/* Assurez-vous que le form a une largeur maximale pour éviter l'étirement excessif */
-form {
-  max-width: 600px; /* ou la largeur maximale que vous désirez */
-}
-
-
-
-<form>
-  <div class="form-group">
-    <label for="user">ut user:</label>
-    <input type="text" id="user" name="user">
+<div class="form-container">
+  <div class="input-group">
+    <!-- Les champs de formulaire ici seront alignés à gauche -->
+    <label for="email">Email:</label>
+    <input type="email" id="email">
   </div>
-  <!-- Répétez cela pour chaque groupe label-input -->
-  <div class="form-group">
-    <label for="email">email:</label>
-    <input type="email" id="email" name="email">
+  <div class="input-group">
+    <!-- Les champs de formulaire ici seront alignés à droite -->
+    <label for="username">Username:</label>
+    <input type="text" id="username">
   </div>
-  <!-- ... autres groupes de champs ... -->
-</form>
-   
+</div>
