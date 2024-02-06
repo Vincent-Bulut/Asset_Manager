@@ -1,28 +1,36 @@
+import { instance } from './axiosApi'; // ajustez le chemin d'importation selon votre structure de projet
 
-.form-container {
-  display: flex;
-  justify-content: space-between; /* aligne les éléments aux deux extrémités */
+type User = {
+  ut: string;
+  role: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  disabled: boolean;
+};
+
+// Cette fonction utilise l'instance Axios pour obtenir les données de l'utilisateur
+export async function getUser(idUser: string): Promise<User | null> {
+  try {
+    const response = await instance.get<User>(`/admin/users/${idUser}`);
+    return response.data; // 'response.data' devrait être de type 'User'
+  } catch (error) {
+    // Gérer les erreurs ici. Par exemple, afficher l'erreur ou renvoyer null.
+    console.error("Erreur lors de la récupération de l'utilisateur:", error);
+    return null;
+  }
 }
 
-.input-group {
-  display: flex;
-  flex-direction: column; /* aligne les étiquettes et les champs de formulaire verticalement */
-  align-items: flex-start; /* aligne les étiquettes et les champs de formulaire à gauche */
+// Exemple d'utilisation de la fonction getUser
+async function demo() {
+  const idUser = '123'; // Utilisez l'ID utilisateur approprié
+  const user = await getUser(idUser);
+  if (user) {
+    console.log("Utilisateur récupéré:", user);
+    // Vous pouvez maintenant utiliser la variable 'user' comme vous le souhaitez
+  } else {
+    console.log("L'utilisateur n'a pas pu être récupéré.");
+  }
 }
 
-.input-group:last-child {
-  align-items: flex-end; /* aligne les étiquettes et les champs de formulaire à droite */
-}
-
-<div class="form-container">
-  <div class="input-group">
-    <!-- Les champs de formulaire ici seront alignés à gauche -->
-    <label for="email">Email:</label>
-    <input type="email" id="email">
-  </div>
-  <div class="input-group">
-    <!-- Les champs de formulaire ici seront alignés à droite -->
-    <label for="username">Username:</label>
-    <input type="text" id="username">
-  </div>
-</div>
+demo();
