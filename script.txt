@@ -1,71 +1,39 @@
+
 from sqlalchemy.orm import sessionmaker
-from your_module import base  # Assurez-vous d'importer les classes de base de SQLAlchemy
-from your_module import Entity, Traders, TraderAllocation, TraderTimes, Structure  # Importez vos classes de modèle
+# Importez vos classes de modèle ici
+from your_module import BusinessManager, Traders, TraderTimes, TraderAllocation, Structure, Entity
 
 # Créer une session avec la base de données
 Session = sessionmaker(bind=your_engine)
 session = Session()
 
-# Remplacer 'some_ut' par le 'ut' réel du trader que vous recherchez
-trader_ut = 'some_ut'
+# Remplacer 'some_ut' par le 'ut' réel du BusinessManager que vous recherchez
+business_manager_ut = 'some_ut'
 
 # Construction de la requête
-result = session.query(
-    Traders,
-    Entity,
-    TraderAllocation,
-    TraderTimes,
-    Structure
+result = session.query(BusinessManager).join(
+    Traders, BusinessManager.ut == Traders.ut_bm
 ).join(
-    Entity, Entity.entity_code == Traders.entity_code
-).join(
-    TraderAllocation, TraderAllocation.id_trader == Traders.id_trader
-).join(
-    TraderTimes, TraderTimes.id_trader == Traders.id_trader
+    TraderAllocation, Traders.id_trader == TraderAllocation.id_trader
 ).join(
     Structure, Structure.id_structure == TraderAllocation.id_structure
+).join(
+    TraderTimes, Traders.id_trader == TraderTimes.id_trader
+).join(
+    Entity, Traders.entity_code == Entity.entity_code
 ).filter(
-    Traders.ut == trader_ut
+    BusinessManager.ut == business_manager_ut
 ).all()
 
 # Fermer la session
 session.close()
 
 # Traiter le résultat
-for item in result:
-    trader, entity, trader_allocation, trader_times, structure = item
-    # Ici vous pouvez accéder aux attributs de chaque objet
-    # Exemple: trader.name, entity.country, etc.
-
-
-from sqlalchemy import select
-from sqlalchemy.orm import sessionmaker, joinedload
-from your_module import Entity, Traders, TraderAllocation, TraderTimes, Structure  # Remplacez par les noms appropriés de vos classes
-
-# Créer une session avec la base de données
-Session = sessionmaker(bind=your_engine)
-session = Session()
-
-# Remplacer 'some_ut' par le 'ut' réel du trader que vous recherchez
-trader_ut = 'some_ut'
-
-# Construction de la requête en utilisant `select()`
-stmt = (
-    select(Traders).
-    options(joinedload(Traders.entity),
-            joinedload(Traders.structures_alloc).joinedload(TraderAllocation.trader).
-            joinedload(TraderAllocation.trader_times),
-            joinedload(Traders.structures_alloc).joinedload(TraderAllocation.structure)).
-    where(Traders.ut == trader_ut)
-)
-
-# Exécution de la requête
-result = session.execute(stmt).scalars().all()
-
-# Fermer la session
-session.close()
-
-# Affichage des résultats
-for trader in result:
-    print(trader.ut, trader.entity, trader.structures_alloc, ...)
-    # Vous pouvez imprimer ou manipuler les données comme vous le souhaitez
+for bm in result:
+    # Accédez ici aux attributs et aux relations
+    print(bm.ut, bm.ut_delegated, bm.publication_status, bm.list_traders)
+    for trader in bm.list_traders:
+        print(trader.ut, trader.start_date, trader.end_date, ...)
+        for allocation in trader.structures_alloc:
+            print(allocation.structure, allocation.trader_times, ...)
+            # Continuer pour accéder à d'autres attributs si nécessaire
