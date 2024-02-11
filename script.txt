@@ -1,36 +1,38 @@
-import { instance } from './axiosApi'; // ajustez le chemin d'importation selon votre structure de projet
+from sqlalchemy.orm import sessionmaker
+from your_module import base  # Assurez-vous d'importer les classes de base de SQLAlchemy
+from your_module import Entity, Traders, TraderAllocation, TraderTimes, Structure  # Importez vos classes de modèle
 
-type User = {
-  ut: string;
-  role: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  disabled: boolean;
-};
+# Créer une session avec la base de données
+Session = sessionmaker(bind=your_engine)
+session = Session()
 
-// Cette fonction utilise l'instance Axios pour obtenir les données de l'utilisateur
-export async function getUser(idUser: string): Promise<User | null> {
-  try {
-    const response = await instance.get<User>(`/admin/users/${idUser}`);
-    return response.data; // 'response.data' devrait être de type 'User'
-  } catch (error) {
-    // Gérer les erreurs ici. Par exemple, afficher l'erreur ou renvoyer null.
-    console.error("Erreur lors de la récupération de l'utilisateur:", error);
-    return null;
-  }
-}
+# Remplacer 'some_ut' par le 'ut' réel du trader que vous recherchez
+trader_ut = 'some_ut'
 
-// Exemple d'utilisation de la fonction getUser
-async function demo() {
-  const idUser = '123'; // Utilisez l'ID utilisateur approprié
-  const user = await getUser(idUser);
-  if (user) {
-    console.log("Utilisateur récupéré:", user);
-    // Vous pouvez maintenant utiliser la variable 'user' comme vous le souhaitez
-  } else {
-    console.log("L'utilisateur n'a pas pu être récupéré.");
-  }
-}
+# Construction de la requête
+result = session.query(
+    Traders,
+    Entity,
+    TraderAllocation,
+    TraderTimes,
+    Structure
+).join(
+    Entity, Entity.entity_code == Traders.entity_code
+).join(
+    TraderAllocation, TraderAllocation.id_trader == Traders.id_trader
+).join(
+    TraderTimes, TraderTimes.id_trader == Traders.id_trader
+).join(
+    Structure, Structure.id_structure == TraderAllocation.id_structure
+).filter(
+    Traders.ut == trader_ut
+).all()
 
-demo();
+# Fermer la session
+session.close()
+
+# Traiter le résultat
+for item in result:
+    trader, entity, trader_allocation, trader_times, structure = item
+    # Ici vous pouvez accéder aux attributs de chaque objet
+    # Exemple: trader.name, entity.country, etc.
