@@ -1,39 +1,30 @@
 
-from sqlalchemy.orm import sessionmaker
-# Importez vos classes de modèle ici
-from your_module import BusinessManager, Traders, TraderTimes, TraderAllocation, Structure, Entity
+import json
+from collections import namedtuple
 
-# Créer une session avec la base de données
-Session = sessionmaker(bind=your_engine)
-session = Session()
+# Définir le namedtuple TraderInfo
+TraderInfo = namedtuple('TraderInfo', 'cdr_code cdr_name times')
 
-# Remplacer 'some_ut' par le 'ut' réel du BusinessManager que vous recherchez
-business_manager_ut = 'some_ut'
+# Supposons que cela est votre réponse d'API
+api_response = {
+    'string': TraderInfo(cdr_code='string', cdr_name='string', times={'string': [1.0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}),
+    'azerty': TraderInfo(cdr_code='azerty', cdr_name='string', times={'azerty': [0.0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})
+}
 
-# Construction de la requête
-result = session.query(BusinessManager).join(
-    Traders, BusinessManager.ut == Traders.ut_bm
-).join(
-    TraderAllocation, Traders.id_trader == TraderAllocation.id_trader
-).join(
-    Structure, Structure.id_structure == TraderAllocation.id_structure
-).join(
-    TraderTimes, Traders.id_trader == TraderTimes.id_trader
-).join(
-    Entity, Traders.entity_code == Entity.entity_code
-).filter(
-    BusinessManager.ut == business_manager_ut
-).all()
+# Transformer la réponse en structure de dictionnaire JSON
+json_structure = {
+    'cdr_code': api_response['string'].cdr_code,
+    'cdr_name': api_response['string'].cdr_name,
+    'cdrs': [
+        {
+            'my_key': key,
+            'name': api_response[key].cdr_name,
+            'times': api_response[key].times[key]
+        }
+        for key in api_response
+    ]
+}
 
-# Fermer la session
-session.close()
-
-# Traiter le résultat
-for bm in result:
-    # Accédez ici aux attributs et aux relations
-    print(bm.ut, bm.ut_delegated, bm.publication_status, bm.list_traders)
-    for trader in bm.list_traders:
-        print(trader.ut, trader.start_date, trader.end_date, ...)
-        for allocation in trader.structures_alloc:
-            print(allocation.structure, allocation.trader_times, ...)
-            # Continuer pour accéder à d'autres attributs si nécessaire
+# Sérialiser le dictionnaire en JSON
+json_output = json.dumps(json_structure, indent=4)
+print(json_output)
