@@ -1,30 +1,49 @@
 
-import json
-from collections import namedtuple
+<script>
+  import { onMount } from 'svelte';
 
-# Définir le namedtuple TraderInfo
-TraderInfo = namedtuple('TraderInfo', 'cdr_code cdr_name times')
+  let data = {
+    string: 1,
+    azerty: 0.5,
+    testtt: 0.5,
+    oulala: 0
+    // Ajoutez les autres champs nécessaires
+  };
 
-# Supposons que cela est votre réponse d'API
-api_response = {
-    'string': TraderInfo(cdr_code='string', cdr_name='string', times={'string': [1.0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}),
-    'azerty': TraderInfo(cdr_code='azerty', cdr_name='string', times={'azerty': [0.0, 0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})
-}
+  let timeoutId;
 
-# Transformer la réponse en structure de dictionnaire JSON
-json_structure = {
-    'cdr_code': api_response['string'].cdr_code,
-    'cdr_name': api_response['string'].cdr_name,
-    'cdrs': [
-        {
-            'my_key': key,
-            'name': api_response[key].cdr_name,
-            'times': api_response[key].times[key]
-        }
-        for key in api_response
-    ]
-}
+  function saveData() {
+    // Ici, vous définiriez la logique pour sauvegarder les données dans la base de données.
+    console.log('Sauvegarde des données', data);
+    
+    // Par exemple, une requête fetch pour envoyer les données au serveur.
+    // fetch('your-endpoint', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json'
+    //   },
+    //   body: JSON.stringify(data)
+    // });
+  }
 
-# Sérialiser le dictionnaire en JSON
-json_output = json.dumps(json_structure, indent=4)
-print(json_output)
+  function scheduleSave() {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(saveData, 30000); // Déclenche saveData après 30s
+  }
+
+  onMount(() => {
+    // Initialiser ou récupérer les données ici si nécessaire
+  });
+</script>
+
+{#each Object.entries(data) as [name, value], i}
+  <input
+    type="text"
+    bind:value={data[name]}
+    on:input={scheduleSave}
+    class={value === null ? 'disabled' : ''}
+    disabled={value === null}
+  />
+{/each}
