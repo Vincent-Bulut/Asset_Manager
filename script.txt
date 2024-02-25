@@ -1,49 +1,27 @@
 
-<script>
-  import { onMount } from 'svelte';
+from datetime import datetime
+from sqlalchemy import and_
 
-  let data = {
-    string: 1,
-    azerty: 0.5,
-    testtt: 0.5,
-    oulala: 0
-    // Ajoutez les autres champs nécessaires
-  };
+# Obtenir la date actuelle
+current_date = datetime.now()
 
-  let timeoutId;
+# Calculer le premier mois et l'année pour la requête
+if current_date.month - 3 <= 0:
+    query_year = current_date.year - 1
+    query_month = 12 + (current_date.month - 3)
+else:
+    query_year = current_date.year
+    query_month = current_date.month - 3
 
-  function saveData() {
-    // Ici, vous définiriez la logique pour sauvegarder les données dans la base de données.
-    console.log('Sauvegarde des données', data);
-    
-    // Par exemple, une requête fetch pour envoyer les données au serveur.
-    // fetch('your-endpoint', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify(data)
-    // });
-  }
+# Faire la requête avec SQLAlchemy
+# Vous devez remplacer `session` par votre objet de session SQLAlchemy actuel
+results = session.query(TraderTimes).filter(
+    and_(
+        TraderTimes.time_year >= query_year,
+        TraderTimes.time_month >= query_month)
+).all()
 
-  function scheduleSave() {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(saveData, 30000); // Déclenche saveData après 30s
-  }
+# Extraire les valeurs time_value
+time_values = [result.time_value for result in results]
 
-  onMount(() => {
-    // Initialiser ou récupérer les données ici si nécessaire
-  });
-</script>
-
-{#each Object.entries(data) as [name, value], i}
-  <input
-    type="text"
-    bind:value={data[name]}
-    on:input={scheduleSave}
-    class={value === null ? 'disabled' : ''}
-    disabled={value === null}
-  />
-{/each}
+  
