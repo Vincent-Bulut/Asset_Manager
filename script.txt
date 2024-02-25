@@ -1,27 +1,44 @@
 
 from datetime import datetime
-from sqlalchemy import and_
+from sqlalchemy import or_, and_
 
 # Obtenir la date actuelle
 current_date = datetime.now()
 
-# Calculer le premier mois et l'année pour la requête
-if current_date.month - 3 <= 0:
-    query_year = current_date.year - 1
-    query_month = 12 + (current_date.month - 3)
-else:
-    query_year = current_date.year
-    query_month = current_date.month - 3
+# Trouver l'année et le mois actuels
+current_year = current_date.year
+current_month = current_date.month
 
-# Faire la requête avec SQLAlchemy
-# Vous devez remplacer `session` par votre objet de session SQLAlchemy actuel
+# Calculer les mois et les années précédents
+if current_month == 1:
+    month1 = 11
+    month2 = 12
+    month3 = 1
+    year1 = current_year - 1
+    year2 = current_year - 1
+    year3 = current_year
+elif current_month == 2:
+    month1 = 12
+    month2 = 1
+    month3 = 2
+    year1 = current_year - 1
+    year2 = current_year
+    year3 = current_year
+else:
+    month1 = current_month - 2
+    month2 = current_month - 1
+    month3 = current_month
+    year1 = current_year
+    year2 = current_year
+    year3 = current_year
+
+# Construire la requête avec les mois et les années calculés
 results = session.query(TraderTimes).filter(
-    and_(
-        TraderTimes.time_year >= query_year,
-        TraderTimes.time_month >= query_month)
+    or_(
+        and_(TraderTimes.time_month == month1, TraderTimes.time_year == year1),
+        and_(TraderTimes.time_month == month2, TraderTimes.time_year == year2),
+        and_(TraderTimes.time_month == month3, TraderTimes.time_year == year3)
+    )
 ).all()
 
-# Extraire les valeurs time_value
-time_values = [result.time_value for result in results]
-
-  
+#
