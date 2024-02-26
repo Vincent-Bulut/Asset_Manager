@@ -1,44 +1,14 @@
 
-from datetime import datetime
-from sqlalchemy import or_, and_
+from sqlalchemy import func
 
-# Obtenir la date actuelle
-current_date = datetime.now()
-
-# Trouver l'année et le mois actuels
-current_year = current_date.year
-current_month = current_date.month
-
-# Calculer les mois et les années précédents
-if current_month == 1:
-    month1 = 11
-    month2 = 12
-    month3 = 1
-    year1 = current_year - 1
-    year2 = current_year - 1
-    year3 = current_year
-elif current_month == 2:
-    month1 = 12
-    month2 = 1
-    month3 = 2
-    year1 = current_year - 1
-    year2 = current_year
-    year3 = current_year
-else:
-    month1 = current_month - 2
-    month2 = current_month - 1
-    month3 = current_month
-    year1 = current_year
-    year2 = current_year
-    year3 = current_year
-
-# Construire la requête avec les mois et les années calculés
-results = session.query(TraderTimes).filter(
-    or_(
-        and_(TraderTimes.time_month == month1, TraderTimes.time_year == year1),
-        and_(TraderTimes.time_month == month2, TraderTimes.time_year == year2),
-        and_(TraderTimes.time_month == month3, TraderTimes.time_year == year3)
+def get_sum_time_value(self, trader_id, month, year):
+    sum_time_value = (
+        self.session.query(func.sum(TraderTimes.time_value))
+        .filter(
+            TraderTimes.id_trader == trader_id,
+            TraderTimes.time_month == month,
+            TraderTimes.time_year == year
+        )
+        .scalar()
     )
-).all()
-
-#
+    return sum_time_value
