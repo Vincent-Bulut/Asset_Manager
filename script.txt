@@ -1,14 +1,32 @@
 
-from sqlalchemy import func
+from sqlalchemy.sql import func
 
-def get_sum_time_value(self, trader_id, month, year):
-    sum_time_value = (
-        self.session.query(func.sum(TraderTimes.time_value))
-        .filter(
-            TraderTimes.id_trader == trader_id,
-            TraderTimes.time_month == month,
-            TraderTimes.time_year == year
-        )
-        .scalar()
-    )
-    return sum_time_value
+# Supposons que vous avez déjà défini la session et importé les classes Trader et TraderTimes
+
+# Définir les paramètres de filtre (mettez les valeurs réelles pour ces variables)
+ut_bm_value = 'votre_valeur_ut_bm'
+time_month_value = 2  # pour février, par exemple
+time_year_value = 2024  # pour l'année 2024, par exemple
+
+# Construire la requête
+query = session.query(
+    func.sum(TraderTimes.time_value).label('total_time_value'),
+    func.count(func.distinct(TraderTimes.id_trader)).label('distinct_traders')
+).join(
+    TraderTimes, Trader.id_trader == TraderTimes.id_trader
+).filter(
+    Trader.ut_bm == ut_bm_value,
+    TraderTimes.time_month == time_month_value,
+    TraderTimes.time_year == time_year_value
+)
+
+# Exécuter la requête
+result = query.one()
+
+# Calculer la moyenne
+average_time_value = result.total_time_value / result.distinct_traders if result.distinct_traders > 0 else None
+
+# Vérifier si la moyenne est égale à 1
+is_average_one = average_time_value == 1
+
+# Vous avez maintenant `is_average_one` qui est True si la condition est remplie
