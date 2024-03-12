@@ -1,19 +1,42 @@
-from sqlalchemy.orm import sessionmaker
-from your_model_file import BusinessManager, Traders, engine
+from sqlalchemy.orm import sessionmaker, aliased
+from your_module import engine, Trader, BusinessManager, Entity, TraderTimes
 
-# Créer une session
+# start a session
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Mettre à jour le statut des BusinessManager
-business_managers = session.query(BusinessManager).all()
-for manager in business_managers:
-    manager.publication_status = 'nouveau_statut'
+# create aliases for easier reference
+BM = aliased(BusinessManager)
+Ent = aliased(Entity)
+TT = aliased(TraderTimes)
 
-# Mettre à jour le statut des Traders
-traders = session.query(Traders).all()
-for trader in traders:
-    trader.publication_status = 'nouveau_statut'
+# construct the query
+query = (
+    session.query(
+        Trader.id_trader,
+        BM.ut.label('business_manager_ut'),
+        Ent.label_entity,
+        Ent.entity_code,
+        TT.time_month,
+        TT.time_value
+    )
+    .join(BM, Trader.business_manager)  # Assumes a relationship is set up on the Trader class for business_manager
+    .join(Ent, Trader.entity)          # Assumes a relationship is set up on the Trader class for entity
+    .outerjoin(TT, Trader.id_trader == TT.id_trader)  # Adjust the join condition as necessary
+    .order_by(Trader.id_trader, TT.time_month)  # Adjust the ordering as needed
+)
 
-# Commit les changements
-session.commit()
+# execute the query and fetch all results
+results = query.all()
+
+# now you can create a DataFrame from the results
+import pandas as pd
+
+df = pd.DataFrame(results)
+
+
+df_pivot = df.pivot_table(
+    index=['id_trader', 'business_manager_ut', 'label_entity', 'entity_code'],
+    columns='time_month',
+    values='time_value'
+).reset_index()
