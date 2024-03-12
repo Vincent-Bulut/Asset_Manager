@@ -40,3 +40,37 @@ df_pivot = df.pivot_table(
     columns='time_month',
     values='time_value'
 ).reset_index()
+
+
+from sqlalchemy.orm import sessionmaker
+from your_module import engine, Trader, BusinessManager, Entity, TraderTimes, TraderAllocation, Structure
+
+# Assuming you've set up your SQLAlchemy engine and session already
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# construct the query
+query = (
+    session.query(
+        Trader.id_trader,
+        BusinessManager.ut.label('business_manager_ut'),
+        Entity.label_entity,
+        Entity.entity_code,
+        Structure.ps_name.label('structure_name'),
+        TraderTimes.time_month,
+        TraderTimes.time_value
+    )
+    .join(BusinessManager, BusinessManager.id == Trader.business_manager_id)  # Adjust based on your relationship setup
+    .join(Entity, Entity.id == Trader.entity_id)  # Adjust based on your relationship setup
+    .join(TraderAllocation, TraderAllocation.id_trader == Trader.id_trader)  # Adjust based on your relationship setup
+    .join(Structure, Structure.id_structure == TraderAllocation.id_structure)  # Adjust based on your relationship setup
+    .outerjoin(TraderTimes, TraderTimes.id_trader == Trader.id_trader)  # Adjust based on your relationship setup
+    .order_by(Trader.id_trader, TraderTimes.time_month)  # Adjust the ordering as needed
+)
+
+# execute the query and fetch all results
+results = query.all()
+
+# Convert to DataFrame
+import pandas as pd
+df = pd.DataFrame(results)
