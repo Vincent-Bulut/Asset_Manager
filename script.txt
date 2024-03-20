@@ -1,76 +1,35 @@
-from sqlalchemy.orm import sessionmaker, aliased
-from your_module import engine, Trader, BusinessManager, Entity, TraderTimes
 
-# start a session
-Session = sessionmaker(bind=engine)
-session = Session()
+// Create an array to hold all the promises
+let promises = [];
 
-# create aliases for easier reference
-BM = aliased(BusinessManager)
-Ent = aliased(Entity)
-TT = aliased(TraderTimes)
+for (let cle in dico_update_queue) {
+  // Create the request body outside the loop
+  const requestBody = {
+    id_trader: cle.split("_")[0],
+    id_structure: cle.split("_")[1],
+    id_montant: cle.split("_")[2],
+    time_value: dico_update_queue[cle],
+  };
 
-# construct the query
-query = (
-    session.query(
-        Trader.id_trader,
-        BM.ut.label('business_manager_ut'),
-        Ent.label_entity,
-        Ent.entity_code,
-        TT.time_month,
-        TT.time_value
-    )
-    .join(BM, Trader.business_manager)  # Assumes a relationship is set up on the Trader class for business_manager
-    .join(Ent, Trader.entity)          # Assumes a relationship is set up on the Trader class for entity
-    .outerjoin(TT, Trader.id_trader == TT.id_trader)  # Adjust the join condition as necessary
-    .order_by(Trader.id_trader, TT.time_month)  # Adjust the ordering as needed
-)
+  // Create a function to make API call
+  let makeApiCall = (cle, requestBody) => {
+    return instance.put(`trader/${cle.split("_")[3]}/time`, JSON.stringify(requestBody));
+  };
 
-# execute the query and fetch all results
-results = query.all()
+  // Add the promise from the API call to the array
+  promises.push(makeApiCall(cle, requestBody));
+}
 
-# now you can create a DataFrame from the results
-import pandas as pd
-
-df = pd.DataFrame(results)
-
-
-df_pivot = df.pivot_table(
-    index=['id_trader', 'business_manager_ut', 'label_entity', 'entity_code'],
-    columns='time_month',
-    values='time_value'
-).reset_index()
-
-
-from sqlalchemy.orm import sessionmaker
-from your_module import engine, Trader, BusinessManager, Entity, TraderTimes, TraderAllocation, Structure
-
-# Assuming you've set up your SQLAlchemy engine and session already
-Session = sessionmaker(bind=engine)
-session = Session()
-
-# construct the query
-query = (
-    session.query(
-        Trader.id_trader,
-        BusinessManager.ut.label('business_manager_ut'),
-        Entity.label_entity,
-        Entity.entity_code,
-        Structure.ps_name.label('structure_name'),
-        TraderTimes.time_month,
-        TraderTimes.time_value
-    )
-    .join(BusinessManager, BusinessManager.id == Trader.business_manager_id)  # Adjust based on your relationship setup
-    .join(Entity, Entity.id == Trader.entity_id)  # Adjust based on your relationship setup
-    .join(TraderAllocation, TraderAllocation.id_trader == Trader.id_trader)  # Adjust based on your relationship setup
-    .join(Structure, Structure.id_structure == TraderAllocation.id_structure)  # Adjust based on your relationship setup
-    .outerjoin(TraderTimes, TraderTimes.id_trader == Trader.id_trader)  # Adjust based on your relationship setup
-    .order_by(Trader.id_trader, TraderTimes.time_month)  # Adjust the ordering as needed
-)
-
-# execute the query and fetch all results
-results = query.all()
-
-# Convert to DataFrame
-import pandas as pd
-df = pd.DataFrame(results)
+// Use Promise.all to execute all the promises
+Promise.all(promises)
+  .then(responses => {
+    // Handle responses here
+    responses.forEach(response => {
+      console.log('success:', response);
+      // Further processing of each response if necessary
+    });
+  })
+  .catch(error => {
+    // Handle errors here
+    console.error('API call error:', error);
+  });
