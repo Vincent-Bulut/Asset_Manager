@@ -1,35 +1,48 @@
 
-// Create an array to hold all the promises
-let promises = [];
+// src/routes/your-route/+page.js
+import axios from 'axios';
 
-for (let cle in dico_update_queue) {
-  // Create the request body outside the loop
-  const requestBody = {
-    id_trader: cle.split("_")[0],
-    id_structure: cle.split("_")[1],
-    id_montant: cle.split("_")[2],
-    time_value: dico_update_queue[cle],
-  };
+export async function load({ fetch }) {
+    // To use Axios, you need to configure it to use SvelteKit's fetch under the hood.
+    // This is important for server-side rendering and for using SvelteKit's fetch polyfill.
+    axios.defaults.adapter = config => {
+        return fetch(config.url, {
+            method: config.method,
+            headers: config.headers,
+            body: config.data,
+        }).then(response => {
+            const { status, statusText, headers, url } = response;
+            return response.text().then(text => {
+                const data = text.length === 0 ? null : JSON.parse(text);
+                return { status, statusText, headers, config, request: { responseURL: url }, data };
+            });
+        });
+    };
 
-  // Create a function to make API call
-  let makeApiCall = (cle, requestBody) => {
-    return instance.put(`trader/${cle.split("_")[3]}/time`, JSON.stringify(requestBody));
-  };
+    try {
+        // Use axios.all to make multiple requests concurrently
+        const [response1, response2] = await axios.all([
+            axios.get('https://api.example1.com/data'),
+            axios.get('https://api.example2.com/data')
+            // You can add more requests as needed
+        ]);
 
-  // Add the promise from the API call to the array
-  promises.push(makeApiCall(cle, requestBody));
+        // Process your responses here
+        // Note: With Axios, you access the data with response.data
+
+        return {
+            props: {
+                data1: response1.data,
+                data2: response2.data
+                // Add more data as needed
+            }
+        };
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        // Handle errors appropriately
+        return {
+            status: error.response?.status || 500,
+            error: new Error('Error fetching data')
+        };
+    }
 }
-
-// Use Promise.all to execute all the promises
-Promise.all(promises)
-  .then(responses => {
-    // Handle responses here
-    responses.forEach(response => {
-      console.log('success:', response);
-      // Further processing of each response if necessary
-    });
-  })
-  .catch(error => {
-    // Handle errors here
-    console.error('API call error:', error);
-  });
