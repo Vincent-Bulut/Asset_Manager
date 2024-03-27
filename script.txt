@@ -1,48 +1,26 @@
 
-// src/routes/your-route/+page.js
-import axios from 'axios';
+import pandas as pd
+from sqlalchemy import create_engine
 
-export async function load({ fetch }) {
-    // To use Axios, you need to configure it to use SvelteKit's fetch under the hood.
-    // This is important for server-side rendering and for using SvelteKit's fetch polyfill.
-    axios.defaults.adapter = config => {
-        return fetch(config.url, {
-            method: config.method,
-            headers: config.headers,
-            body: config.data,
-        }).then(response => {
-            const { status, statusText, headers, url } = response;
-            return response.text().then(text => {
-                const data = text.length === 0 ? null : JSON.parse(text);
-                return { status, statusText, headers, config, request: { responseURL: url }, data };
-            });
-        });
-    };
+# Lire le fichier Excel
+fichier_excel = 'chemin/vers/ton/fichier.xlsx'  # Ou 'chemin/vers/ton/fichier.csv' pour un CSV
+df = pd.read_excel(fichier_excel)  # Ou pd.read_csv(fichier_excel) pour un CSV
 
-    try {
-        // Use axios.all to make multiple requests concurrently
-        const [response1, response2] = await axios.all([
-            axios.get('https://api.example1.com/data'),
-            axios.get('https://api.example2.com/data')
-            // You can add more requests as needed
-        ]);
+# Configuration de la connexion à la base de données
+DATABASE_URL = "postgresql+psycopg2://user:password@host:port/database"
+engine = create_engine(DATABASE_URL)
 
-        // Process your responses here
-        // Note: With Axios, you access the data with response.data
+# Si votre table n'existe pas, pandas peut la créer pour vous lors de l'importation. Assurez-vous que les types de données dans le DataFrame correspondent à ce que vous attendez dans PostgreSQL.
 
-        return {
-            props: {
-                data1: response1.data,
-                data2: response2.data
-                // Add more data as needed
-            }
-        };
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        // Handle errors appropriately
-        return {
-            status: error.response?.status || 500,
-            error: new Error('Error fetching data')
-        };
-    }
-}
+df.to_sql('nom_de_ta_table', engine, if_exists='append', index=False)  # 'append' ajoute les données à une table existante, 'replace' pour remplacer la table
+
+# Si votre table n'existe pas, pandas peut la créer pour vous lors de l'importation. Assurez-vous que les types de données dans le DataFrame correspondent à ce que vous attendez dans PostgreSQL.
+```
+
+Utilisez la fonction `to_sql` de pandas pour importer votre DataFrame dans la base de données PostgreSQL. Si la table n'existe pas, elle sera créée.
+
+### Notes
+- `if_exists='append'` ajoute les données à une table existante sans supprimer les données existantes. Si la table n'existe pas, elle sera créée. Utilisez `if_exists='replace'` si vous souhaitez supprimer la table existante et la recréer.
+- `index=False` signifie que l'index du DataFrame ne sera pas écrit dans la base de données. Si votre table a besoin d'un index, assurez-vous de le gérer correctement.
+
+Ce code établit la connexion avec votre base de données PostgreSQL et importe les données du fichier Excel (ou CSV) directement dans la table spécifiée. Assurez-vous que les noms de colonnes dans votre fichier Excel correspondent aux noms de colonnes dans la table PostgreSQL.
