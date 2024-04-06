@@ -66,6 +66,29 @@ def adjustWorkingDayFormat(dateRef: datetime) -> str:
     if dateRef.weekday() < 5:
         return dateRef.strftime("%Y-%m-%d")
     else:
+
+def calcul_impot(revenu_net_imposable):
+    tranches = [
+        (0, 10777, 0),
+        (10778, 27478, 0.11),
+        (27479, 79533, 0.30),
+        (79534, 164935, 0.41),
+        (164936, float('inf'), 0.45)
+    ]
+    
+    impot = 0
+    for borne_inf, borne_sup, taux in tranches:
+        if revenu_net_imposable > borne_inf:
+            impot += min(revenu_net_imposable, borne_sup) - borne_inf * taux
+        else:
+            break
+            
+    return impot
+
+# Exemple d'utilisation
+# revenu_net_imposable = 30000  # Mettez votre revenu net imposable ici
+# impot_a_payer = calcul_impot(revenu_net_imposable)
+# print(f"L'impôt à payer est de {impot_a_payer}€")
         return (dateRef - BDay(1)).strftime("%Y-%m-%d")
 
 
