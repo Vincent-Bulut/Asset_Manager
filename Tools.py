@@ -89,7 +89,7 @@ def calcul_impot(revenu_net_imposable):
 # revenu_net_imposable = 30000  # Mettez votre revenu net imposable ici
 # impot_a_payer = calcul_impot(revenu_net_imposable)
 # print(f"L'impôt à payer est de {impot_a_payer}€")
-        return (dateRef - BDay(1)).strftime("%Y-%m-%d")
+
 
 
 
