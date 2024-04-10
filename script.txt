@@ -1,5 +1,6 @@
 
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import DBAPIError
 
 Session = sessionmaker(bind=engine)
 
@@ -7,21 +8,21 @@ def update_trd_time(req: TraderTimeModel):
     ts = utils.get_current_timestamp()
     session = Session()
     try:
-        # Select rows for update and lock them
-        trd_times = session.query(TraderTimes).filter(
+        # Add row-level locking with 'with_for_update'
+        trd_time = session.query(TraderTimes).filter(
             TraderTimes.id_trader == req.id_trader,
-            TraderTimes.id_structure == req.id_structure,
-            TraderTimes.time_month == req.time_month,
-            TraderTimes.time_year == req.time_year
-        ).with_for_update().all()
+            TraderTimes.id_structure == req.id_structure
+        ).with_for_update().one_or_none()
 
-        for trd_time in trd_times:
+        if trd_time:
+            trd_time.time_month = req.time_month
+            trd_time.time_year = req.time_year
             trd_time.time_value = req.time_value
             trd_time.timestamp = ts
-        
-        session.commit()
-    except Exception as e:
-        session.rollback()
+            session.commit()
+    except DBAPIError as e:
+        session.rollback()  # Rollback in case of database error
+        # Implement a retry mechanism or send an appropriate response back to the client
         raise e
     finally:
         session.close()
