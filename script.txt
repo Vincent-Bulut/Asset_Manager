@@ -1,18 +1,28 @@
 
-def update_trd_time(self, req: TraderTimeModel):
+from sqlalchemy.orm import sessionmaker
+
+# Create a scoped session factory
+Session = scoped_session(sessionmaker(bind=engine))
+
+def update_trd_time(req: TraderTimeModel):
     ts = utils.get_current_timestamp()
-    # Assuming TraderTimes is a mapped class and not a Table object
-    objects_to_update = self.session.query(TraderTimes).filter(
-        TraderTimes.id_trader == req.id_trader,
-        TraderTimes.id_structure == req.id_structure,
-        TraderTimes.time_month == req.time_month,
-        TraderTimes.time_year == req.time_year
-    )
-
-    # Batch update values
-    objects_to_update.update({
-        TraderTimes.time_value: req.time_value,
-        TraderTimes.timestamp: ts
-    }, synchronize_session=False)  # Use `False` or 'fetch' if you’re not worried about the session being out of date with the database.
-
-    self.session.commit()
+    session = Session()  # Get a new session object for this operation
+    
+    try:
+        # Assuming TraderTimes is an ORM-mapped class
+        session.query(TraderTimes).filter(
+            TraderTimes.id_trader == req.id_trader,
+            TraderTimes.id_structure == req.id_structure
+        ).update({
+            TraderTimes.time_month: req.time_month,
+            TraderTimes.time_year: req.time_year,
+            TraderTimes.time_value: req.time_value,
+            TraderTimes.timestamp: ts
+        }, synchronize_session=False)
+        
+        session.commit()
+    except Exception as e:
+        session.rollback()  # Rollback in case of exception
+        raise
+    finally:
+        session.close()  # Always close the session
