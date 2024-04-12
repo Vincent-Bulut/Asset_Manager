@@ -1,28 +1,16 @@
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.exc import DBAPIError
+from fastapi import Depends, HTTPException, Security
+from fastapi.security import OAuth2PasswordBearer
 
-Session = sessionmaker(bind=engine)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def update_trd_time(req: TraderTimeModel):
-    ts = utils.get_current_timestamp()
-    session = Session()
-    try:
-        # Add row-level locking with 'with_for_update'
-        trd_time = session.query(TraderTimes).filter(
-            TraderTimes.id_trader == req.id_trader,
-            TraderTimes.id_structure == req.id_structure
-        ).with_for_update().one_or_none()
+def get_current_user(ut: str = Depends(oauth2_scheme)):
+    # Cette fonction devrait extraire l'UT de l'utilisateur à partir du token et le retourner.
+    # Simulons que nous avons extrait l'UT et que l'utilisateur est authentifié.
+    return {"authenticated_ut": "ut123"}
 
-        if trd_time:
-            trd_time.time_month = req.time_month
-            trd_time.time_year = req.time_year
-            trd_time.time_value = req.time_value
-            trd_time.timestamp = ts
-            session.commit()
-    except DBAPIError as e:
-        session.rollback()  # Rollback in case of database error
-        # Implement a retry mechanism or send an appropriate response back to the client
-        raise e
-    finally:
-        session.close()
+@router.get("/{ut}/data")
+def get_business_manager_info(ut: str, current_user: dict = Depends(get_current_user)):
+    if ut != current_user["authenticated_ut"]:
+        raise HTTPException(status_code=403, detail="Access to the requested resource is forbidden")
+    # Le reste de la logique...
