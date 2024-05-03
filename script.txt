@@ -1,16 +1,27 @@
 
-from fastapi import Depends, HTTPException, Security
-from fastapi.security import OAuth2PasswordBearer
+Sub CompactAndRepairAccessDB()
+    Dim accessApp As Object
+    Set accessApp = CreateObject("Access.Application")
+    
+    ' Chemin complet vers la base de données Access à compacter et réparer
+    Dim sourceDB As String
+    sourceDB = "C:\Chemin\vers\la\base\de\donnees.accdb"
+    
+    ' Chemin complet où enregistrer la base de données compactée
+    Dim destDB As String
+    destDB = "C:\Chemin\vers\la\base\de\donnees_compactee.accdb"
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+    ' Exécuter la compactation et la réparation
+    accessApp.DBEngine.CompactDatabase sourceDB, destDB
+    
+    ' Fermer l'application Access
+    accessApp.Quit
+    
+    ' Libérer l'objet
+    Set accessApp = Nothing
 
-def get_current_user(ut: str = Depends(oauth2_scheme)):
-    # Cette fonction devrait extraire l'UT de l'utilisateur à partir du token et le retourner.
-    # Simulons que nous avons extrait l'UT et que l'utilisateur est authentifié.
-    return {"authenticated_ut": "ut123"}
-
-@router.get("/{ut}/data")
-def get_business_manager_info(ut: str, current_user: dict = Depends(get_current_user)):
-    if ut != current_user["authenticated_ut"]:
-        raise HTTPException(status_code=403, detail="Access to the requested resource is forbidden")
-    # Le reste de la logique...
+    ' Remplacer l'ancienne base de données par la nouvelle
+    ' Attention : Ces opérations peuvent être dangereuses si vous n'avez pas de sauvegarde
+    Kill sourceDB
+    Name destDB As sourceDB
+End Sub
