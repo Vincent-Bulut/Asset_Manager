@@ -1,27 +1,38 @@
 
-Sub CompactAndRepairAccessDB()
-    Dim accessApp As Object
-    Set accessApp = CreateObject("Access.Application")
-    
-    ' Chemin complet vers la base de données Access à compacter et réparer
-    Dim sourceDB As String
-    sourceDB = "C:\Chemin\vers\la\base\de\donnees.accdb"
-    
-    ' Chemin complet où enregistrer la base de données compactée
-    Dim destDB As String
-    destDB = "C:\Chemin\vers\la\base\de\donnees_compactee.accdb"
+Dim rs As DAO.Recordset
+Dim dealId As String
+Dim found As Boolean
 
-    ' Exécuter la compactation et la réparation
-    accessApp.DBEngine.CompactDatabase sourceDB, destDB
-    
-    ' Fermer l'application Access
-    accessApp.Quit
-    
-    ' Libérer l'objet
-    Set accessApp = Nothing
+' Ouvrir la table ou la requête où vous vérifiez l'existence du deal ID
+Set rs = db.OpenRecordset("NomDeVotreTable", dbOpenDynaset, dbSeeChanges)
 
-    ' Remplacer l'ancienne base de données par la nouvelle
-    ' Attention : Ces opérations peuvent être dangereuses si vous n'avez pas de sauvegarde
-    Kill sourceDB
-    Name destDB As sourceDB
-End Sub
+' Boucler sur les données que vous voulez importer
+For i = LBound(var_data, 1) To UBound(var_data, 1)
+    dealId = var_data(i, IndexDealId)  ' Assurez-vous d'avoir l'index correct pour dealId dans var_data
+    found = False
+
+    ' Rechercher le deal ID dans la base de données
+    rs.FindFirst "dealId = '" & dealId & "'"
+    If Not rs.NoMatch Then
+        found = True
+        ' Mise à jour de l'enregistrement existant
+        rs.Edit
+        rs!Champ1 = var_data(i, 1) ' Remplacez 'Champ1' par le nom de votre champ et ajustez les indices selon vos données
+        rs!Champ2 = var_data(i, 2)
+        ' Ajoutez plus de champs si nécessaire
+        rs.Update
+    End If
+
+    If Not found Then
+        ' Insérer une nouvelle ligne
+        rs.AddNew
+        rs!dealId = dealId
+        rs!Champ1 = var_data(i, 1)
+        rs!Champ2 = var_data(i, 2)
+        ' Ajoutez plus de champs si nécessaire
+        rs.Update
+    End If
+Next i
+
+rs.Close
+Set rs = Nothing
