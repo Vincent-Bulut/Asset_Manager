@@ -1,38 +1,15 @@
 
-Dim rs As DAO.Recordset
-Dim dealId As String
-Dim found As Boolean
 
-' Ouvrir la table ou la requête où vous vérifiez l'existence du deal ID
-Set rs = db.OpenRecordset("NomDeVotreTable", dbOpenDynaset, dbSeeChanges)
+UPDATE TableA AS a
+INNER JOIN TableB AS b ON a.Key = b.Key
+SET a.Field1 = b.Field1, 
+    a.Field2 = b.Field2;
 
-' Boucler sur les données que vous voulez importer
-For i = LBound(var_data, 1) To UBound(var_data, 1)
-    dealId = var_data(i, IndexDealId)  ' Assurez-vous d'avoir l'index correct pour dealId dans var_data
-    found = False
-
-    ' Rechercher le deal ID dans la base de données
-    rs.FindFirst "dealId = '" & dealId & "'"
-    If Not rs.NoMatch Then
-        found = True
-        ' Mise à jour de l'enregistrement existant
-        rs.Edit
-        rs!Champ1 = var_data(i, 1) ' Remplacez 'Champ1' par le nom de votre champ et ajustez les indices selon vos données
-        rs!Champ2 = var_data(i, 2)
-        ' Ajoutez plus de champs si nécessaire
-        rs.Update
-    End If
-
-    If Not found Then
-        ' Insérer une nouvelle ligne
-        rs.AddNew
-        rs!dealId = dealId
-        rs!Champ1 = var_data(i, 1)
-        rs!Champ2 = var_data(i, 2)
-        ' Ajoutez plus de champs si nécessaire
-        rs.Update
-    End If
-Next i
-
-rs.Close
-Set rs = Nothing
+INSERT INTO TableA (Key, Field1, Field2)
+SELECT b.Key, b.Field1, b.Field2
+FROM TableB AS b
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM TableA AS a
+    WHERE a.Key = b.Key
+);
