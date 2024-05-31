@@ -1,15 +1,60 @@
 
 
-UPDATE TableA AS a
-INNER JOIN TableB AS b ON a.Key = b.Key
-SET a.Field1 = b.Field1, 
-    a.Field2 = b.Field2;
+Sub ExporterColonnesAccessVersExcel()
+    ' Déclarations des variables
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim xlApp As Object
+    Dim xlBook As Object
+    Dim xlSheet As Object
+    Dim tableName As String
+    Dim columnsToExport As Variant
+    Dim filePath As String
+    Dim i As Integer
+    Dim row As Integer
+    Dim col As Integer
+    
+    ' Initialisation des variables
+    tableName = "NomDeVotreTable" ' Remplacez par le nom de votre table
+    columnsToExport = Array("Colonne1", "Colonne2", "Colonne3") ' Remplacez par les noms des colonnes à exporter
+    filePath = "C:\chemin\vers\votre\fichier.xlsx" ' Remplacez par le chemin et le nom de votre fichier Excel
 
-INSERT INTO TableA (Key, Field1, Field2)
-SELECT b.Key, b.Field1, b.Field2
-FROM TableB AS b
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM TableA AS a
-    WHERE a.Key = b.Key
-);
+    ' Ouverture de la base de données et du jeu d'enregistrements
+    Set db = CurrentDb()
+    Set rs = db.OpenRecordset("SELECT " & Join(columnsToExport, ", ") & " FROM " & tableName)
+
+    ' Création de l'application Excel
+    Set xlApp = CreateObject("Excel.Application")
+    xlApp.Visible = False ' Pour afficher Excel, changez cette valeur à True
+    Set xlBook = xlApp.Workbooks.Add
+    Set xlSheet = xlBook.Sheets(1)
+
+    ' Exportation des en-têtes de colonnes
+    For col = LBound(columnsToExport) To UBound(columnsToExport)
+        xlSheet.Cells(1, col + 1).Value = columnsToExport(col)
+    Next col
+
+    ' Exportation des données
+    row = 2
+    Do Until rs.EOF
+        For col = LBound(columnsToExport) To UBound(columnsToExport)
+            xlSheet.Cells(row, col + 1).Value = rs(columnsToExport(col)).Value
+        Next col
+        rs.MoveNext
+        row = row + 1
+    Loop
+
+    ' Enregistrement du fichier Excel
+    xlBook.SaveAs filePath
+    xlBook.Close False
+    xlApp.Quit
+
+    ' Libération des objets
+    Set rs = Nothing
+    Set db = Nothing
+    Set xlSheet = Nothing
+    Set xlBook = Nothing
+    Set xlApp = Nothing
+
+    MsgBox "Exportation terminée avec succès!", vbInformation
+End Sub
