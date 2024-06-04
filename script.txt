@@ -1,60 +1,45 @@
 
-
-Sub ExporterColonnesAccessVersExcel()
-    ' Déclarations des variables
-    Dim db As DAO.Database
-    Dim rs As DAO.Recordset
-    Dim xlApp As Object
-    Dim xlBook As Object
-    Dim xlSheet As Object
-    Dim tableName As String
-    Dim columnsToExport As Variant
+Sub ExportListObjectToTextFile()
+    Dim ws As Worksheet
+    Dim tbl As ListObject
+    Dim cell As Range
     Dim filePath As String
-    Dim i As Integer
-    Dim row As Integer
-    Dim col As Integer
+    Dim fileNum As Integer
+    Dim i As Long, j As Long
+
+    ' Définir la feuille de calcul et le ListObject
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Changez le nom de la feuille selon vos besoins
+    Set tbl = ws.ListObjects("Table1") ' Changez le nom de la table selon vos besoins
+
+    ' Définir le chemin du fichier
+    filePath = ThisWorkbook.Path & "\exported_table.txt"
     
-    ' Initialisation des variables
-    tableName = "NomDeVotreTable" ' Remplacez par le nom de votre table
-    columnsToExport = Array("Colonne1", "Colonne2", "Colonne3") ' Remplacez par les noms des colonnes à exporter
-    filePath = "C:\chemin\vers\votre\fichier.xlsx" ' Remplacez par le chemin et le nom de votre fichier Excel
+    ' Ouvrir le fichier en écriture
+    fileNum = FreeFile
+    Open filePath For Output As #fileNum
+    
+    ' Ecrire les en-têtes
+    For j = 1 To tbl.HeaderRowRange.Columns.Count
+        If j = tbl.HeaderRowRange.Columns.Count Then
+            Print #fileNum, tbl.HeaderRowRange.Cells(1, j).Value
+        Else
+            Print #fileNum, tbl.HeaderRowRange.Cells(1, j).Value & vbTab;
+        End If
+    Next j
+    
+    ' Ecrire les données
+    For i = 1 To tbl.ListRows.Count
+        For j = 1 To tbl.ListColumns.Count
+            If j = tbl.ListColumns.Count Then
+                Print #fileNum, tbl.DataBodyRange.Cells(i, j).Value
+            Else
+                Print #fileNum, tbl.DataBodyRange.Cells(i, j).Value & vbTab;
+            End If
+        Next j
+    Next i
 
-    ' Ouverture de la base de données et du jeu d'enregistrements
-    Set db = CurrentDb()
-    Set rs = db.OpenRecordset("SELECT " & Join(columnsToExport, ", ") & " FROM " & tableName)
-
-    ' Création de l'application Excel
-    Set xlApp = CreateObject("Excel.Application")
-    xlApp.Visible = False ' Pour afficher Excel, changez cette valeur à True
-    Set xlBook = xlApp.Workbooks.Add
-    Set xlSheet = xlBook.Sheets(1)
-
-    ' Exportation des en-têtes de colonnes
-    For col = LBound(columnsToExport) To UBound(columnsToExport)
-        xlSheet.Cells(1, col + 1).Value = columnsToExport(col)
-    Next col
-
-    ' Exportation des données
-    row = 2
-    Do Until rs.EOF
-        For col = LBound(columnsToExport) To UBound(columnsToExport)
-            xlSheet.Cells(row, col + 1).Value = rs(columnsToExport(col)).Value
-        Next col
-        rs.MoveNext
-        row = row + 1
-    Loop
-
-    ' Enregistrement du fichier Excel
-    xlBook.SaveAs filePath
-    xlBook.Close False
-    xlApp.Quit
-
-    ' Libération des objets
-    Set rs = Nothing
-    Set db = Nothing
-    Set xlSheet = Nothing
-    Set xlBook = Nothing
-    Set xlApp = Nothing
-
-    MsgBox "Exportation terminée avec succès!", vbInformation
+    ' Fermer le fichier
+    Close #fileNum
+    
+    MsgBox "Export completed successfully!", vbInformation
 End Sub
