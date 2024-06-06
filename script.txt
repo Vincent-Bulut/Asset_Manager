@@ -1,45 +1,98 @@
 
-Sub ExportListObjectToTextFile()
-    Dim ws As Worksheet
-    Dim tbl As ListObject
-    Dim cell As Range
-    Dim filePath As String
-    Dim fileNum As Integer
-    Dim i As Long, j As Long
+Pour implémenter un menu déroulant dans Svelte qui affiche les liens "Users" et "Structures" sous une seule entrée "Admin", vous pouvez suivre les étapes suivantes. 
 
-    ' Définir la feuille de calcul et le ListObject
-    Set ws = ThisWorkbook.Sheets("Sheet1") ' Changez le nom de la feuille selon vos besoins
-    Set tbl = ws.ListObjects("Table1") ' Changez le nom de la table selon vos besoins
+1. **Créez un composant Svelte pour le menu déroulant.**
+2. **Utilisez du CSS pour gérer l'affichage du menu lors du survol.**
 
-    ' Définir le chemin du fichier
-    filePath = ThisWorkbook.Path & "\exported_table.txt"
-    
-    ' Ouvrir le fichier en écriture
-    fileNum = FreeFile
-    Open filePath For Output As #fileNum
-    
-    ' Ecrire les en-têtes
-    For j = 1 To tbl.HeaderRowRange.Columns.Count
-        If j = tbl.HeaderRowRange.Columns.Count Then
-            Print #fileNum, tbl.HeaderRowRange.Cells(1, j).Value
-        Else
-            Print #fileNum, tbl.HeaderRowRange.Cells(1, j).Value & vbTab;
-        End If
-    Next j
-    
-    ' Ecrire les données
-    For i = 1 To tbl.ListRows.Count
-        For j = 1 To tbl.ListColumns.Count
-            If j = tbl.ListColumns.Count Then
-                Print #fileNum, tbl.DataBodyRange.Cells(i, j).Value
-            Else
-                Print #fileNum, tbl.DataBodyRange.Cells(i, j).Value & vbTab;
-            End If
-        Next j
-    Next i
+Voici un exemple de code pour le faire :
 
-    ' Fermer le fichier
-    Close #fileNum
-    
-    MsgBox "Export completed successfully!", vbInformation
-End Sub
+1. **Créer le fichier `DropdownMenu.svelte`:**
+
+```svelte
+<script>
+    let isOpen = false;
+
+    function toggleMenu() {
+        isOpen = !isOpen;
+    }
+
+    function closeMenu() {
+        isOpen = false;
+    }
+</script>
+
+<style>
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f9f9f9;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        z-index: 1;
+    }
+
+    .dropdown-content a {
+        color: black;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+    }
+
+    .dropdown-content a:hover {background-color: #f1f1f1;}
+
+    .dropdown:hover .dropdown-content {
+        display: block;
+    }
+</style>
+
+<div class="dropdown" on:mouseleave={closeMenu}>
+    <button on:mouseover={toggleMenu}>Admin</button>
+    {#if isOpen}
+        <div class="dropdown-content">
+            <a href="/users">Users</a>
+            <a href="/structures">Structures</a>
+        </div>
+    {/if}
+</div>
+```
+
+2. **Intégrer ce composant dans votre fichier principal (par exemple, `App.svelte`):**
+
+```svelte
+<script>
+    import DropdownMenu from './DropdownMenu.svelte';
+</script>
+
+<style>
+    nav {
+        background-color: #f2f2f2;
+        padding: 10px;
+    }
+
+    .nav-link {
+        margin-right: 20px;
+    }
+</style>
+
+<nav>
+    <a href="/cfm" class="nav-link">CFM</a>
+    <DropdownMenu />
+</nav>
+
+<main>
+    <!-- Votre contenu principal ici -->
+</main>
+```
+
+3. **Mettre à jour le CSS global pour s'assurer que le menu est bien stylisé:**
+
+Vous pouvez ajouter ces styles soit dans un fichier CSS global, soit directement dans vos composants Svelte selon votre préférence.
+
+Cela devrait créer un menu déroulant sous "Admin" qui affiche les liens "Users" et "Structures" lorsqu'on le survole. Ce menu restera visible tant que la souris est au-dessus de l'élément.
+
+Si vous avez d'autres questions ou besoin d'assistance supplémentaire, n'hésitez pas à demander !
