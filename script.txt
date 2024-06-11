@@ -1,98 +1,58 @@
 
-Pour implémenter un menu déroulant dans Svelte qui affiche les liens "Users" et "Structures" sous une seule entrée "Admin", vous pouvez suivre les étapes suivantes. 
+Sub FilterLargeCSVWithADODB()
+    Dim csvFilePath As String
+    Dim conn As Object
+    Dim rs As Object
+    Dim sql As String
+    Dim filterValues As Variant
+    Dim i As Long
+    Dim outputSheet As Worksheet
 
-1. **Créez un composant Svelte pour le menu déroulant.**
-2. **Utilisez du CSS pour gérer l'affichage du menu lors du survol.**
+    ' Définir le chemin du fichier CSV
+    csvFilePath = "C:\chemin\vers\votre\fichier.csv"
+    
+    ' Définir la feuille de résultats
+    Set outputSheet = ThisWorkbook.Sheets.Add
+    outputSheet.Name = "FilteredData"
+    
+    ' Liste des valeurs pour filtrer (vous pouvez les modifier selon vos besoins)
+    filterValues = Array("valeur1", "valeur2", "valeur3")
+    
+    ' Construire la chaîne de critères pour SQL
+    Dim criteria As String
+    criteria = ""
+    For i = LBound(filterValues) To UBound(filterValues)
+        criteria = criteria & "'" & filterValues(i) & "',"
+    Next i
+    criteria = Left(criteria, Len(criteria) - 1) ' Retirer la dernière virgule
 
-Voici un exemple de code pour le faire :
+    ' Construire la requête SQL
+    sql = "SELECT * FROM [" & Mid(csvFilePath, InStrRev(csvFilePath, "\") + 1) & "] WHERE [VotreChamp] IN (" & criteria & ")"
 
-1. **Créer le fichier `DropdownMenu.svelte`:**
+    ' Créer une connexion ADODB
+    Set conn = CreateObject("ADODB.Connection")
+    conn.Open "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & Left(csvFilePath, InStrRev(csvFilePath, "\") - 1) & ";Extended Properties='text;HDR=Yes;FMT=Delimited(,)';"
 
-```svelte
-<script>
-    let isOpen = false;
+    ' Créer un recordset ADODB
+    Set rs = CreateObject("ADODB.Recordset")
+    rs.Open sql, conn
 
-    function toggleMenu() {
-        isOpen = !isOpen;
-    }
+    ' Vérifier le nombre d'enregistrements et les coller dans la feuille Excel
+    If Not rs.EOF Then
+        ' Copier les en-têtes
+        For i = 0 To rs.Fields.Count - 1
+            outputSheet.Cells(1, i + 1).Value = rs.Fields(i).Name
+        Next i
 
-    function closeMenu() {
-        isOpen = false;
-    }
-</script>
+        ' Copier les données
+        outputSheet.Cells(2, 1).CopyFromRecordset rs
+    End If
 
-<style>
-    .dropdown {
-        position: relative;
-        display: inline-block;
-    }
+    ' Fermer les objets ADODB
+    rs.Close
+    conn.Close
+    Set rs = Nothing
+    Set conn = Nothing
 
-    .dropdown-content {
-        display: none;
-        position: absolute;
-        background-color: #f9f9f9;
-        min-width: 160px;
-        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-        z-index: 1;
-    }
-
-    .dropdown-content a {
-        color: black;
-        padding: 12px 16px;
-        text-decoration: none;
-        display: block;
-    }
-
-    .dropdown-content a:hover {background-color: #f1f1f1;}
-
-    .dropdown:hover .dropdown-content {
-        display: block;
-    }
-</style>
-
-<div class="dropdown" on:mouseleave={closeMenu}>
-    <button on:mouseover={toggleMenu}>Admin</button>
-    {#if isOpen}
-        <div class="dropdown-content">
-            <a href="/users">Users</a>
-            <a href="/structures">Structures</a>
-        </div>
-    {/if}
-</div>
-```
-
-2. **Intégrer ce composant dans votre fichier principal (par exemple, `App.svelte`):**
-
-```svelte
-<script>
-    import DropdownMenu from './DropdownMenu.svelte';
-</script>
-
-<style>
-    nav {
-        background-color: #f2f2f2;
-        padding: 10px;
-    }
-
-    .nav-link {
-        margin-right: 20px;
-    }
-</style>
-
-<nav>
-    <a href="/cfm" class="nav-link">CFM</a>
-    <DropdownMenu />
-</nav>
-
-<main>
-    <!-- Votre contenu principal ici -->
-</main>
-```
-
-3. **Mettre à jour le CSS global pour s'assurer que le menu est bien stylisé:**
-
-Vous pouvez ajouter ces styles soit dans un fichier CSS global, soit directement dans vos composants Svelte selon votre préférence.
-
-Cela devrait créer un menu déroulant sous "Admin" qui affiche les liens "Users" et "Structures" lorsqu'on le survole. Ce menu restera visible tant que la souris est au-dessus de l'élément.
-
-Si vous avez d'autres questions ou besoin d'assistance supplémentaire, n'hésitez pas à demander !
+    MsgBox "Filtrage terminé et données collées dans la feuille 'FilteredData'."
+End Sub
