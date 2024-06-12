@@ -1,0 +1,55 @@
+Sub ImportAndFilterCSV()
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim csvFilePath As String
+    Dim acceptableValuesRange As Range
+    Dim acceptableValues As String
+    Dim lastRow As Long
+    Dim queryName As String
+    Dim conn As WorkbookConnection
+    Dim i As Long
+    Dim valueArray As Variant
+    
+    ' Définir le chemin du fichier CSV
+    csvFilePath = "C:\path\to\your\file.csv"  ' Modifiez ce chemin
+    
+    ' Définir la feuille où les résultats seront chargés
+    Set wb = ThisWorkbook
+    Set ws = wb.Sheets("Résultats")  ' Assurez-vous que cette feuille existe
+    
+    ' Effacer les anciennes données
+    ws.Cells.Clear
+    
+    ' Définir la plage des valeurs acceptables
+    With wb.Sheets("ValeursAcceptables")
+        lastRow = .Cells(.Rows.Count, 1).End(xlUp).Row
+        Set acceptableValuesRange = .Range("A1:A" & lastRow)
+    End With
+    
+    ' Convertir la plage de valeurs acceptables en une liste de chaînes entre guillemets
+    valueArray = acceptableValuesRange.Value
+    For i = 1 To UBound(valueArray, 1)
+        valueArray(i, 1) = """" & valueArray(i, 1) & """"
+    Next i
+    acceptableValues = Join(Application.Transpose(valueArray), ",")
+    
+    ' Nom de la requête
+    queryName = "FilteredCSV"
+    
+    ' Vérifier si la requête existe et la supprimer
+    On Error Resume Next
+    ActiveWorkbook.Queries(queryName).Delete
+    On Error GoTo 0
+    
+    ' Créer une requête Power Query pour importer et filtrer le CSV
+    With ActiveWorkbook.Queries
+        .Add Name:=queryName, Formula:= _
+            "let" & vbCrLf & _
+            "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
+            "    FilteredRows = Table.SelectRows(Source, each List.Contains({" & acceptableValues & "}, [YourColumnName]))" & vbCrLf & _
+            "in" & vbCrLf & _
+            "    FilteredRows"
+    End With
+    
+    ' Charger la requête dans une nouvelle feuille
+    On Error​⬤
