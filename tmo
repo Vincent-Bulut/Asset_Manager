@@ -46,10 +46,30 @@ Sub ImportAndFilterCSV()
         .Add Name:=queryName, Formula:= _
             "let" & vbCrLf & _
             "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
-            "    FilteredRows = Table.SelectRows(Source, each List.Contains({" & acceptableValues & "}, [YourColumnName]))" & vbCrLf & _
+            "    FilteredRows = Table.SelectRows(Source, each List.Contains({" & acceptableValues & "}, Record.Field(_, ""Column7"")))" & vbCrLf & _
             "in" & vbCrLf & _
             "    FilteredRows"
     End With
     
     ' Charger la requête dans une nouvelle feuille
-    On Error​⬤
+    On Error Resume Next
+    Set conn = ActiveWorkbook.Connections(queryName)
+    If conn Is Nothing Then
+        Set conn = ActiveWorkbook.Connections.Add2(Name:=queryName, _
+                          Description:="", _
+                          ConnectionString:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & queryName & ";Extended Properties=""""" _
+                          CommandText:=queryName, _
+                          CommandType:=xlCmdTable)
+    End If
+    On Error GoTo 0
+    
+    With ws.ListObjects.Add(SourceType:=0, Source:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & queryName & ";Extended Properties=""""", Destination:=ws.Range("A1"))
+        .Name = queryName
+        .TableStyle = "TableStyleMedium2"
+    End With
+    
+    ' Actualiser la table pour obtenir les données
+    ws.ListObjects(queryName).Refresh
+    
+    MsgBox "Données filtrées importées avec succès !"
+End Sub
