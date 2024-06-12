@@ -10,6 +10,7 @@ Sub ImportAndFilterCSV()
     Dim conn As WorkbookConnection
     Dim i As Long
     Dim valueArray As Variant
+    Dim pqQuery As WorkbookQuery
     
     ' Définir le chemin du fichier CSV
     csvFilePath = "C:\path\to\your\file.csv"  ' Modifiez ce chemin
@@ -39,7 +40,12 @@ Sub ImportAndFilterCSV()
     
     ' Vérifier si la requête existe et la supprimer
     On Error Resume Next
-    ActiveWorkbook.Queries(queryName).Delete
+    For Each pqQuery In ActiveWorkbook.Queries
+        If pqQuery.Name = queryName Then
+            ActiveWorkbook.Queries(queryName).Delete
+            Exit For
+        End If
+    Next pqQuery
     On Error GoTo 0
     
     ' Créer une requête Power Query pour importer et filtrer le CSV
@@ -49,7 +55,7 @@ Sub ImportAndFilterCSV()
             "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
             "    RemovedTopRows = Table.Skip(Source, 3)," & vbCrLf & _
             "    PromotedHeaders = Table.PromoteHeaders(RemovedTopRows, [PromoteAllScalars=true])," & vbCrLf & _
-            "    FilteredRows = Table.SelectRows(PromotedHeaders, each List.Contains({" & acceptableValues & "}, Record.Field(_, ""Column7"")))" & vbCrLf & _
+            "    FilteredRows = Table.SelectRows(PromotedHeaders, each List.Contains({" & acceptableValues & "}, [Column7]))" & vbCrLf & _
             "in" & vbCrLf & _
             "    FilteredRows"
     End With
