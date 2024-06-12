@@ -47,7 +47,9 @@ Sub ImportAndFilterCSV()
         .Add Name:=queryName, Formula:= _
             "let" & vbCrLf & _
             "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
-            "    FilteredRows = Table.SelectRows(Source, each List.Contains({" & acceptableValues & "}, Record.Field(_, ""Column7"")))" & vbCrLf & _
+            "    RemovedTopRows = Table.Skip(Source, 3)," & vbCrLf & _
+            "    PromotedHeaders = Table.PromoteHeaders(RemovedTopRows, [PromoteAllScalars=true])," & vbCrLf & _
+            "    FilteredRows = Table.SelectRows(PromotedHeaders, each List.Contains({" & acceptableValues & "}, Record.Field(_, ""Column7"")))" & vbCrLf & _
             "in" & vbCrLf & _
             "    FilteredRows"
     End With
