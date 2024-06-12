@@ -7,10 +7,10 @@ Sub ImportAndFilterCSV()
     Dim acceptableValues As String
     Dim lastRow As Long
     Dim queryName As String
-    Dim conn As WorkbookConnection
+    Dim pqQuery As WorkbookQuery
     Dim i As Long
     Dim valueArray As Variant
-    Dim pqQuery As WorkbookQuery
+    Dim conn As WorkbookConnection
     
     ' Définir le chemin du fichier CSV
     csvFilePath = "C:\path\to\your\file.csv"  ' Modifiez ce chemin
@@ -38,27 +38,32 @@ Sub ImportAndFilterCSV()
     ' Nom de la requête
     queryName = "FilteredCSV"
     
-    ' Vérifier si la requête existe et la supprimer
+    ' Vérifier si la requête existe
     On Error Resume Next
-    For Each pqQuery In ActiveWorkbook.Queries
-        If pqQuery.Name = queryName Then
-            ActiveWorkbook.Queries(queryName).Delete
-            Exit For
-        End If
-    Next pqQuery
+    Set pqQuery = ActiveWorkbook.Queries(queryName)
     On Error GoTo 0
     
-    ' Créer une requête Power Query pour importer et filtrer le CSV
-    With ActiveWorkbook.Queries
-        .Add Name:=queryName, Formula:= _
-            "let" & vbCrLf & _
-            "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
-            "    RemovedTopRows = Table.Skip(Source, 3)," & vbCrLf & _
-            "    PromotedHeaders = Table.PromoteHeaders(RemovedTopRows, [PromoteAllScalars=true])," & vbCrLf & _
-            "    FilteredRows = Table.SelectRows(PromotedHeaders, each List.Contains({" & acceptableValues & "}, [Column7]))" & vbCrLf & _
-            "in" & vbCrLf & _
-            "    FilteredRows"
-    End With
+    ' Formule Power Query
+    Dim pqFormula As String
+    pqFormula = _
+        "let" & vbCrLf & _
+        "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
+        "    RemovedTopRows = Table.Skip(Source, 3)," & vbCrLf & _
+        "    PromotedHeaders = Table.PromoteHeaders(RemovedTopRows, [PromoteAllScalars=true])," & vbCrLf & _
+        "    RemovedLastColumn = Table.RemoveColumns(PromotedHeaders, {Table.ColumnNames(PromotedHeaders){Table.ColumnCount(PromotedHeaders)-1}})," & vbCrLf & _
+        "    FilteredRows = Table.SelectRows(RemovedLastColumn, each List.Contains({" & acceptableValues & "}, [Column7]))" & vbCrLf & _
+        "in" & vbCrLf & _
+        "    FilteredRows"
+    
+    ' Si la requête existe, mettre à jour la formule
+    If Not pqQuery Is Nothing Then
+        pqQuery.Formula = pqFormula
+    Else
+        ' Sinon, créer une nouvelle requête
+        With ActiveWorkbook.Queries
+            .Add Name:=queryName, Formula:=pqFormula
+        End With
+    End If
     
     ' Charger la requête dans une nouvelle feuille
     On Error Resume Next
