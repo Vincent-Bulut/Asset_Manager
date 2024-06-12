@@ -1,4 +1,9 @@
 
+Pour enlever le préfixe "F2_" dans les valeurs de la colonne 7 dans Power Query via VBA, vous pouvez ajouter une étape de transformation à votre script Power Query pour remplacer le préfixe par une chaîne vide. Voici comment vous pouvez modifier votre script pour inclure cette transformation :
+
+### Script VBA modifié
+
+```vba
 Sub ImportAndFilterCSV()
     Dim wb As Workbook
     Dim ws As Worksheet
@@ -43,6 +48,10 @@ Sub ImportAndFilterCSV()
     Set pqQuery = ActiveWorkbook.Queries(queryName)
     On Error GoTo 0
     
+    ' Définir les colonnes à conserver (excepté la dernière colonne)
+    Dim columnsToKeep As String
+    columnsToKeep = "{""Column1"", ""Column2"", ""Column3"", ""Column4"", ""Column5"", ""Column6"", ""Column7""}"  ' Modifiez ces noms en fonction des noms réels des colonnes
+    
     ' Formule Power Query
     Dim pqFormula As String
     pqFormula = _
@@ -50,8 +59,10 @@ Sub ImportAndFilterCSV()
         "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
         "    RemovedTopRows = Table.Skip(Source, 3)," & vbCrLf & _
         "    PromotedHeaders = Table.PromoteHeaders(RemovedTopRows, [PromoteAllScalars=true])," & vbCrLf & _
-        "    RemovedLastColumn = Table.RemoveColumns(PromotedHeaders, {Table.ColumnNames(PromotedHeaders){Table.ColumnCount(PromotedHeaders)-1}})," & vbCrLf & _
-        "    FilteredRows = Table.SelectRows(RemovedLastColumn, each List.Contains({" & acceptableValues & "}, [Column7]))" & vbCrLf & _
+        "    RemovedLastColumn = Table.SelectColumns(PromotedHeaders, " & columnsToKeep & ")," & vbCrLf & _
+        "    DateFormatted = Table.TransformColumns(RemovedLastColumn, {{""DateColumn"", each Date.ToText(_, ""yyyyMM""), type text}})," & vbCrLf & _
+        "    PrefixRemoved = Table.TransformColumns(DateFormatted, {{""Column7"", each Text.Replace(_, ""F2_"", """")}})," & vbCrLf & _
+        "    FilteredRows = Table.SelectRows(PrefixRemoved, each List.Contains({" & acceptableValues & "}, [Column7]))" & vbCrLf & _
         "in" & vbCrLf & _
         "    FilteredRows"
     
@@ -87,3 +98,15 @@ Sub ImportAndFilterCSV()
     
     MsgBox "Données filtrées importées avec succès !"
 End Sub
+```
+
+### Points à personnaliser
+
+1. **Chemin du fichier CSV** : Assurez-vous de définir `csvFilePath` avec le chemin correct de votre fichier CSV.
+2. **Nom de la feuille de résultats** : La feuille nommée `Résultats` doit exister dans votre classeur.
+3. **Nombre de colonnes dans le fichier CSV** : Remplacez `YourNumberOfColumns` par le nombre réel de colonnes dans votre fichier CSV.
+4. **Colonnes à conserver** : Modifiez `columnsToKeep` pour inclure toutes les colonnes à conserver, à l'exception de la dernière colonne que vous souhaitez supprimer.
+5. **Nom de la colonne de date** : Remplacez `"DateColumn"` par le nom réel de la colonne contenant les dates dans votre fichier CSV.
+6. **Nom de la colonne à modifier** : Remplacez `"Column7"` par le nom réel de la colonne dans laquelle vous souhaitez enlever le préfixe `"F2_"`.
+
+Ce script modifié ajoute une étape `Table.TransformColumns` pour formater la colonne de date spécifiée au format `yyyyMM` et une autre étape `Text.Replace` pour enlever le préfixe `"F2_"` dans la colonne 7. Assurez-vous de remplacer `"DateColumn"` et `"Column7"` par les noms réels des colonnes dans votre CSV.
