@@ -1,58 +1,67 @@
 
-Sub FilterLargeCSVWithADODB()
-    Dim csvFilePath As String
-    Dim conn As Object
-    Dim rs As Object
-    Dim sql As String
-    Dim filterValues As Variant
-    Dim i As Long
-    Dim outputSheet As Worksheet
-
-    ' Définir le chemin du fichier CSV
-    csvFilePath = "C:\chemin\vers\votre\fichier.csv"
-    
-    ' Définir la feuille de résultats
-    Set outputSheet = ThisWorkbook.Sheets.Add
-    outputSheet.Name = "FilteredData"
-    
-    ' Liste des valeurs pour filtrer (vous pouvez les modifier selon vos besoins)
-    filterValues = Array("valeur1", "valeur2", "valeur3")
-    
-    ' Construire la chaîne de critères pour SQL
-    Dim criteria As String
-    criteria = ""
-    For i = LBound(filterValues) To UBound(filterValues)
-        criteria = criteria & "'" & filterValues(i) & "',"
-    Next i
-    criteria = Left(criteria, Len(criteria) - 1) ' Retirer la dernière virgule
-
-    ' Construire la requête SQL
-    sql = "SELECT * FROM [" & Mid(csvFilePath, InStrRev(csvFilePath, "\") + 1) & "] WHERE [VotreChamp] IN (" & criteria & ")"
-
-    ' Créer une connexion ADODB
-    Set conn = CreateObject("ADODB.Connection")
-    conn.Open "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & Left(csvFilePath, InStrRev(csvFilePath, "\") - 1) & ";Extended Properties='text;HDR=Yes;FMT=Delimited(,)';"
-
-    ' Créer un recordset ADODB
-    Set rs = CreateObject("ADODB.Recordset")
-    rs.Open sql, conn
-
-    ' Vérifier le nombre d'enregistrements et les coller dans la feuille Excel
-    If Not rs.EOF Then
-        ' Copier les en-têtes
-        For i = 0 To rs.Fields.Count - 1
-            outputSheet.Cells(1, i + 1).Value = rs.Fields(i).Name
-        Next i
-
-        ' Copier les données
-        outputSheet.Cells(2, 1).CopyFromRecordset rs
-    End If
-
-    ' Fermer les objets ADODB
-    rs.Close
-    conn.Close
-    Set rs = Nothing
-    Set conn = Nothing
-
-    MsgBox "Filtrage terminé et données collées dans la feuille 'FilteredData'."
-End Sub
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau avec Info-Bulle</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            position: relative; /* Nécessaire pour que le tooltip soit positionné par rapport à la cellule */
+        }
+        
+        /* Style pour l'info-bulle */
+        td:hover::after {
+            content: attr(data-tooltip); /* Affiche la valeur de l'attribut data-tooltip */
+            position: absolute;
+            bottom: 100%; /* Positionne au-dessus de la cellule */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        td:hover::after {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>En-tête 1</th>
+                <th>En-tête 2</th>
+                <th>En-tête 3</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td data-tooltip="Info-Bulle 1">Valeur 1</td>
+                <td data-tooltip="Info-Bulle 2">Valeur 2</td>
+                <td data-tooltip="Info-Bulle 3">Valeur 3</td>
+            </tr>
+            <tr>
+                <td data-tooltip="Info-Bulle 4">Valeur 4</td>
+                <td data-tooltip="Info-Bulle 5">Valeur 5</td>
+                <td data-tooltip="Info-Bulle 6">Valeur 6</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
