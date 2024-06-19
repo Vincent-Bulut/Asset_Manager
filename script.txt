@@ -1,67 +1,115 @@
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau avec Info-Bulle</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-            position: relative; /* Nécessaire pour que le tooltip soit positionné par rapport à la cellule */
-        }
-        
-        /* Style pour l'info-bulle */
-        td:hover::after {
-            content: attr(data-tooltip); /* Affiche la valeur de l'attribut data-tooltip */
-            position: absolute;
-            bottom: 100%; /* Positionne au-dessus de la cellule */
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: #fff;
-            padding: 5px 10px;
-            border-radius: 4px;
-            white-space: nowrap;
-            z-index: 1;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-        }
-        
-        td:hover::after {
-            opacity: 1;
-        }
-    </style>
-</head>
-<body>
-    <table>
-        <thead>
-            <tr>
-                <th>En-tête 1</th>
-                <th>En-tête 2</th>
-                <th>En-tête 3</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td data-tooltip="Info-Bulle 1">Valeur 1</td>
-                <td data-tooltip="Info-Bulle 2">Valeur 2</td>
-                <td data-tooltip="Info-Bulle 3">Valeur 3</td>
-            </tr>
-            <tr>
-                <td data-tooltip="Info-Bulle 4">Valeur 4</td>
-                <td data-tooltip="Info-Bulle 5">Valeur 5</td>
-                <td data-tooltip="Info-Bulle 6">Valeur 6</td>
-            </tr>
-        </tbody>
-    </table>
-</body>
-</html>
+Pour pré-remplir un formulaire en utilisant une requête GET avec Svelte, vous pouvez suivre cet exemple de mise en œuvre. Cet exemple suppose que vous avez déjà configuré un projet Svelte de base.
+
+1. **Installation des dépendances:**
+   Assurez-vous que votre projet Svelte est configuré avec les dépendances nécessaires. Si vous ne l'avez pas déjà fait, initialisez un nouveau projet Svelte :
+
+   ```bash
+   npx degit sveltejs/template svelte-app
+   cd svelte-app
+   npm install
+   ```
+
+2. **Création du composant de formulaire:**
+
+   Créez un composant `Form.svelte` où nous allons faire la requête GET et pré-remplir le formulaire.
+
+   ```svelte
+   <!-- src/components/Form.svelte -->
+   <script>
+       import { onMount } from 'svelte';
+       import { writable } from 'svelte/store';
+
+       const formData = writable({
+           name: '',
+           email: '',
+           age: ''
+       });
+
+       onMount(async () => {
+           try {
+               const response = await fetch('https://api.example.com/form-data');
+               const data = await response.json();
+               formData.set({
+                   name: data.name,
+                   email: data.email,
+                   age: data.age
+               });
+           } catch (error) {
+               console.error('Failed to fetch form data:', error);
+           }
+       });
+   </script>
+
+   <style>
+       form {
+           display: flex;
+           flex-direction: column;
+           max-width: 300px;
+           margin: auto;
+       }
+
+       label {
+           margin-top: 10px;
+       }
+   </style>
+
+   <form>
+       <label>
+           Name:
+           <input type="text" bind:value={$formData.name} />
+       </label>
+       <label>
+           Email:
+           <input type="email" bind:value={$formData.email} />
+       </label>
+       <label>
+           Age:
+           <input type="number" bind:value={$formData.age} />
+       </label>
+   </form>
+   ```
+
+3. **Incorporation du composant dans votre application principale:**
+
+   Ensuite, vous devez inclure le composant `Form.svelte` dans votre application principale.
+
+   ```svelte
+   <!-- src/App.svelte -->
+   <script>
+       import Form from './components/Form.svelte';
+   </script>
+
+   <main>
+       <h1>Pré-remplir un formulaire avec Svelte</h1>
+       <Form />
+   </main>
+
+   <style>
+       main {
+           text-align: center;
+           padding: 1em;
+           max-width: 240px;
+           margin: 0 auto;
+       }
+
+       h1 {
+           color: #ff3e00;
+           text-transform: uppercase;
+           font-size: 1.5em;
+           margin-bottom: 0.5em;
+       }
+   </style>
+   ```
+
+4. **Exécution de l'application:**
+
+   Lancez votre application en utilisant :
+
+   ```bash
+   npm run dev
+   ```
+
+   Cela devrait démarrer un serveur de développement et ouvrir votre application dans un navigateur. Votre formulaire sera pré-rempli avec les données récupérées via la requête GET lorsque le composant sera monté.
+
+Ce modèle de base montre comment récupérer des données depuis une API et les utiliser pour pré-remplir un formulaire dans une application Svelte. Vous pouvez adapter l'exemple en fonction de vos besoins spécifiques et ajouter des fonctionnalités supplémentaires selon vos exigences.
