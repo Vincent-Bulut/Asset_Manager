@@ -1,0 +1,63 @@
+Oui, vous pouvez utiliser `TransferSpreadsheet` dans VBA pour intégrer une feuille de calcul Excel dans une table Access. Voici un guide complet pour y parvenir :
+
+### Étapes de l'algorithme en VBA
+
+1. Ouvrir la base de données Access.
+2. Créer une nouvelle macro ou module VBA.
+3. Utiliser la commande `TransferSpreadsheet` pour importer les données.
+
+### Exemple de code VBA
+
+```vba
+Sub ImporterTableDepuisExcel()
+    ' Définir les variables
+    Dim CheminFichier As String
+    Dim NomFeuille As String
+    Dim NomTable As String
+    Dim TypeFeuille As AcSpreadSheetType
+    
+    ' Initialiser les variables
+    CheminFichier = "C:\Chemin\Vers\Données.xlsx" ' Chemin du fichier Excel
+    NomFeuille = "Feuille1" ' Nom de la feuille Excel
+    NomTable = "TableImportée" ' Nom de la table Access
+    TypeFeuille = acSpreadsheetTypeExcel12Xml ' Pour Excel 2007 et versions ultérieures (xlsx)
+    
+    ' Utiliser TransferSpreadsheet pour importer les données
+    DoCmd.TransferSpreadsheet _
+        TransferType:=acImport, _
+        SpreadsheetType:=TypeFeuille, _
+        TableName:=NomTable, _
+        FileName:=CheminFichier, _
+        HasFieldNames:=True, _
+        Range:=NomFeuille & "$"
+    
+    ' Message de confirmation
+    MsgBox "Importation terminée avec succès !", vbInformation
+End Sub
+```
+
+### Explication du code
+
+- **CheminFichier** : Le chemin complet du fichier Excel à importer. Remplacez `"C:\Chemin\Vers\Données.xlsx"` par le chemin réel de votre fichier Excel.
+- **NomFeuille** : Le nom de la feuille de calcul Excel à partir de laquelle les données seront importées. Remplacez `"Feuille1"` par le nom de votre feuille.
+- **NomTable** : Le nom de la table Access dans laquelle les données seront importées. Remplacez `"TableImportée"` par le nom souhaité pour votre table dans Access.
+- **TypeFeuille** : Le type de fichier Excel. `acSpreadsheetTypeExcel12Xml` est utilisé pour les fichiers .xlsx. Pour les fichiers Excel plus anciens, utilisez `acSpreadsheetTypeExcel8` (pour .xls).
+- **TransferType** : `acImport` spécifie que nous importons des données.
+- **HasFieldNames** : `True` indique que la première ligne de la feuille de calcul contient les noms des champs.
+- **Range** : Spécifie la feuille et la plage de cellules (ici, toute la feuille).
+
+### Ajouter le code VBA dans Access
+
+1. Ouvrez votre base de données Access.
+2. Appuyez sur `Alt + F11` pour ouvrir l'éditeur VBA.
+3. Dans l'éditeur VBA, cliquez sur `Insert` > `Module` pour créer un nouveau module.
+4. Copiez et collez le code VBA fourni dans le module.
+5. Enregistrez le module et fermez l'éditeur VBA.
+
+### Exécuter le script VBA
+
+1. Revenez à Access.
+2. Appuyez sur `Alt + F8` pour ouvrir la boîte de dialogue `Macro`.
+3. Sélectionnez `ImporterTableDepuisExcel` dans la liste des macros et cliquez sur `Run`.
+
+Le script VBA va maintenant importer les données de la feuille de calcul Excel spécifiée dans une table Access. Assurez-vous que le chemin du fichier et les noms de la feuille et de la table sont correctement définis avant d'exécuter le script.
