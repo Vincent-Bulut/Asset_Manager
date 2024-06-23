@@ -1,115 +1,115 @@
 
-Pour pré-remplir un formulaire en utilisant une requête GET avec Svelte, vous pouvez suivre cet exemple de mise en œuvre. Cet exemple suppose que vous avez déjà configuré un projet Svelte de base.
+Pour permettre la sélection de plusieurs trading entities à ajouter, vous pouvez utiliser une liste de cases à cocher (checkboxes) ou un champ de sélection multiple. Voici comment vous pouvez le faire avec une liste de cases à cocher :
 
-1. **Installation des dépendances:**
-   Assurez-vous que votre projet Svelte est configuré avec les dépendances nécessaires. Si vous ne l'avez pas déjà fait, initialisez un nouveau projet Svelte :
+### Étape 1: Mettre à jour le composant Svelte
 
-   ```bash
-   npx degit sveltejs/template svelte-app
-   cd svelte-app
-   npm install
-   ```
+1. **Afficher les trading entities existantes**.
+2. **Permettre la sélection de multiples nouvelles trading entities via des cases à cocher**.
+3. **Ajouter les nouvelles trading entities sélectionnées et mettre à jour l'API**.
 
-2. **Création du composant de formulaire:**
+### `TradingEntities.svelte`
+```svelte
+<script>
+  import { onMount } from 'svelte';
+  import { writable } from 'svelte/store';
 
-   Créez un composant `Form.svelte` où nous allons faire la requête GET et pré-remplir le formulaire.
+  let tradingEntities = writable([]);
+  let selectedEntities = writable([]);
+  let availableEntities = ['E14023', 'E14027', 'E14030', 'E14031']; // Exemple de nouvelles entités disponibles
 
-   ```svelte
-   <!-- src/components/Form.svelte -->
-   <script>
-       import { onMount } from 'svelte';
-       import { writable } from 'svelte/store';
+  // Fonction pour charger les trading entities depuis l'API
+  async function loadTradingEntities() {
+    try {
+      const response = await fetch('https://api.exemple.com/structure'); // Remplacez par l'URL de votre API
+      const data = await response.json();
+      tradingEntities.set(data.trading_entities.split(',')); // Supposons que l'attribut est `trading_entities`
+    } catch (error) {
+      console.error('Erreur lors du chargement des trading entities:', error);
+    }
+  }
 
-       const formData = writable({
-           name: '',
-           email: '',
-           age: ''
-       });
+  // Fonction pour ajouter les nouvelles trading entities sélectionnées
+  function addTradingEntities() {
+    tradingEntities.update(current => {
+      selectedEntities.update(selected => {
+        selected.forEach(entity => {
+          if (!current.includes(entity) && entity !== '') {
+            current.push(entity);
+          }
+        });
+        updateTradingEntitiesOnServer(current); // Mise à jour de l'API
+        return [];
+      });
+      return current;
+    });
+  }
 
-       onMount(async () => {
-           try {
-               const response = await fetch('https://api.example.com/form-data');
-               const data = await response.json();
-               formData.set({
-                   name: data.name,
-                   email: data.email,
-                   age: data.age
-               });
-           } catch (error) {
-               console.error('Failed to fetch form data:', error);
-           }
-       });
-   </script>
+  // Fonction pour mettre à jour les trading entities sur le serveur
+  async function updateTradingEntitiesOnServer(entities) {
+    try {
+      const response = await fetch('https://api.exemple.com/structure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trading_entities: entities.join(',') }),
+      });
+      const data = await response.json();
+      console.log('Mise à jour réussie:', data);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des trading entities:', error);
+    }
+  }
 
-   <style>
-       form {
-           display: flex;
-           flex-direction: column;
-           max-width: 300px;
-           margin: auto;
-       }
+  onMount(() => {
+    loadTradingEntities();
+  });
+</script>
 
-       label {
-           margin-top: 10px;
-       }
-   </style>
+<style>
+  /* Ajoutez du style si nécessaire */
+</style>
 
-   <form>
-       <label>
-           Name:
-           <input type="text" bind:value={$formData.name} />
-       </label>
-       <label>
-           Email:
-           <input type="email" bind:value={$formData.email} />
-       </label>
-       <label>
-           Age:
-           <input type="number" bind:value={$formData.age} />
-       </label>
-   </form>
-   ```
+<div>
+  <h2>Trading Entities</h2>
+  <ul>
+    {#each $tradingEntities as entity}
+      <li>{entity}</li>
+    {/each}
+  </ul>
+  <h3>Ajouter de nouvelles Trading Entities</h3>
+  {#each availableEntities as entity}
+    <div>
+      <input type="checkbox" bind:group={$selectedEntities} value={entity} />
+      <label>{entity}</label>
+    </div>
+  {/each}
+  <button on:click={addTradingEntities}>Ajouter les sélectionnées</button>
+</div>
+```
 
-3. **Incorporation du composant dans votre application principale:**
+### Explications
 
-   Ensuite, vous devez inclure le composant `Form.svelte` dans votre application principale.
+1. **Stores Svelte** :
+   - `tradingEntities` : Stocke les trading entities actuelles chargées depuis l'API.
+   - `selectedEntities` : Stocke les trading entities sélectionnées via les cases à cocher.
 
-   ```svelte
-   <!-- src/App.svelte -->
-   <script>
-       import Form from './components/Form.svelte';
-   </script>
+2. **Fonctions principales** :
+   - `loadTradingEntities` : Charge les trading entities existantes depuis l'API et les stocke dans `tradingEntities`.
+   - `addTradingEntities` : Ajoute les nouvelles trading entities sélectionnées à `tradingEntities` si elles n'existent pas déjà, puis met à jour l'API avec la liste complète des trading entities.
 
-   <main>
-       <h1>Pré-remplir un formulaire avec Svelte</h1>
-       <Form />
-   </main>
+3. **Interface utilisateur** :
+   - Affiche les trading entities existantes dans une liste.
+   - Affiche des cases à cocher pour les nouvelles trading entities disponibles.
+   - Bouton pour ajouter les trading entities sélectionnées.
 
-   <style>
-       main {
-           text-align: center;
-           padding: 1em;
-           max-width: 240px;
-           margin: 0 auto;
-       }
+4. **Mise à jour de l'API** :
+   - La fonction `updateTradingEntitiesOnServer` envoie une requête POST avec les trading entities mises à jour.
 
-       h1 {
-           color: #ff3e00;
-           text-transform: uppercase;
-           font-size: 1.5em;
-           margin-bottom: 0.5em;
-       }
-   </style>
-   ```
+### Améliorations possibles
 
-4. **Exécution de l'application:**
+- **Gestion des erreurs** : Affichez des messages d'erreur ou des notifications en cas d'échec du chargement ou de la mise à jour des données.
+- **Validation** : Ajoutez des validations supplémentaires pour les entrées utilisateur.
+- **Optimisation** : Optimisez la gestion de l'état et les mises à jour du DOM.
 
-   Lancez votre application en utilisant :
-
-   ```bash
-   npm run dev
-   ```
-
-   Cela devrait démarrer un serveur de développement et ouvrir votre application dans un navigateur. Votre formulaire sera pré-rempli avec les données récupérées via la requête GET lorsque le composant sera monté.
-
-Ce modèle de base montre comment récupérer des données depuis une API et les utiliser pour pré-remplir un formulaire dans une application Svelte. Vous pouvez adapter l'exemple en fonction de vos besoins spécifiques et ajouter des fonctionnalités supplémentaires selon vos exigences.
+Cette implémentation permet de sélectionner plusieurs trading entities à ajouter et de mettre à jour l'API en conséquence. Vous pouvez adapter et étendre ce code en fonction de vos besoins spécifiques.
