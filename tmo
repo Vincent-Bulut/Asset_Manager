@@ -1,112 +1,141 @@
 
-Pour enlever le préfixe "F2_" dans les valeurs de la colonne 7 dans Power Query via VBA, vous pouvez ajouter une étape de transformation à votre script Power Query pour remplacer le préfixe par une chaîne vide. Voici comment vous pouvez modifier votre script pour inclure cette transformation :
+Pour implémenter une search bar permettant de filtrer et sélectionner les trading entities dans un tableau, vous pouvez suivre ces étapes :
 
-### Script VBA modifié
+1. **Afficher les trading entities existantes**.
+2. **Ajouter une barre de recherche pour filtrer les trading entities disponibles**.
+3. **Permettre la sélection des trading entities filtrées dans un tableau**.
+4. **Ajouter les trading entities sélectionnées à la liste existante et mettre à jour l'API**.
 
-```vba
-Sub ImportAndFilterCSV()
-    Dim wb As Workbook
-    Dim ws As Worksheet
-    Dim csvFilePath As String
-    Dim acceptableValuesRange As Range
-    Dim acceptableValues As String
-    Dim lastRow As Long
-    Dim queryName As String
-    Dim pqQuery As WorkbookQuery
-    Dim i As Long
-    Dim valueArray As Variant
-    Dim conn As WorkbookConnection
-    
-    ' Définir le chemin du fichier CSV
-    csvFilePath = "C:\path\to\your\file.csv"  ' Modifiez ce chemin
-    
-    ' Définir la feuille où les résultats seront chargés
-    Set wb = ThisWorkbook
-    Set ws = wb.Sheets("Résultats")  ' Assurez-vous que cette feuille existe
-    
-    ' Effacer les anciennes données
-    ws.Cells.Clear
-    
-    ' Définir la plage des valeurs acceptables
-    With wb.Sheets("ValeursAcceptables")
-        lastRow = .Cells(.Rows.Count, 1).End(xlUp).Row
-        Set acceptableValuesRange = .Range("A1:A" & lastRow)
-    End With
-    
-    ' Convertir la plage de valeurs acceptables en une liste de chaînes entre guillemets
-    valueArray = acceptableValuesRange.Value
-    For i = 1 To UBound(valueArray, 1)
-        valueArray(i, 1) = """" & valueArray(i, 1) & """"
-    Next i
-    acceptableValues = Join(Application.Transpose(valueArray), ",")
-    
-    ' Nom de la requête
-    queryName = "FilteredCSV"
-    
-    ' Vérifier si la requête existe
-    On Error Resume Next
-    Set pqQuery = ActiveWorkbook.Queries(queryName)
-    On Error GoTo 0
-    
-    ' Définir les colonnes à conserver (excepté la dernière colonne)
-    Dim columnsToKeep As String
-    columnsToKeep = "{""Column1"", ""Column2"", ""Column3"", ""Column4"", ""Column5"", ""Column6"", ""Column7""}"  ' Modifiez ces noms en fonction des noms réels des colonnes
-    
-    ' Formule Power Query
-    Dim pqFormula As String
-    pqFormula = _
-        "let" & vbCrLf & _
-        "    Source = Csv.Document(File.Contents(""" & csvFilePath & """),[Delimiter="","", Columns=YourNumberOfColumns, Encoding=1252, QuoteStyle=QuoteStyle.Csv])," & vbCrLf & _
-        "    RemovedTopRows = Table.Skip(Source, 3)," & vbCrLf & _
-        "    PromotedHeaders = Table.PromoteHeaders(RemovedTopRows, [PromoteAllScalars=true])," & vbCrLf & _
-        "    RemovedLastColumn = Table.SelectColumns(PromotedHeaders, " & columnsToKeep & ")," & vbCrLf & _
-        "    DateFormatted = Table.TransformColumns(RemovedLastColumn, {{""DateColumn"", each Date.ToText(_, ""yyyyMM""), type text}})," & vbCrLf & _
-        "    PrefixRemoved = Table.TransformColumns(DateFormatted, {{""Column7"", each Text.Replace(_, ""F2_"", """")}})," & vbCrLf & _
-        "    FilteredRows = Table.SelectRows(PrefixRemoved, each List.Contains({" & acceptableValues & "}, [Column7]))" & vbCrLf & _
-        "in" & vbCrLf & _
-        "    FilteredRows"
-    
-    ' Si la requête existe, mettre à jour la formule
-    If Not pqQuery Is Nothing Then
-        pqQuery.Formula = pqFormula
-    Else
-        ' Sinon, créer une nouvelle requête
-        With ActiveWorkbook.Queries
-            .Add Name:=queryName, Formula:=pqFormula
-        End With
-    End If
-    
-    ' Charger la requête dans une nouvelle feuille
-    On Error Resume Next
-    Set conn = ActiveWorkbook.Connections(queryName)
-    If conn Is Nothing Then
-        Set conn = ActiveWorkbook.Connections.Add2(Name:=queryName, _
-                          Description:="", _
-                          ConnectionString:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & queryName & ";Extended Properties=""""" _
-                          CommandText:=queryName, _
-                          CommandType:=xlCmdTable)
-    End If
-    On Error GoTo 0
-    
-    With ws.ListObjects.Add(SourceType:=0, Source:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & queryName & ";Extended Properties=""""", Destination:=ws.Range("A1"))
-        .Name = queryName
-        .TableStyle = "TableStyleMedium2"
-    End With
-    
-    ' Actualiser la table pour obtenir les données
-    ws.ListObjects(queryName).Refresh
-    
-    MsgBox "Données filtrées importées avec succès !"
-End Sub
+Voici comment vous pouvez le faire en Svelte :
+
+### `TradingEntities.svelte`
+```svelte
+<script>
+  import { onMount } from 'svelte';
+  import { writable } from 'svelte/store';
+
+  let tradingEntities = writable([]);
+  let availableEntities = ['E14023', 'E14027', 'E14030', 'E14031']; // Exemple de nouvelles entités disponibles
+  let searchQuery = writable('');
+  let filteredEntities = writable([]);
+  let selectedEntities = writable([]);
+
+  // Fonction pour charger les trading entities depuis l'API
+  async function loadTradingEntities() {
+    try {
+      const response = await fetch('https://api.exemple.com/structure'); // Remplacez par l'URL de votre API
+      const data = await response.json();
+      tradingEntities.set(data.trading_entities.split(',')); // Supposons que l'attribut est `trading_entities`
+    } catch (error) {
+      console.error('Erreur lors du chargement des trading entities:', error);
+    }
+  }
+
+  // Fonction pour filtrer les entités disponibles en fonction de la recherche
+  function filterEntities() {
+    const query = $searchQuery.toLowerCase();
+    filteredEntities.set(availableEntities.filter(entity => entity.toLowerCase().includes(query)));
+  }
+
+  // Fonction pour ajouter les trading entities sélectionnées
+  function addTradingEntities() {
+    tradingEntities.update(current => {
+      selectedEntities.update(selected => {
+        selected.forEach(entity => {
+          if (!current.includes(entity) && entity !== '') {
+            current.push(entity);
+          }
+        });
+        updateTradingEntitiesOnServer(current); // Mise à jour de l'API
+        return [];
+      });
+      return current;
+    });
+  }
+
+  // Fonction pour mettre à jour les trading entities sur le serveur
+  async function updateTradingEntitiesOnServer(entities) {
+    try {
+      const response = await fetch('https://api.exemple.com/structure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ trading_entities: entities.join(',') }),
+      });
+      const data = await response.json();
+      console.log('Mise à jour réussie:', data);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des trading entities:', error);
+    }
+  }
+
+  $: $searchQuery, filterEntities(); // Mettre à jour les entités filtrées à chaque changement de recherche
+
+  onMount(() => {
+    loadTradingEntities();
+    filterEntities(); // Initialiser les entités filtrées
+  });
+</script>
+
+<style>
+  /* Ajoutez du style si nécessaire */
+</style>
+
+<div>
+  <h2>Trading Entities</h2>
+  <ul>
+    {#each $tradingEntities as entity}
+      <li>{entity}</li>
+    {/each}
+  </ul>
+
+  <h3>Ajouter de nouvelles Trading Entities</h3>
+  <input type="text" bind:value={$searchQuery} placeholder="Rechercher une trading entity" />
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sélectionner</th>
+        <th>Trading Entity</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each $filteredEntities as entity}
+        <tr>
+          <td><input type="checkbox" bind:group={$selectedEntities} value={entity} /></td>
+          <td>{entity}</td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+
+  <button on:click={addTradingEntities}>Ajouter les sélectionnées</button>
+</div>
 ```
 
-### Points à personnaliser
+### Explications
 
-1. **Chemin du fichier CSV** : Assurez-vous de définir `csvFilePath` avec le chemin correct de votre fichier CSV.
-2. **Nom de la feuille de résultats** : La feuille nommée `Résultats` doit exister dans votre classeur.
-3. **Nombre de colonnes dans le fichier CSV** : Remplacez `YourNumberOfColumns` par le nombre réel de colonnes dans votre fichier CSV.
-4. **Colonnes à conserver** : Modifiez `columnsToKeep` pour inclure toutes les colonnes à conserver, à l'exception de la dernière colonne que vous souhaitez supprimer.
-5. **Nom de la colonne de date** : Remplacez `"DateColumn"` par le nom réel de la colonne contenant les dates dans votre fichier CSV.
-6. **Nom de la colonne à modifier** : Remplacez `"Column7"` par le nom réel de la colonne dans laquelle vous souhaitez enlever le préfixe `"F2_"`.
+1. **Stores Svelte** :
+   - `tradingEntities` : Stocke les trading entities actuelles chargées depuis l'API.
+   - `availableEntities` : Stocke toutes les trading entities disponibles pour ajout.
+   - `searchQuery` : Stocke la requête de recherche entrée par l'utilisateur.
+   - `filteredEntities` : Stocke les trading entities filtrées en fonction de la requête de recherche.
+   - `selectedEntities` : Stocke les trading entities sélectionnées via les cases à cocher dans le tableau.
 
-Ce script modifié ajoute une étape `Table.TransformColumns` pour formater la colonne de date spécifiée au format `yyyyMM` et une autre étape `Text.Replace` pour enlever le préfixe `"F2_"` dans la colonne 7. Assurez-vous de remplacer `"DateColumn"` et `"Column7"` par les noms réels des colonnes dans votre CSV.
+2. **Fonctions principales** :
+   - `loadTradingEntities` : Charge les trading entities existantes depuis l'API et les stocke dans `tradingEntities`.
+   - `filterEntities` : Filtre les trading entities disponibles en fonction de la requête de recherche et met à jour `filteredEntities`.
+   - `addTradingEntities` : Ajoute les nouvelles trading entities sélectionnées à `tradingEntities` si elles n'existent pas déjà, puis met à jour l'API avec la liste complète des trading entities.
+   - `updateTradingEntitiesOnServer` : Met à jour les trading entities sur le serveur.
+
+3. **Interface utilisateur** :
+   - Affiche les trading entities existantes dans une liste.
+   - Affiche une barre de recherche pour filtrer les trading entities disponibles.
+   - Affiche un tableau avec les trading entities filtrées et des cases à cocher pour les sélectionner.
+   - Bouton pour ajouter les trading entities sélectionnées.
+
+4. **Réactivité** :
+   - Utilise `$: $searchQuery, filterEntities()` pour mettre à jour automatiquement les entités filtrées chaque fois que la requête de recherche change.
+
+Cette implémentation permet de rechercher et de sélectionner plusieurs trading entities à ajouter, puis de mettre à jour l'API en conséquence. Vous pouvez adapter et étendre ce code en fonction de vos besoins spécifiques.
