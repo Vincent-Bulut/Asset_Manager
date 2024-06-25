@@ -1,61 +1,37 @@
 
-from sqlalchemy.orm import sessionmaker, aliased
-from sqlalchemy import create_engine, select
+# Connexion à la base de données
+engine = create_engine('your_database_url')
+Base.metadata.create_all(engine)
+session = Session(engine)
 
-# Configuration de la base de données
-DATABASE_URL = "postgresql://user:password@host/database"
-engine = create_engine(DATABASE_URL)
+# ID du trader que vous voulez rechercher
+trader_id = 1
 
-Session = sessionmaker(bind=engine)
-session = Session()
-
-# Assurez-vous de remplacer ces imports par vos classes réelles
-from your_models import Users, BusinessManager, Traders
-
-# Aliasing des tables
-u = aliased(Users)
-bm = aliased(BusinessManager)
-t = aliased(Traders)
-
-# Construction de la requête
+# Requête pour obtenir les structures pour un trader donné
 stmt = (
-    select(u, bm, t)
-    .outerjoin(bm, u.ut == bm.ut)
-    .outerjoin(t, u.ut == t.ut)
-    .where(u.ut == 'ut3k8g')
+    select(Traders)
+    .options(joinedload(Traders.allocations).joinedload(TraderAllocation.structure))
+    .where(Traders.id_trader == trader_id)
 )
 
-# Exécution de la requête
-results = session.execute(stmt).all()
+# Exécuter la requête
+trader = session.scalars(stmt).one()
 
-# Formater les résultats
-formatted_result = []
-for user, business_manager, trader in results:
-    formatted_result.append({
-        "user": {
-            "ut": user.ut,
-            "role": user.role,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "disabled": user.disabled,
-        },
-        "business_manager": {
-            "ut": business_manager.ut if business_manager else None,
-            "ut_delegated": business_manager.ut_delegated if business_manager else None,
-            "publication_status": business_manager.publication_status if business_manager else None,
-        },
-        "trader": {
-            "id_trader": trader.id_trader if trader else None,
-            "ut": trader.ut if trader else None,
-            "ut_bm": trader.ut_bm if trader else None,
-            "entity_code": trader.entity_code if trader else None,
-            "start_date": trader.start_date if trader else None,
-            "end_date": trader.end_date if trader else None,
-            "publication_status": trader.publication_status if trader else None,
+# Formater les données
+formatted_data = {
+    "Trader ID": trader.id_trader,
+    "Structures": [
+        {
+            "Structure ID": allocation.structure.id_structure,
+            "CDR": allocation.structure.cdr,
+            "PS Type": allocation.structure.ps_type,
+            "CDR Name": allocation.structure.cdr_name,
+            "CDR Name 2": allocation.structure.cdr_name2,
         }
-    })
+        for allocation in trader.allocations
+    ]
+}
 
-# Retour des résultats formatés
-for item in formatted_result:
-    print(item)
+# Afficher les données formatées
+import pprint
+pprint.pprint(formatted_data)
