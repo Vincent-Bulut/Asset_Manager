@@ -1,28 +1,52 @@
-def get_business_managers_details(self):
-    result = self.session.query(
-        Users,
-        BusinessManager
-    ).join(
-        BusinessManager, BusinessManager.ut == Users.ut
-    ).all()
 
-    # Formater les résultats
-    formatted_result = []
-    for users, business_manager in result:
-        formatted_result.append({
-            "user": {
-                "ut": users.ut,
-                "role": users.role,
-                "email": users.email,
-                "first_name": users.first_name,
-                "last_name": users.last_name,
-                "disabled": users.disabled,
-            },
-            "business_manager": {
-                "ut": business_manager.ut,
-                "ut_delegated": business_manager.ut_delegated,
-                "publication_status": business_manager.publication_status,
-            }
-        })
-    
-    return formatted_result
+from sqlalchemy.orm import sessionmaker, aliased
+from sqlalchemy import create_engine, select
+
+# Configuration de la base de données
+DATABASE_URL = "postgresql://user:password@host/database"
+engine = create_engine(DATABASE_URL)
+
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Assurez-vous de remplacer ces imports par vos classes réelles
+from your_models import Users, BusinessManager, Traders
+
+# Aliasing des tables
+u = aliased(Users)
+bm = aliased(BusinessManager)
+t = aliased(Traders)
+
+# Construction de la requête
+stmt = (
+    select(u, bm, t)
+    .outerjoin(bm, u.ut == bm.ut)
+    .outerjoin(t, u.ut == t.ut)
+    .where(u.ut == 'ut3k8g')
+)
+
+# Exécution de la requête
+results = session.execute(stmt).all()
+
+# Formater les résultats
+formatted_result = []
+for user, business_manager, trader in results:
+    formatted_result.append({
+        "user": {
+            "ut": user.ut,
+            "role": user.role,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "disabled": user.disabled,
+        },
+        "business_manager": {
+            "ut": business_manager.ut if business_manager else None,
+            "ut_delegated": business_manager.ut_delegated if business_manager else None,
+            "publication_status": business_manager.publication_status if business_manager else None,
+        },
+        "trader": {
+            "id_trader": trader.id_trader if trader else None,
+            "ut": trader.ut if trader else None,
+            "ut_bm": trader.ut_bm if trader else None,
+            "entity_code": trader.entity_code​⬤
