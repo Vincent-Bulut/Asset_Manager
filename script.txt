@@ -1,115 +1,34 @@
 
-Pour permettre la sélection de plusieurs trading entities à ajouter, vous pouvez utiliser une liste de cases à cocher (checkboxes) ou un champ de sélection multiple. Voici comment vous pouvez le faire avec une liste de cases à cocher :
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import aliased
 
-### Étape 1: Mettre à jour le composant Svelte
+# Remplacer par l'URL de connexion appropriée pour votre base de données
+DATABASE_URL = "postgresql://user:password@host/database"
+engine = create_engine(DATABASE_URL)
 
-1. **Afficher les trading entities existantes**.
-2. **Permettre la sélection de multiples nouvelles trading entities via des cases à cocher**.
-3. **Ajouter les nouvelles trading entities sélectionnées et mettre à jour l'API**.
+Session = sessionmaker(bind=engine)
+session = Session()
 
-### `TradingEntities.svelte`
-```svelte
-<script>
-  import { onMount } from 'svelte';
-  import { writable } from 'svelte/store';
+# Assurez-vous de remplacer ces imports par vos classes réelles
+from your_models import Users, BusinessManager, Traders
 
-  let tradingEntities = writable([]);
-  let selectedEntities = writable([]);
-  let availableEntities = ['E14023', 'E14027', 'E14030', 'E14031']; // Exemple de nouvelles entités disponibles
+# Aliasing des tables
+u = aliased(Users)
+bm = aliased(BusinessManager)
+t = aliased(Traders)
 
-  // Fonction pour charger les trading entities depuis l'API
-  async function loadTradingEntities() {
-    try {
-      const response = await fetch('https://api.exemple.com/structure'); // Remplacez par l'URL de votre API
-      const data = await response.json();
-      tradingEntities.set(data.trading_entities.split(',')); // Supposons que l'attribut est `trading_entities`
-    } catch (error) {
-      console.error('Erreur lors du chargement des trading entities:', error);
-    }
-  }
+# Construction de la requête
+stmt = (
+    select(u, bm, t)
+    .outerjoin(bm, u.ut == bm.ut)
+    .outerjoin(t, u.ut == t.ut)
+    .where(u.ut == 'ut3k8g')
+)
 
-  // Fonction pour ajouter les nouvelles trading entities sélectionnées
-  function addTradingEntities() {
-    tradingEntities.update(current => {
-      selectedEntities.update(selected => {
-        selected.forEach(entity => {
-          if (!current.includes(entity) && entity !== '') {
-            current.push(entity);
-          }
-        });
-        updateTradingEntitiesOnServer(current); // Mise à jour de l'API
-        return [];
-      });
-      return current;
-    });
-  }
+# Exécution de la requête
+results = session.execute(stmt).all()
 
-  // Fonction pour mettre à jour les trading entities sur le serveur
-  async function updateTradingEntitiesOnServer(entities) {
-    try {
-      const response = await fetch('https://api.exemple.com/structure', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ trading_entities: entities.join(',') }),
-      });
-      const data = await response.json();
-      console.log('Mise à jour réussie:', data);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour des trading entities:', error);
-    }
-  }
-
-  onMount(() => {
-    loadTradingEntities();
-  });
-</script>
-
-<style>
-  /* Ajoutez du style si nécessaire */
-</style>
-
-<div>
-  <h2>Trading Entities</h2>
-  <ul>
-    {#each $tradingEntities as entity}
-      <li>{entity}</li>
-    {/each}
-  </ul>
-  <h3>Ajouter de nouvelles Trading Entities</h3>
-  {#each availableEntities as entity}
-    <div>
-      <input type="checkbox" bind:group={$selectedEntities} value={entity} />
-      <label>{entity}</label>
-    </div>
-  {/each}
-  <button on:click={addTradingEntities}>Ajouter les sélectionnées</button>
-</div>
-```
-
-### Explications
-
-1. **Stores Svelte** :
-   - `tradingEntities` : Stocke les trading entities actuelles chargées depuis l'API.
-   - `selectedEntities` : Stocke les trading entities sélectionnées via les cases à cocher.
-
-2. **Fonctions principales** :
-   - `loadTradingEntities` : Charge les trading entities existantes depuis l'API et les stocke dans `tradingEntities`.
-   - `addTradingEntities` : Ajoute les nouvelles trading entities sélectionnées à `tradingEntities` si elles n'existent pas déjà, puis met à jour l'API avec la liste complète des trading entities.
-
-3. **Interface utilisateur** :
-   - Affiche les trading entities existantes dans une liste.
-   - Affiche des cases à cocher pour les nouvelles trading entities disponibles.
-   - Bouton pour ajouter les trading entities sélectionnées.
-
-4. **Mise à jour de l'API** :
-   - La fonction `updateTradingEntitiesOnServer` envoie une requête POST avec les trading entities mises à jour.
-
-### Améliorations possibles
-
-- **Gestion des erreurs** : Affichez des messages d'erreur ou des notifications en cas d'échec du chargement ou de la mise à jour des données.
-- **Validation** : Ajoutez des validations supplémentaires pour les entrées utilisateur.
-- **Optimisation** : Optimisez la gestion de l'état et les mises à jour du DOM.
-
-Cette implémentation permet de sélectionner plusieurs trading entities à ajouter et de mettre à jour l'API en conséquence. Vous pouvez adapter et étendre ce code en fonction de vos besoins spécifiques.
+# Affichage des résultats
+for row in results:
+    print(row)
