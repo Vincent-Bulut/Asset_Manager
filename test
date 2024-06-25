@@ -9,28 +9,26 @@ trader_id = 1
 
 # Requête pour obtenir les structures pour un trader donné
 stmt = (
-    select(Traders)
-    .options(joinedload(Traders.allocations).joinedload(TraderAllocation.structure))
+    select(Structure)
+    .join(TraderAllocation, Structure.id_structure == TraderAllocation.id_struct)
+    .join(Traders, Traders.id_trader == TraderAllocation.id_trd)
     .where(Traders.id_trader == trader_id)
 )
 
 # Exécuter la requête
-trader = session.scalars(stmt).one()
+result = session.execute(stmt).fetchall()
 
 # Formater les données
-formatted_data = {
-    "Trader ID": trader.id_trader,
-    "Structures": [
-        {
-            "Structure ID": allocation.structure.id_structure,
-            "CDR": allocation.structure.cdr,
-            "PS Type": allocation.structure.ps_type,
-            "CDR Name": allocation.structure.cdr_name,
-            "CDR Name 2": allocation.structure.cdr_name2,
-        }
-        for allocation in trader.allocations
-    ]
-}
+formatted_data = [
+    {
+        "Structure ID": row.Structure.id_structure,
+        "CDR": row.Structure.cdr,
+        "PS Type": row.Structure.ps_type,
+        "CDR Name": row.Structure.cdr_name,
+        "PS Name": row.Structure.ps_name,
+    }
+    for row in result
+]
 
 # Afficher les données formatées
 import pprint
