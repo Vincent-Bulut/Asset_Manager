@@ -49,4 +49,13 @@ for user, business_manager, trader in results:
             "id_trader": trader.id_trader if trader else None,
             "ut": trader.ut if trader else None,
             "ut_bm": trader.ut_bm if trader else None,
-            "entity_code": trader.entity_code​⬤
+            "entity_code": trader.entity_code if trader else None,
+            "start_date": trader.start_date if trader else None,
+            "end_date": trader.end_date if trader else None,
+            "publication_status": trader.publication_status if trader else None,
+        }
+    })
+
+# Retour des résultats formatés
+for item in formatted_result:
+    print(item)
