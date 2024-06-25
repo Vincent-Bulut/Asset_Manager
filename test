@@ -1,1 +1,28 @@
-test
+def get_business_managers_details(self):
+    result = self.session.query(
+        Users,
+        BusinessManager
+    ).join(
+        BusinessManager, BusinessManager.ut == Users.ut
+    ).all()
+
+    # Formater les résultats
+    formatted_result = []
+    for users, business_manager in result:
+        formatted_result.append({
+            "user": {
+                "ut": users.ut,
+                "role": users.role,
+                "email": users.email,
+                "first_name": users.first_name,
+                "last_name": users.last_name,
+                "disabled": users.disabled,
+            },
+            "business_manager": {
+                "ut": business_manager.ut,
+                "ut_delegated": business_manager.ut_delegated,
+                "publication_status": business_manager.publication_status,
+            }
+        })
+    
+    return formatted_result
