@@ -4,9 +4,11 @@ function addStructure(elementsToAdd) {
 
     // Créer un ensemble des `id_structure` déjà présents dans `trd_allocations`
     const existingIds = new Set(trd_allocations.map(allocation => allocation.id_structure));
+    console.log('Existing IDs:', existingIds);
 
     // Filtrer les nouveaux éléments pour exclure ceux dont l'id est déjà présent dans `trd_allocations`
     const newElements = elementsToAdd.filter(element => !existingIds.has(element.id_structure));
+    console.log('New Elements to Add:', newElements);
 
     // Ajouter les nouveaux éléments filtrés à `trd_allocations`
     trd_allocations.push(...newElements);
