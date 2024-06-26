@@ -1,35 +1,16 @@
 
-# Connexion à la base de données
-engine = create_engine('your_database_url')
-Base.metadata.create_all(engine)
-session = Session(engine)
+function addStructure(elementsToAdd) {
+    console.log('elt to add', elementsToAdd);
 
-# ID du trader que vous voulez rechercher
-trader_id = 1
+    // Créer un ensemble des `id_structure` déjà présents dans `trd_allocations`
+    const existingIds = new Set(trd_allocations.map(allocation => allocation.id_structure));
 
-# Requête pour obtenir les structures pour un trader donné
-stmt = (
-    select(Structure)
-    .join(TraderAllocation, Structure.id_structure == TraderAllocation.id_struct)
-    .join(Traders, Traders.id_trader == TraderAllocation.id_trd)
-    .where(Traders.id_trader == trader_id)
-)
+    // Filtrer les nouveaux éléments pour exclure ceux dont l'id est déjà présent dans `trd_allocations`
+    const newElements = elementsToAdd.filter(element => !existingIds.has(element.id_structure));
 
-# Exécuter la requête
-result = session.execute(stmt).fetchall()
+    // Ajouter les nouveaux éléments filtrés à `trd_allocations`
+    trd_allocations.push(...newElements);
 
-# Formater les données
-formatted_data = [
-    {
-        "Structure ID": row.Structure.id_structure,
-        "CDR": row.Structure.cdr,
-        "PS Type": row.Structure.ps_type,
-        "CDR Name": row.Structure.cdr_name,
-        "PS Name": row.Structure.ps_name,
-    }
-    for row in result
-]
-
-# Afficher les données formatées
-import pprint
-pprint.pprint(formatted_data)
+    console.log('Updated trd_allocations', trd_allocations);
+    return;
+}
