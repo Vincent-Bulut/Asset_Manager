@@ -1,40 +1,28 @@
 
-error_log /dev/stdout debug;
+function removeStructures(structuresToDelete) {
+    console.log('structuresToDelete', structuresToDelete);
+    console.log('actual trd_alloc', trd_allocations);
 
-events {
-    worker_connections 1024;
+    // Créer un ensemble des id_structure à supprimer
+    const idsToDelete = new Set(structuresToDelete.map(structure => structure.id_structure));
+    console.log('IDs to delete', idsToDelete);
+
+    // Filtrer trd_allocations pour supprimer les éléments avec id_structure dans idsToDelete
+    trd_allocations = trd_allocations.filter(allocation => !idsToDelete.has(allocation.id_structure));
+    
+    console.log('Updated trd_allocations', trd_allocations);
 }
 
-http {
-    server {
-        listen 5700;
-        server_name profit-split.wac.dev.emea.cib profit-split.wac.int.emea.cib profit-split.wac.emea.cib;
+// Exemple d'utilisation
+let trd_allocations = [
+    { id_structure: 1, name: 'Allocation 1' },
+    { id_structure: 2, name: 'Allocation 2' },
+    { id_structure: 3, name: 'Allocation 3' }
+];
 
-        location / {
-            proxy_pass http://webapp:80/;
-            try_files $uri $uri/ /index.html;  # Important pour le routage client-side de SvelteKit
-        }
+let structuresToDelete = [
+    { id_structure: 2, name: 'Delete 1' },
+    { id_structure: 3, name: 'Delete 2' }
+];
 
-        location /api/ {
-            proxy_pass http://api:8000/;
-        }
-
-        # Servir les fichiers statiques (JS, CSS, images, etc.)
-        location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|svg|woff|woff2|ttf|eot)$ {
-            try_files $uri =404;
-            access_log off;
-            add_header Cache-Control "public, max-age=3600";
-        }
-
-        # Gérer les fichiers spécifiques comme favicon.ico et robots.txt
-        location = /favicon.ico {
-            try_files /favicon.ico =204;
-        }
-        location = /robots.txt {
-            try_files /robots.txt =204;
-        }
-
-        # Rediriger les erreurs 404 vers l'index pour permettre le routage côté client
-        error_page 404 /index.html;
-    }
-}
+removeStructures(structuresToDelete);
