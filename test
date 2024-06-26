@@ -1,18 +1,40 @@
 
-function addStructure(elementsToAdd) {
-    console.log('elt to add', elementsToAdd);
+server {
+    listen 80;
+    server_name yourdomain.com;
 
-    // Créer un ensemble des `id_structure` déjà présents dans `trd_allocations`
-    const existingIds = new Set(trd_allocations.map(allocation => allocation.id_structure));
-    console.log('Existing IDs:', existingIds);
+    root /path/to/your/sveltekit/build;
+    index index.html;
 
-    // Filtrer les nouveaux éléments pour exclure ceux dont l'id est déjà présent dans `trd_allocations`
-    const newElements = elementsToAdd.filter(element => !existingIds.has(element.id_structure));
-    console.log('New Elements to Add:', newElements);
+    # Servir les fichiers statiques
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 
-    // Ajouter les nouveaux éléments filtrés à `trd_allocations`
-    trd_allocations.push(...newElements);
+    # Gérer les fichiers spécifiques comme favicon.ico et robots.txt
+    location = /favicon.ico {
+        try_files /favicon.ico =204;
+    }
+    location = /robots.txt {
+        try_files /robots.txt =204;
+    }
 
-    console.log('Updated trd_allocations', trd_allocations);
-    return;
+    # Servir les ressources statiques (JS, CSS, images, etc.)
+    location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|svg|woff|woff2|ttf|eot)$ {
+        try_files $uri =404;
+        access_log off;
+        add_header Cache-Control "public, max-age=3600";
+    }
+
+    # Rediriger les erreurs 404 vers l'index pour permettre le routage côté client
+    error_page 404 /index.html;
+
+    # Gérer les API ou autres routes spécifiques si nécessaire
+    location /api {
+        proxy_pass http://backend_server;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
