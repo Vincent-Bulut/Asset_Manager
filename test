@@ -1,40 +1,40 @@
 
-server {
-    listen 80;
-    server_name yourdomain.com;
+error_log /dev/stdout debug;
 
-    root /path/to/your/sveltekit/build;
-    index index.html;
+events {
+    worker_connections 1024;
+}
 
-    # Servir les fichiers statiques
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+http {
+    server {
+        listen 5700;
+        server_name profit-split.wac.dev.emea.cib profit-split.wac.int.emea.cib profit-split.wac.emea.cib;
 
-    # Gérer les fichiers spécifiques comme favicon.ico et robots.txt
-    location = /favicon.ico {
-        try_files /favicon.ico =204;
-    }
-    location = /robots.txt {
-        try_files /robots.txt =204;
-    }
+        location / {
+            proxy_pass http://webapp:80/;
+            try_files $uri $uri/ /index.html;  # Important pour le routage client-side de SvelteKit
+        }
 
-    # Servir les ressources statiques (JS, CSS, images, etc.)
-    location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|svg|woff|woff2|ttf|eot)$ {
-        try_files $uri =404;
-        access_log off;
-        add_header Cache-Control "public, max-age=3600";
-    }
+        location /api/ {
+            proxy_pass http://api:8000/;
+        }
 
-    # Rediriger les erreurs 404 vers l'index pour permettre le routage côté client
-    error_page 404 /index.html;
+        # Servir les fichiers statiques (JS, CSS, images, etc.)
+        location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|svg|woff|woff2|ttf|eot)$ {
+            try_files $uri =404;
+            access_log off;
+            add_header Cache-Control "public, max-age=3600";
+        }
 
-    # Gérer les API ou autres routes spécifiques si nécessaire
-    location /api {
-        proxy_pass http://backend_server;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        # Gérer les fichiers spécifiques comme favicon.ico et robots.txt
+        location = /favicon.ico {
+            try_files /favicon.ico =204;
+        }
+        location = /robots.txt {
+            try_files /robots.txt =204;
+        }
+
+        # Rediriger les erreurs 404 vers l'index pour permettre le routage côté client
+        error_page 404 /index.html;
     }
 }
