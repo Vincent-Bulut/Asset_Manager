@@ -1,28 +1,36 @@
 
-function removeStructures(structuresToDelete) {
-    console.log('structuresToDelete', structuresToDelete);
-    console.log('actual trd_alloc', trd_allocations);
+class TraderAllocationCore(Core):
 
-    // Créer un ensemble des id_structure à supprimer
-    const idsToDelete = new Set(structuresToDelete.map(structure => structure.id_structure));
-    console.log('IDs to delete', idsToDelete);
+    def create_trader_alloc(self, id_trd: int, id_struct: int):
+        # Vérifier si l'allocation existe déjà
+        existing_alloc = self.session.scalars(
+            select(TraderAllocation).where(
+                TraderAllocation.id_trd == id_trd,
+                TraderAllocation.id_struct == id_struct
+            )
+        ).first()
 
-    // Filtrer trd_allocations pour supprimer les éléments avec id_structure dans idsToDelete
-    trd_allocations = trd_allocations.filter(allocation => !idsToDelete.has(allocation.id_structure));
-    
-    console.log('Updated trd_allocations', trd_allocations);
-}
+        if existing_alloc is not None:
+            # Allocation existe déjà, vous pouvez lever une exception ou simplement retourner
+            print("Allocation already exists")
+            return existing_alloc
 
-// Exemple d'utilisation
-let trd_allocations = [
-    { id_structure: 1, name: 'Allocation 1' },
-    { id_structure: 2, name: 'Allocation 2' },
-    { id_structure: 3, name: 'Allocation 3' }
-];
+        # Créer une nouvelle allocation si elle n'existe pas
+        new_trd_alloc = TraderAllocation(
+            id_trd=id_trd,
+            id_struct=id_struct
+        )
 
-let structuresToDelete = [
-    { id_structure: 2, name: 'Delete 1' },
-    { id_structure: 3, name: 'Delete 2' }
-];
+        self.session.add(new_trd_alloc)
+        self.session.commit()
 
-removeStructures(structuresToDelete);
+        return new_trd_alloc
+
+    def get_trader_allocation(self, req: TraderAllocModel):
+        query = self.session.scalars(
+            select(TraderAllocation).where(
+                TraderAllocation.id_trd == req.id_trader,
+                TraderAllocation.id_struct == req.id_structure
+            )
+        ).all()
+        return query
