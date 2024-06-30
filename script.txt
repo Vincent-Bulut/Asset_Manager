@@ -1,34 +1,64 @@
 
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import aliased
+from sqlalchemy.exc import SQLAlchemyError
 
-# Remplacer par l'URL de connexion appropriée pour votre base de données
-DATABASE_URL = "postgresql://user:password@host/database"
-engine = create_engine(DATABASE_URL)
+# Définir vos modèles ici (Trader, Structure, TraderAllocation)
 
+# Créez un moteur et une session
+engine = create_engine('DATABASE_URL')  # Remplacez 'DATABASE_URL' par votre URL de base de données
 Session = sessionmaker(bind=engine)
-session = Session()
 
-# Assurez-vous de remplacer ces imports par vos classes réelles
-from your_models import Users, BusinessManager, Traders
+def insert_data(trader_data, structure_data_list, trader_allocation_data_list):
+    session = Session()
+    try:
+        with session.begin():
+            # Insérer le trader
+            trader = Trader(**trader_data)
+            session.add(trader)
+            session.flush()  # pour obtenir l'id du trader
 
-# Aliasing des tables
-u = aliased(Users)
-bm = aliased(BusinessManager)
-t = aliased(Traders)
+            # Insérer les structures
+            structures = []
+            for structure_data in structure_data_list:
+                structure = Structure(**structure_data)
+                session.add(structure)
+                structures.append(structure)
+            session.flush()  # pour obtenir les ids des structures
 
-# Construction de la requête
-stmt = (
-    select(u, bm, t)
-    .outerjoin(bm, u.ut == bm.ut)
-    .outerjoin(t, u.ut == t.ut)
-    .where(u.ut == 'ut3k8g')
-)
+            # Insérer les allocations de trader
+            for allocation_data in trader_allocation_data_list:
+                allocation_data['id_trd'] = trader.id_trader  # Associe l'ID du trader
+                allocation = TraderAllocation(**allocation_data)
+                session.add(allocation)
+            
+            # Valider la transaction
+            session.commit()
+            print("Data inserted successfully.")
+    except SQLAlchemyError as e:
+        session.rollback()
+        print(f"An error occurred: {e}")
+    finally:
+        session.close()
 
-# Exécution de la requête
-results = session.execute(stmt).all()
+# Exemple de données à insérer
+trader_data = {
+    'name': 'John Doe',
+    'business_manager': 'Manager Name',  # Ajustez selon votre modèle
+    # autres champs...
+}
 
-# Affichage des résultats
-for row in results:
-    print(row)
+structure_data_list = [
+    {'name': 'Structure 1', 'code': 'S1', 'type': 'Type 1'},
+    {'name': 'Structure 2', 'code': 'S2', 'type': 'Type 2'},
+    # autres structures...
+]
+
+trader_allocation_data_list = [
+    {'id_struct': 1},  # Vous pouvez remplacer par des données appropriées
+    {'id_struct': 2},
+    # autres allocations...
+]
+
+# Appeler la fonction d'insertion
+insert_data(trader_data, structure_data_list, trader_allocation_data_list)
