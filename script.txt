@@ -1,64 +1,59 @@
 
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 
-# Définir vos modèles ici (Trader, Structure, TraderAllocation)
-
-# Créez un moteur et une session
-engine = create_engine('DATABASE_URL')  # Remplacez 'DATABASE_URL' par votre URL de base de données
+# Assuming the engine and session are set up correctly
+engine = create_engine('DATABASE_URL')  # Replace 'DATABASE_URL' with your actual database URL
 Session = sessionmaker(bind=engine)
 
-def insert_data(trader_data, structure_data_list, trader_allocation_data_list):
+def update_trader_and_allocations(trader_id, trader_data, new_struct_ids):
     session = Session()
     try:
-        with session.begin():
-            # Insérer le trader
-            trader = Trader(**trader_data)
-            session.add(trader)
-            session.flush()  # pour obtenir l'id du trader
+        # Step 1: Fetch existing data
+        trader = session.query(Traders).filter_by(id_trader=trader_id).one()
+        current_allocations = {alloc.id_struct for alloc in trader.trader_allocations}
 
-            # Insérer les structures
-            structures = []
-            for structure_data in structure_data_list:
-                structure = Structure(**structure_data)
-                session.add(structure)
-                structures.append(structure)
-            session.flush()  # pour obtenir les ids des structures
+        # Step 2: Update Traders table
+        for key, value in trader_data.items():
+            setattr(trader, key, value)
+        
+        # Step 3: Update TraderAllocation table
+        new_struct_ids = set(new_struct_ids)
+        
+        # Add new allocations
+        allocations_to_add = new_struct_ids - current_allocations
+        for id_struct in allocations_to_add:
+            new_allocation = TraderAllocation(id_trd=trader_id, id_struct=id_struct)
+            session.add(new_allocation)
 
-            # Insérer les allocations de trader
-            for allocation_data in trader_allocation_data_list:
-                allocation_data['id_trd'] = trader.id_trader  # Associe l'ID du trader
-                allocation = TraderAllocation(**allocation_data)
-                session.add(allocation)
-            
-            # Valider la transaction
-            session.commit()
-            print("Data inserted successfully.")
+        # Remove old allocations
+        allocations_to_remove = current_allocations - new_struct_ids
+        for id_struct in allocations_to_remove:
+            # Check if there are any references in TraderTimes
+            is_referenced = session.query(TraderTimes).filter_by(id_struct=id_struct).count() > 0
+            if not is_referenced:
+                allocation_to_remove = session.query(TraderAllocation).filter_by(id_trd=trader_id, id_struct=id_struct).one()
+                session.delete(allocation_to_remove)
+
+        # Commit the transaction
+        session.commit()
+        print("Data updated successfully.")
     except SQLAlchemyError as e:
         session.rollback()
         print(f"An error occurred: {e}")
     finally:
         session.close()
 
-# Exemple de données à insérer
+# Example data to update
+trader_id = 1
 trader_data = {
-    'name': 'John Doe',
-    'business_manager': 'Manager Name',  # Ajustez selon votre modèle
-    # autres champs...
+    'name': 'Jane Doe',
+    'business_manager': 'New Manager',  # Adjust according to your model
+    # other fields...
 }
+new_struct_ids = [1, 3, 4]  # List of new structure IDs
 
-structure_data_list = [
-    {'name': 'Structure 1', 'code': 'S1', 'type': 'Type 1'},
-    {'name': 'Structure 2', 'code': 'S2', 'type': 'Type 2'},
-    # autres structures...
-]
-
-trader_allocation_data_list = [
-    {'id_struct': 1},  # Vous pouvez remplacer par des données appropriées
-    {'id_struct': 2},
-    # autres allocations...
-]
-
-# Appeler la fonction d'insertion
-insert_data(trader_data, structure_data_list, trader_allocation_data_list)
+# Call the update function
+update_trader_and_allocations(trader_id, trader_data, new_struct_ids)
