@@ -1,9 +1,10 @@
 
+Pour créer un tableau croisé dynamique où certaines colonnes sont agrégées par moyenne et d'autres par somme, vous pouvez utiliser un dictionnaire pour spécifier différentes fonctions d'agrégation pour chaque colonne. Voici comment le faire avec `pandas` :
+
+```python
 import pandas as pd
 
 # Supposons que df soit votre DataFrame avec les données nécessaires
-# Voici un exemple de structure de DataFrame. Adaptez-le à vos données réelles.
-
 data = {
     'Source end date': ['2023-01-01', '2023-02-01', '2023-03-01'],
     'Bucket': ['A', 'B', 'C'],
@@ -23,16 +24,16 @@ data = {
 
 df = pd.DataFrame(data)
 
-# Créer le tableau croisé dynamique
+# Créer le tableau croisé dynamique avec des fonctions d'agrégation différentes
 pivot_table = pd.pivot_table(
     df,
-    values=[
-        'FTP - Average maturity on average amount',
-        'Weighted average selected interest rate - Rate',
-        'Weighted average selected gross margin',
-        'FTP - Weighted average Liquidity Component - Rate',
-        'WAO (Weighted Avg. Outstanding) amount in EUR'
-    ],
+    values={
+        'FTP - Average maturity on average amount': 'mean',
+        'Weighted average selected interest rate - Rate': 'mean',
+        'Weighted average selected gross margin': 'mean',
+        'FTP - Weighted average Liquidity Component - Rate': 'mean',
+        'WAO (Weighted Avg. Outstanding) amount in EUR': 'sum'
+    },
     index=[
         'Section - Level 4',
         'Section - Level 1',
@@ -46,7 +47,20 @@ pivot_table = pd.pivot_table(
         'Source end date',
         'Bucket'
     ],
-    aggfunc='mean'  # Vous pouvez aussi utiliser d'autres fonctions d'agrégation comme 'sum', 'max', etc.
+    aggfunc={
+        'FTP - Average maturity on average amount': 'mean',
+        'Weighted average selected interest rate - Rate': 'mean',
+        'Weighted average selected gross margin': 'mean',
+        'FTP - Weighted average Liquidity Component - Rate': 'mean',
+        'WAO (Weighted Avg. Outstanding) amount in EUR': 'sum'
+    }
 )
 
 print(pivot_table)
+```
+
+### Explications :
+- `values` : Utilise un dictionnaire pour spécifier les colonnes et leurs fonctions d'agrégation respectives.
+- `aggfunc` : Utilise également un dictionnaire pour appliquer différentes fonctions d'agrégation à différentes colonnes.
+
+Ce code vous permet de créer un tableau croisé dynamique avec des moyennes pour certaines colonnes et une somme pour la colonne "WAO (Weighted Avg. Outstanding) amount in EUR".
