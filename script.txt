@@ -1,0 +1,32 @@
+import pandas as pd
+
+# Exemple de DataFrame avec des index supplémentaires
+data = {
+    'Category': ['Cat1', 'Cat1', 'Cat2', 'Cat2'],
+    'SubCategory': ['Sub1', 'Sub1', 'Sub2', 'Sub2'],
+    'Item': ['Item1', 'Item2', 'Item1', 'Item2'],
+    'Date': ['2021-01-01', '2021-01-01', '2021-01-02', '2021-01-02'],
+    'Bucket': ['A', 'B', 'A', 'B'],
+    'Value': [10, 20, 15, 25]
+}
+
+df = pd.DataFrame(data)
+
+# Conversion de la colonne Date en datetime
+df['Date'] = pd.to_datetime(df['Date'])
+
+# Utilisation de pivot_table pour créer la table pivot avec des index supplémentaires
+pivot_df = pd.pivot_table(
+    df,
+    values='Value',
+    index=['Category', 'SubCategory', 'Item'],
+    columns=['Date', 'Bucket'],
+    aggfunc='sum',
+    fill_value=0
+)
+
+# Réorganisation de l'index et des colonnes pour une meilleure lisibilité
+pivot_df.columns = pd.MultiIndex.from_tuples(pivot_df.columns, names=['Date', 'Bucket'])
+pivot_df = pivot_df.sort_index(axis=1, level=[0, 1])
+
+print(pivot_df)
