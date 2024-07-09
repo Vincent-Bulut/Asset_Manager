@@ -1,32 +1,49 @@
+
 import pandas as pd
+from flask import Flask, request, jsonify
 
-# Exemple de DataFrame avec des index supplémentaires
-data = {
-    'Category': ['Cat1', 'Cat1', 'Cat2', 'Cat2'],
-    'SubCategory': ['Sub1', 'Sub1', 'Sub2', 'Sub2'],
-    'Item': ['Item1', 'Item2', 'Item1', 'Item2'],
-    'Date': ['2021-01-01', '2021-01-01', '2021-01-02', '2021-01-02'],
-    'Bucket': ['A', 'B', 'A', 'B'],
-    'Value': [10, 20, 15, 25]
-}
+app = Flask(__name__)
 
-df = pd.DataFrame(data)
+class PivotTableCreator:
+    def __init__(self, data_itac_c, data_steve_model, data_steve_cont, data_steve_cont_np):
+        self.data_itac_c = data_itac_c
+        self.data_steve_model = data_steve_model
+        self.data_steve_cont = data_steve_cont
+        self.data_steve_cont_np = data_steve_cont_np
 
-# Conversion de la colonne Date en datetime
-df['Date'] = pd.to_datetime(df['Date'])
+    def create_pivot_table(self, data, index, columns, values, aggfunc='mean'):
+        pivot_table = pd.pivot_table(data, index=index, columns=columns, values=values, aggfunc=aggfunc)
+        return pivot_table
 
-# Utilisation de pivot_table pour créer la table pivot avec des index supplémentaires
-pivot_df = pd.pivot_table(
-    df,
-    values='Value',
-    index=['Category', 'SubCategory', 'Item'],
-    columns=['Date', 'Bucket'],
-    aggfunc='sum',
-    fill_value=0
-)
+    def create_itac_c_pivot(self):
+        return self.create_pivot_table(self.data_itac_c, index=['index_column'], columns=['column_name'], values=['value_column'])
 
-# Réorganisation de l'index et des colonnes pour une meilleure lisibilité
-pivot_df.columns = pd.MultiIndex.from_tuples(pivot_df.columns, names=['Date', 'Bucket'])
-pivot_df = pivot_df.sort_index(axis=1, level=[0, 1])
+    def create_steve_model_pivot(self):
+        return self.create_pivot_table(self.data_steve_model, index=['index_column'], columns=['column_name'], values=['value_column'])
 
-print(pivot_df)
+    # Ajoutez d'autres méthodes pour chaque DataFrame si nécessaire
+
+@app.route('/route_3', methods=['POST'])
+def route_3():
+    data_itac_c = pd.DataFrame(request.json['data_itac_c'])
+    data_steve_model = pd.DataFrame(request.json['data_steve_model'])
+    data_steve_cont = pd.DataFrame(request.json['data_steve_cont'])
+    data_steve_cont_np = pd.DataFrame(request.json['data_steve_cont_np'])
+
+    pivot_creator = PivotTableCreator(data_itac_c, data_steve_model, data_steve_cont, data_steve_cont_np)
+
+    pivot_itac_c = pivot_creator.create_itac_c_pivot()
+    pivot_steve_model = pivot_creator.create_steve_model_pivot()
+    # Créez d'autres pivot tables si nécessaire
+
+    # Convertissez les pivot tables en JSON pour les retourner dans la réponse
+    response = {
+        'pivot_itac_c': pivot_itac_c.to_json(),
+        'pivot_steve_model': pivot_steve_model.to_json(),
+        # Ajoutez d'autres pivot tables si nécessaire
+    }
+
+    return jsonify(response)
+
+if __name__ == '__main__':
+    app.run(debug=True)
