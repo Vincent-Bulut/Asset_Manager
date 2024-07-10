@@ -83,4 +83,15 @@ print("\nDataFrame après réinitialisation du Multi-Index des Colonnes:")
 print(df)
 ```
 
-Exécutons cet exemple pour voir les résultats.
+Exécutons cet exemple pour voir les 
+résultats.
+
+# Utilisation de .loc pour accéder à la valeur spécifique
+value_loc = df.loc[1, ('A', 'one')]
+print("\nValeur de la deuxième ligne pour la colonne ('A', 'one') avec .loc:")
+print(value_loc)
+
+# Utilisation de .iloc pour accéder à la valeur spécifique
+value_iloc = df.iloc[1, df.columns.get_loc(('A', 'one'))]
+print("\nValeur de la deuxième ligne pour la colonne ('A', 'one') avec .iloc:")
+print(value_iloc)
