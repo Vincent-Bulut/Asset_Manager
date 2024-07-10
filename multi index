@@ -1,0 +1,86 @@
+Les DataFrames pandas peuvent contenir des multi-index, non seulement pour les lignes (index), mais aussi pour les colonnes. Cela permet de manipuler des structures de données plus complexes et hiérarchiques. Un multi-index pour les colonnes est particulièrement utile lorsque vous avez des données organisées en plusieurs niveaux ou catégories.
+
+### Exemple de Création d'un DataFrame avec Multi-Index pour les Colonnes
+
+Voici comment créer et manipuler un DataFrame avec un multi-index pour les colonnes :
+
+#### Création d'un DataFrame avec un Multi-Index pour les Colonnes
+```python
+import pandas as pd
+import numpy as np
+
+# Création d'un DataFrame avec des multi-index pour les colonnes
+arrays = [
+    ['A', 'A', 'B', 'B'],
+    ['one', 'two', 'one', 'two']
+]
+tuples = list(zip(*arrays))
+index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+df = pd.DataFrame(np.random.randn(4, 4), columns=index)
+
+print("DataFrame avec Multi-Index pour les Colonnes:")
+print(df)
+```
+
+#### Accès aux Données avec un Multi-Index pour les Colonnes
+Pour accéder aux données dans un DataFrame avec des colonnes multi-indexées, vous devez spécifier tous les niveaux de l'index.
+
+##### Accès aux Données d'une Colonne Spécifique
+```python
+print("\nAccès aux données de la colonne ('A', 'one'):")
+print(df['A']['one'])
+```
+
+##### Accès aux Données de Toutes les Colonnes d'un Niveau Supérieur
+```python
+print("\nAccès aux données de toutes les colonnes sous 'A':")
+print(df['A'])
+```
+
+#### Réinitialisation du Multi-Index pour les Colonnes
+Vous pouvez également réinitialiser le multi-index des colonnes pour aplatir la structure.
+
+##### Réinitialisation du Multi-Index
+```python
+# Réinitialisation du multi-index des colonnes
+df.columns = ['_'.join(col).strip() for col in df.columns.values]
+
+print("\nDataFrame après réinitialisation du Multi-Index des Colonnes:")
+print(df)
+```
+
+### Exemple Complet
+Mettons tout cela ensemble dans un exemple complet que nous pouvons exécuter.
+
+```python
+import pandas as pd
+import numpy as np
+
+# Création d'un DataFrame avec des multi-index pour les colonnes
+arrays = [
+    ['A', 'A', 'B', 'B'],
+    ['one', 'two', 'one', 'two']
+]
+tuples = list(zip(*arrays))
+index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+df = pd.DataFrame(np.random.randn(4, 4), columns=index)
+
+print("DataFrame avec Multi-Index pour les Colonnes:")
+print(df)
+
+# Accès aux données de la colonne ('A', 'one')
+print("\nAccès aux données de la colonne ('A', 'one'):")
+print(df['A']['one'])
+
+# Accès aux données de toutes les colonnes sous 'A'
+print("\nAccès aux données de toutes les colonnes sous 'A':")
+print(df['A'])
+
+# Réinitialisation du multi-index des colonnes
+df.columns = ['_'.join(col).strip() for col in df.columns.values]
+
+print("\nDataFrame après réinitialisation du Multi-Index des Colonnes:")
+print(df)
+```
+
+Exécutons cet exemple pour voir les résultats.
