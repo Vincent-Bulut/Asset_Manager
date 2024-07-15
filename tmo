@@ -1,10 +1,50 @@
 
-from sqlalchemy.orm import Session
+' Ajoutez une référence à Microsoft Scripting Runtime
+' Outils -> Références -> Cochez "Microsoft Scripting Runtime"
 
-def insert_trader_allocations(session: Session, id_trd: int, id_structs: list[int]):
-    allocations = [
-        TraderAllocation(id_trd=id_trd, id_struct=id_struct)
-        for id_struct in id_structs
-    ]
-    session.add_all(allocations)
-    session.commit()
+Function get_schema_mapping() As Dictionary
+    Dim d_mapping_tmp As New Dictionary
+    d_mapping_tmp.Add("DynamicExportData[Section - Level 4]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Section - Level 2]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Section - Level 1]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Section - Level 3]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Devise de reporting]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Residence country of the reporting entity - Code]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Economic agent (Arpege) - Code]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Conso. perim. of the acct. cpy (Yield) Code]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Significant index]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Final significant index - Code - BMF 653]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Section - Level 5]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Negative floor rate - Code]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Contractual floor - Code]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Negative Contractual floor - Calculated - Code 1]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Bucket]", "str")
+    d_mapping_tmp.Add("DynamicExportData[Source end date]", "safe_date")
+    d_mapping_tmp.Add("DynamicExportData[FTP - Average maturity on average amount]", "safe_float")
+    d_mapping_tmp.Add("DynamicExportData[Weighted average selected interest rate - Rate]", "safe_float")
+    d_mapping_tmp.Add("DynamicExportData[FTP - Weighted average Fixed Rate Sub-Component - Rate]", "safe_float")
+    d_mapping_tmp.Add("DynamicExportData[Weighted average Liquidity Component - Rate]", "safe_float")
+    d_mapping_tmp.Add("DynamicExportData[WAO (Weighted Avg. Outstanding) amt in EUR]", "safe_float")
+    
+    Set get_schema_mapping = d_mapping_tmp
+End Function
+
+Function DictionaryToJSON(d As Dictionary) As String
+    Dim json As String
+    Dim key As Variant
+    json = "{"
+    For Each key In d.Keys
+        json = json & """" & key & """: """ & d(key) & ""","
+    Next key
+    json = Left(json, Len(json) - 1) ' Retirer la dernière virgule
+    json = json & "}"
+    DictionaryToJSON = json
+End Function
+
+Sub DebugSchemaMapping()
+    Dim schema As Dictionary
+    Dim json As String
+    Set schema = get_schema_mapping()
+    json = DictionaryToJSON(schema)
+    Debug.Print json
+End Sub
