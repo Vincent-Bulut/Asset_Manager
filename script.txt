@@ -1,49 +1,60 @@
 
+[python]
+
+Pour traduire cette formule Excel en une opération pandas et l'ajouter comme une nouvelle colonne à votre DataFrame, vous devez utiliser des opérations conditionnelles avec `numpy.where` ou `pandas.DataFrame.apply` pour imiter la logique de la formule Excel.
+
+Voici un exemple pour traduire cette logique en pandas :
+
+1. Importer les bibliothèques nécessaires.
+2. Charger vos DataFrames.
+3. Créer la nouvelle colonne en utilisant `numpy.where` pour gérer les conditions.
+
+La formule Excel fournie :
+```excel
+=SI(OU('BILAN STEVE CONT ID7'="INTERNE_BB_vs_TB";'BILAN STEVE CONT ID7'="INTRAGROUPE_BB_vs_TB");RECHERCHEV('BILAN STEVE CONT E7';'Mapping Compartiment ITAC'!A:B;2;FAUX);RECHERCHEV('BILAN STEVE CONT ID7';'Mapping Compartiment ITAC'!A:B;2;FAUX))
+```
+
+Supposons que vous avez un DataFrame `df` avec les colonnes nécessaires et un DataFrame `mapping_df` pour le `Mapping Compartiment ITAC`. Voici comment vous pouvez implémenter cela :
+
+```python
 import pandas as pd
+import numpy as np
 
-class MaquetteMngr:
-    """Use for build the final maquette"""
+# Exemple de DataFrame principal
+df = pd.DataFrame({
+    'BILAN STEVE CONT ID7': ['INTERNE_BB_vs_TB', 'INTRAGROUPE_BB_vs_TB', 'OTHER'],
+    'BILAN STEVE CONT E7': ['E1', 'E2', 'E3']
+})
 
-    def __init__(self, pivot_itac_c, pivot_steve_model, pivot_steve_cont, pivot_steve_cont_np):
-        self._pivot_itac_c = pivot_itac_c
-        self._pivot_steve_model = pivot_steve_model
-        self._pivot_steve_cont = pivot_steve_cont
-        self._pivot_steve_cont_np = pivot_steve_cont_np
-        self.maquette_all = pd.DataFrame()
+# Exemple de DataFrame de mapping
+mapping_df = pd.DataFrame({
+    'A': ['E1', 'E2', 'E3', 'ID1', 'ID2'],
+    'B': ['Mapping1', 'Mapping2', 'Mapping3', 'Mapping4', 'Mapping5']
+})
 
-    def create_key_column(self, df):
-        """Creates a key column by concatenating the first 14 columns of the DataFrame."""
-        if df.shape[1] < 14:
-            raise ValueError("The DataFrame does not have 14 columns.")
-        
-        df['key'] = df.iloc[:, :14].apply(lambda row: '_'.join(row.values.astype(str)), axis=1)
-        return df
+# Fonction pour effectuer la recherche (vlookup) dans le DataFrame de mapping
+def vlookup(value, mapping_df, col_lookup, col_return):
+    match = mapping_df.loc[mapping_df[col_lookup] == value, col_return]
+    if not match.empty:
+        return match.iloc[0]
+    return np.nan
 
-    def process_all_dataframes(self):
-        """Process all dataframes to add the key column."""
-        self._pivot_itac_c = self.create_key_column(self._pivot_itac_c)
-        self._pivot_steve_model = self.create_key_column(self._pivot_steve_model)
-        self._pivot_steve_cont = self.create_key_column(self._pivot_steve_cont)
-        self._pivot_steve_cont_np = self.create_key_column(self._pivot_steve_cont_np)
+# Appliquer la logique conditionnelle
+df['New_Column'] = np.where(
+    df['BILAN STEVE CONT ID7'].isin(['INTERNE_BB_vs_TB', 'INTRAGROUPE_BB_vs_TB']),
+    df['BILAN STEVE CONT E7'].apply(lambda x: vlookup(x, mapping_df, 'A', 'B')),
+    df['BILAN STEVE CONT ID7'].apply(lambda x: vlookup(x, mapping_df, 'A', 'B'))
+)
 
-# Exemple d'utilisation
-# Assurez-vous que les DataFrames pivot_itac_c, pivot_steve_model, pivot_steve_cont et pivot_steve_cont_np existent
-pivot_itac_c = pd.DataFrame([[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], [16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]], columns=[f'col{i}' for i in range(1, 16)])
-pivot_steve_model = pivot_itac_c.copy()
-pivot_steve_cont = pivot_itac_c.copy()
-pivot_steve_cont_np = pivot_itac_c.copy()
+import ace_tools as tools; tools.display_dataframe_to_user(name="Updated DataFrame", dataframe=df)
 
-manager = MaquetteMngr(pivot_itac_c, pivot_steve_model, pivot_steve_cont, pivot_steve_cont_np)
-manager.process_all_dataframes()
+print(df)
+```
 
-print("Pivot ITAC C with key:")
-print(manager._pivot_itac_c)
+Dans cet exemple :
 
-print("\nPivot Steve Model with key:")
-print(manager._pivot_steve_model)
+- `vlookup` est une fonction qui effectue une recherche dans `mapping_df` pour trouver la correspondance.
+- `np.where` est utilisé pour appliquer la logique conditionnelle principale.
+- `apply` est utilisé pour appliquer la fonction `vlookup` sur les valeurs des colonnes pertinentes.
 
-print("\nPivot Steve Cont with key:")
-print(manager._pivot_steve_cont)
-
-print("\nPivot Steve Cont NP with key:")
-print(manager._pivot_steve_cont_np)
+Assurez-vous de remplacer les noms des colonnes et les valeurs de recherche par ceux qui correspondent à votre contexte spécifique. Si vous avez besoin d'ajustements supplémentaires ou de clarifications, n'hésitez pas à demander.
