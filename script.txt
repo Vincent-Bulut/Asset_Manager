@@ -1,60 +1,24 @@
 
-[python]
-
-Pour traduire cette formule Excel en une opération pandas et l'ajouter comme une nouvelle colonne à votre DataFrame, vous devez utiliser des opérations conditionnelles avec `numpy.where` ou `pandas.DataFrame.apply` pour imiter la logique de la formule Excel.
-
-Voici un exemple pour traduire cette logique en pandas :
-
-1. Importer les bibliothèques nécessaires.
-2. Charger vos DataFrames.
-3. Créer la nouvelle colonne en utilisant `numpy.where` pour gérer les conditions.
-
-La formule Excel fournie :
-```excel
-=SI(OU('BILAN STEVE CONT ID7'="INTERNE_BB_vs_TB";'BILAN STEVE CONT ID7'="INTRAGROUPE_BB_vs_TB");RECHERCHEV('BILAN STEVE CONT E7';'Mapping Compartiment ITAC'!A:B;2;FAUX);RECHERCHEV('BILAN STEVE CONT ID7';'Mapping Compartiment ITAC'!A:B;2;FAUX))
-```
-
-Supposons que vous avez un DataFrame `df` avec les colonnes nécessaires et un DataFrame `mapping_df` pour le `Mapping Compartiment ITAC`. Voici comment vous pouvez implémenter cela :
-
-```python
-import pandas as pd
 import numpy as np
 
-# Exemple de DataFrame principal
-df = pd.DataFrame({
-    'BILAN STEVE CONT ID7': ['INTERNE_BB_vs_TB', 'INTRAGROUPE_BB_vs_TB', 'OTHER'],
-    'BILAN STEVE CONT E7': ['E1', 'E2', 'E3']
-})
+# Définir les conditions
+conditions = [
+    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['FLIND', 'NRF', 'NNF']),
+    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['FLOOR']),
+    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['TUNNEL']),
+    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['TOT'])
+]
 
-# Exemple de DataFrame de mapping
-mapping_df = pd.DataFrame({
-    'A': ['E1', 'E2', 'E3', 'ID1', 'ID2'],
-    'B': ['Mapping1', 'Mapping2', 'Mapping3', 'Mapping4', 'Mapping5']
-})
+# Définir les valeurs correspondant à chaque condition
+choices = [
+    'Value for FLIND, NRF, NNF',
+    'Value for FLOOR',
+    'Value for TUNNEL',
+    'Value for TOT'
+]
 
-# Fonction pour effectuer la recherche (vlookup) dans le DataFrame de mapping
-def vlookup(value, mapping_df, col_lookup, col_return):
-    match = mapping_df.loc[mapping_df[col_lookup] == value, col_return]
-    if not match.empty:
-        return match.iloc[0]
-    return np.nan
+# Appliquer np.select pour obtenir les résultats
+self._maquette_mapped_columns['Cap_Floor_Tunnel'] = np.select(conditions, choices, default='Default Value')
 
-# Appliquer la logique conditionnelle
-df['New_Column'] = np.where(
-    df['BILAN STEVE CONT ID7'].isin(['INTERNE_BB_vs_TB', 'INTRAGROUPE_BB_vs_TB']),
-    df['BILAN STEVE CONT E7'].apply(lambda x: vlookup(x, mapping_df, 'A', 'B')),
-    df['BILAN STEVE CONT ID7'].apply(lambda x: vlookup(x, mapping_df, 'A', 'B'))
-)
-
-import ace_tools as tools; tools.display_dataframe_to_user(name="Updated DataFrame", dataframe=df)
-
-print(df)
-```
-
-Dans cet exemple :
-
-- `vlookup` est une fonction qui effectue une recherche dans `mapping_df` pour trouver la correspondance.
-- `np.where` est utilisé pour appliquer la logique conditionnelle principale.
-- `apply` est utilisé pour appliquer la fonction `vlookup` sur les valeurs des colonnes pertinentes.
-
-Assurez-vous de remplacer les noms des colonnes et les valeurs de recherche par ceux qui correspondent à votre contexte spécifique. Si vous avez besoin d'ajustements supplémentaires ou de clarifications, n'hésitez pas à demander.
+# Afficher le DataFrame résultant
+print(self._maquette_mapped_columns)
