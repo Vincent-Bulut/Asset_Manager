@@ -1,24 +1,23 @@
 
-import numpy as np
+import pandas as pd
 
-# Définir les conditions
-conditions = [
-    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['FLIND', 'NRF', 'NNF']),
-    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['FLOOR']),
-    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['TUNNEL']),
-    self._pivot_steve_cont_mapped['DynamicExportData[Contractual floor + Calculated - CodeNBSP]'].isin(['TOT'])
-]
+def check_dataframes_shape(*dataframes):
+    if not dataframes:
+        raise ValueError("No DataFrames provided")
 
-# Définir les valeurs correspondant à chaque condition
-choices = [
-    'Value for FLIND, NRF, NNF',
-    'Value for FLOOR',
-    'Value for TUNNEL',
-    'Value for TOT'
-]
+    # Get the shape of the first dataframe
+    first_shape = dataframes[0].shape
 
-# Appliquer np.select pour obtenir les résultats
-self._maquette_mapped_columns['Cap_Floor_Tunnel'] = np.select(conditions, choices, default='Default Value')
+    # Check if all DataFrames have the same shape
+    for df in dataframes:
+        if df.shape != first_shape:
+            raise ValueError("Not all DataFrames have the same shape")
 
-# Afficher le DataFrame résultant
-print(self._maquette_mapped_columns)
+    print("All DataFrames have the same shape")
+
+# Example usage
+df1 = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+df2 = pd.DataFrame({'A': [7, 8, 9], 'B': [10, 11, 12]})
+df3 = pd.DataFrame({'A': [13, 14, 15], 'B': [16, 17, 18]})
+
+check_dataframes_shape(df1, df2, df3)  # This should print "All DataFrames have the same shape"
