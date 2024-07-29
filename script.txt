@@ -1,24 +1,33 @@
+
 Sub HistoriserListObjects()
     Dim ws As Worksheet
     Dim lo As ListObject
+    Dim histWorkbook As Workbook
     Dim histSheet As Worksheet
     Dim histName As String
     Dim timestamp As String
-    Dim i As Integer
     Dim histLastRow As Long
 
     ' Obtenir l'horodatage
     timestamp = Format(Now(), "yyyy-mm-dd_hh-mm-ss")
     
-    ' Boucle à travers chaque feuille dans le classeur
+    ' Chemin et nom du classeur d'historisation (modifier selon vos besoins)
+    Dim histWorkbookPath As String
+    histWorkbookPath = "C:\Path\To\HistoryWorkbook_" & timestamp & ".xlsx"
+    
+    ' Créer un nouveau classeur d'historisation avec un nom horodaté
+    Set histWorkbook = Workbooks.Add
+    histWorkbook.SaveAs histWorkbookPath
+    
+    ' Boucle à travers chaque feuille dans le classeur actuel
     For Each ws In ThisWorkbook.Worksheets
         ' Boucle à travers chaque ListObject dans la feuille
         For Each lo In ws.ListObjects
             ' Créer un nom unique pour la feuille d'historique
             histName = "Hist_" & ws.Name & "_" & lo.Name & "_" & timestamp
             
-            ' Ajouter une nouvelle feuille pour l'historique
-            Set histSheet = ThisWorkbook.Sheets.Add
+            ' Ajouter une nouvelle feuille pour l'historique dans le classeur d'historisation
+            Set histSheet = histWorkbook.Sheets.Add
             histSheet.Name = histName
             
             ' Copier les données du ListObject dans la nouvelle feuille
@@ -29,6 +38,10 @@ Sub HistoriserListObjects()
             histSheet.Range("A1:A" & histLastRow).Offset(0, lo.ListColumns.Count).Value = timestamp
         Next lo
     Next ws
+    
+    ' Sauvegarder et fermer le classeur d'historisation
+    histWorkbook.Save
+    histWorkbook.Close
 
-    MsgBox "Historisation des ListObjects terminée.", vbInformation
+    MsgBox "Historisation des ListObjects terminée dans le classeur d'historisation.", vbInformation
 End Sub
