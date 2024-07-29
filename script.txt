@@ -1,23 +1,34 @@
+Sub HistoriserListObjects()
+    Dim ws As Worksheet
+    Dim lo As ListObject
+    Dim histSheet As Worksheet
+    Dim histName As String
+    Dim timestamp As String
+    Dim i As Integer
+    Dim histLastRow As Long
 
-import pandas as pd
-import numpy as np
+    ' Obtenir l'horodatage
+    timestamp = Format(Now(), "yyyy-mm-dd_hh-mm-ss")
+    
+    ' Boucle à travers chaque feuille dans le classeur
+    For Each ws In ThisWorkbook.Worksheets
+        ' Boucle à travers chaque ListObject dans la feuille
+        For Each lo In ws.ListObjects
+            ' Créer un nom unique pour la feuille d'historique
+            histName = "Hist_" & ws.Name & "_" & lo.Name & "_" & timestamp
+            
+            ' Ajouter une nouvelle feuille pour l'historique
+            Set histSheet = ThisWorkbook.Sheets.Add
+            histSheet.Name = histName
+            
+            ' Copier les données du ListObject dans la nouvelle feuille
+            lo.Range.Copy Destination:=histSheet.Range("A1")
+            
+            ' Ajouter l'horodatage dans la colonne adjacente
+            histLastRow = histSheet.Cells(Rows.Count, 1).End(xlUp).Row
+            histSheet.Range("A1:A" & histLastRow).Offset(0, lo.ListColumns.Count).Value = timestamp
+        Next lo
+    Next ws
 
-# Création des DataFrames d'exemple avec le même index
-index = [0, 1, 2, 3, 4]
-df1 = pd.DataFrame({
-    'Code_produit': ['A', 'B', 'C', 'D', 'E'],
-    'Valeur': [10, 20, 30, 40, 50]
-}, index=index)
-
-df2 = pd.DataFrame({
-    'P_NND_NReg': [1, 2, 3, 4, 5],
-    'P_Oth_CurAc': [10, 20, 30, 40, 50]
-}, index=index)
-
-# Condition basée sur df2
-condition = df2['P_NND_NReg'] != df2['P_Oth_CurAc']
-
-# Mise à jour de df1 en fonction de la condition
-df1['Code_produit'] = np.where(condition, df2['P_Oth_CurAc'], df1['Code_produit'])
-
-print(df1)
+    MsgBox "Historisation des ListObjects terminée.", vbInformation
+End Sub
