@@ -1,47 +1,39 @@
 
-Sub HistoriserListObjects()
-    Dim ws As Worksheet
-    Dim lo As ListObject
-    Dim histWorkbook As Workbook
-    Dim histSheet As Worksheet
-    Dim histName As String
-    Dim timestamp As String
-    Dim histLastRow As Long
+Sub CopierFeuille()
+    Dim SourceWorkbook As Workbook
+    Dim DestinationWorkbook As Workbook
+    Dim SourceSheet As Worksheet
+    Dim DestinationSheet As Worksheet
 
-    ' Obtenir l'horodatage
-    timestamp = Format(Now(), "yyyy-mm-dd_hh-mm-ss")
+    ' Chemin du classeur source
+    Dim SourcePath As String
+    SourcePath = "C:\Chemin\Vers\Votre\ClasseurSource.xlsx"
     
-    ' Chemin et nom du classeur d'historisation (modifier selon vos besoins)
-    Dim histWorkbookPath As String
-    histWorkbookPath = "C:\Path\To\HistoryWorkbook_" & timestamp & ".xlsx"
+    ' Chemin du classeur de destination
+    Dim DestinationPath As String
+    DestinationPath = "C:\Chemin\Vers\Votre\ClasseurDestination.xlsx"
     
-    ' Créer un nouveau classeur d'historisation avec un nom horodaté
-    Set histWorkbook = Workbooks.Add
-    histWorkbook.SaveAs histWorkbookPath
+    ' Ouvrir le classeur source
+    Set SourceWorkbook = Workbooks.Open(SourcePath)
     
-    ' Boucle à travers chaque feuille dans le classeur actuel
-    For Each ws In ThisWorkbook.Worksheets
-        ' Boucle à travers chaque ListObject dans la feuille
-        For Each lo In ws.ListObjects
-            ' Créer un nom unique pour la feuille d'historique
-            histName = "Hist_" & ws.Name & "_" & lo.Name & "_" & timestamp
-            
-            ' Ajouter une nouvelle feuille pour l'historique dans le classeur d'historisation
-            Set histSheet = histWorkbook.Sheets.Add
-            histSheet.Name = histName
-            
-            ' Copier les données du ListObject dans la nouvelle feuille
-            lo.Range.Copy Destination:=histSheet.Range("A1")
-            
-            ' Ajouter l'horodatage dans la colonne adjacente
-            histLastRow = histSheet.Cells(Rows.Count, 1).End(xlUp).Row
-            histSheet.Range("A1:A" & histLastRow).Offset(0, lo.ListColumns.Count).Value = timestamp
-        Next lo
-    Next ws
+    ' Définir la feuille à copier
+    Set SourceSheet = SourceWorkbook.Sheets("NomDeLaFeuilleSource")
     
-    ' Sauvegarder et fermer le classeur d'historisation
-    histWorkbook.Save
-    histWorkbook.Close
-
-    MsgBox "Historisation des ListObjects terminée dans le classeur d'historisation.", vbInformation
+    ' Ouvrir le classeur de destination
+    Set DestinationWorkbook = Workbooks.Open(DestinationPath)
+    
+    ' Copier la feuille source dans le classeur de destination
+    SourceSheet.Copy After:=DestinationWorkbook.Sheets(DestinationWorkbook.Sheets.Count)
+    
+    ' Optionnel : Renommer la feuille copiée
+    Set DestinationSheet = DestinationWorkbook.Sheets(DestinationWorkbook.Sheets.Count)
+    DestinationSheet.Name = "NomDeLaNouvelleFeuille"
+    
+    ' Fermer le classeur source sans sauvegarder les modifications
+    SourceWorkbook.Close SaveChanges:=False
+    
+    ' Sauvegarder et fermer le classeur de destination
+    DestinationWorkbook.Close SaveChanges:=True
+    
+    MsgBox "La feuille a été copiée avec succès !"
 End Sub
