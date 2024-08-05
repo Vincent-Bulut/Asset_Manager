@@ -1,39 +1,29 @@
 
-Sub CopierFeuille()
-    Dim SourceWorkbook As Workbook
-    Dim DestinationWorkbook As Workbook
-    Dim SourceSheet As Worksheet
-    Dim DestinationSheet As Worksheet
+def concatenate_and_compare_lists(list_of_lists, bigger_set):
+    # Concaténer les listes en une seule liste
+    concatenated_list = []
+    for lst in list_of_lists:
+        concatenated_list.extend(lst)
+    
+    # Convertir la liste concaténée en ensemble
+    smaller_set = set(concatenated_list)
+    
+    # Trouver les éléments dans le plus grand ensemble qui ne sont pas dans le plus petit ensemble
+    missing_elements = bigger_set - smaller_set
+    
+    # Convertir les éléments manquants en liste
+    missing_elements_list = list(missing_elements)
+    
+    return missing_elements_list
 
-    ' Chemin du classeur source
-    Dim SourcePath As String
-    SourcePath = "C:\Chemin\Vers\Votre\ClasseurSource.xlsx"
-    
-    ' Chemin du classeur de destination
-    Dim DestinationPath As String
-    DestinationPath = "C:\Chemin\Vers\Votre\ClasseurDestination.xlsx"
-    
-    ' Ouvrir le classeur source
-    Set SourceWorkbook = Workbooks.Open(SourcePath)
-    
-    ' Définir la feuille à copier
-    Set SourceSheet = SourceWorkbook.Sheets("NomDeLaFeuilleSource")
-    
-    ' Ouvrir le classeur de destination
-    Set DestinationWorkbook = Workbooks.Open(DestinationPath)
-    
-    ' Copier la feuille source dans le classeur de destination
-    SourceSheet.Copy After:=DestinationWorkbook.Sheets(DestinationWorkbook.Sheets.Count)
-    
-    ' Optionnel : Renommer la feuille copiée
-    Set DestinationSheet = DestinationWorkbook.Sheets(DestinationWorkbook.Sheets.Count)
-    DestinationSheet.Name = "NomDeLaNouvelleFeuille"
-    
-    ' Fermer le classeur source sans sauvegarder les modifications
-    SourceWorkbook.Close SaveChanges:=False
-    
-    ' Sauvegarder et fermer le classeur de destination
-    DestinationWorkbook.Close SaveChanges:=True
-    
-    MsgBox "La feuille a été copiée avec succès !"
-End Sub
+# Exemple d'utilisation
+list_of_lists = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+
+bigger_set = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+
+missing_elements_list = concatenate_and_compare_lists(list_of_lists, bigger_set)
+print(missing_elements_list)
