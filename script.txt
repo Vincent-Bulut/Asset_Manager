@@ -1,29 +1,23 @@
 
-def concatenate_and_compare_lists(list_of_lists, bigger_set):
-    # Concaténer les listes en une seule liste
-    concatenated_list = []
-    for lst in list_of_lists:
-        concatenated_list.extend(lst)
+Sub GetFileSize()
+    Dim filePath As String
+    Dim fileSize As Double
     
-    # Convertir la liste concaténée en ensemble
-    smaller_set = set(concatenated_list)
+    ' Obtenir le chemin complet du fichier actuel
+    filePath = ThisWorkbook.FullName
     
-    # Trouver les éléments dans le plus grand ensemble qui ne sont pas dans le plus petit ensemble
-    missing_elements = bigger_set - smaller_set
-    
-    # Convertir les éléments manquants en liste
-    missing_elements_list = list(missing_elements)
-    
-    return missing_elements_list
-
-# Exemple d'utilisation
-list_of_lists = [
-    [1, 2, 3],
-    [4, 5, 6],
-    [7, 8, 9]
-]
-
-bigger_set = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-
-missing_elements_list = concatenate_and_compare_lists(list_of_lists, bigger_set)
-print(missing_elements_list)
+    ' Vérifier si le fichier existe
+    If Dir(filePath) <> "" Then
+        ' Utiliser le FileSystemObject pour obtenir la taille du fichier
+        Dim fso As Object
+        Set fso = CreateObject("Scripting.FileSystemObject")
+        
+        ' Récupérer la taille du fichier en octets
+        fileSize = fso.GetFile(filePath).Size
+        
+        ' Afficher la taille du fichier en octets
+        MsgBox "La taille du fichier est de " & fileSize & " octets."
+    Else
+        MsgBox "Le fichier n'existe pas."
+    End If
+End Sub
