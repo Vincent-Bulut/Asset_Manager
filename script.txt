@@ -8,10 +8,10 @@ def add_subtotals(df, group_columns, subtotal_column):
     # Ajouter les sous-totaux pour chaque groupe
     for name, group in df.groupby(group_columns):
         subtotal = group[subtotal_column].sum()
-        subtotal_row = {col: 'Total ' + str(name) if col in group_columns else '' for col in df.columns}
+        subtotal_row = {col: 'Total ' + ' - '.join(str(n) for n in name) if col in group_columns else '' for col in df.columns}
         subtotal_row[subtotal_column] = subtotal
-        subtotal_rows.append(subtotal_row)
         subtotal_rows.extend(group.to_dict('records'))
+        subtotal_rows.append(subtotal_row)
 
     return pd.DataFrame(subtotal_rows)
 
@@ -27,8 +27,17 @@ pivot_table = pd.pivot_table(
     aggfunc=sum
 ).reset_index()
 
-# Ajouter les sous-totaux par 'Domaine' et 'Grappe_Bilan_Steve'
+# Ajouter les sous-totaux par 'Grappe_Bilan_Steve' et 'Domaine'
 pivot_table_with_subtotals = add_subtotals(pivot_table, ['Domaine', 'Grappe_Bilan_Steve'], 'CRD 31/12/Année N')
+
+# Ajouter les sous-totaux par 'Domaine' seulement
+pivot_table_with_subtotals = add_subtotals(pivot_table_with_subtotals, ['Domaine'], 'CRD 31/12/Année N')
+
+# Calculer le total général
+total_general = pivot_table['CRD 31/12/Année N'].sum()
+total_general_row = {col: 'Total Général' if col == 'Domaine' else '' for col in pivot_table.columns}
+total_general_row['CRD 31/12/Année N'] = total_general
+pivot_table_with_subtotals = pivot_table_with_subtotals.append(total_general_row, ignore_index=True)
 
 # Afficher le tableau croisé dynamique avec sous-totaux
 print(pivot_table_with_subtotals)
