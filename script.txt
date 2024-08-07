@@ -1,23 +1,38 @@
 
-Sub GetFileSize()
-    Dim filePath As String
-    Dim fileSize As Double
+import pandas as pd
+
+# Fonction pour ajouter les sous-totaux
+def add_subtotals(df, group_columns, subtotal_column):
+    subtotal_rows = []
     
-    ' Obtenir le chemin complet du fichier actuel
-    filePath = ThisWorkbook.FullName
-    
-    ' Vérifier si le fichier existe
-    If Dir(filePath) <> "" Then
-        ' Utiliser le FileSystemObject pour obtenir la taille du fichier
-        Dim fso As Object
-        Set fso = CreateObject("Scripting.FileSystemObject")
-        
-        ' Récupérer la taille du fichier en octets
-        fileSize = fso.GetFile(filePath).Size
-        
-        ' Afficher la taille du fichier en octets
-        MsgBox "La taille du fichier est de " & fileSize & " octets."
-    Else
-        MsgBox "Le fichier n'existe pas."
-    End If
-End Sub
+    # Ajouter les sous-totaux pour chaque groupe
+    for name, group in df.groupby(group_columns):
+        subtotal = group[subtotal_column].sum()
+        subtotal_row = {col: 'Total ' + str(name) if col in group_columns else '' for col in df.columns}
+        subtotal_row[subtotal_column] = subtotal
+        subtotal_rows.append(subtotal_row)
+        subtotal_rows.extend(group.to_dict('records'))
+
+    return pd.DataFrame(subtotal_rows)
+
+# Charger le fichier Excel
+file_path = '/mnt/data/your_file.xlsx'  # Remplacez par le chemin de votre fichier
+df = pd.read_excel(file_path)
+
+# Créer le tableau croisé dynamique
+pivot_table = pd.pivot_table(
+    df,
+    values='CRD 31/12/Année N',
+    index=['Domaine', 'Grappe_Bilan_Steve', 'Devise'],
+    aggfunc=sum
+).reset_index()
+
+# Ajouter les sous-totaux par 'Domaine' et 'Grappe_Bilan_Steve'
+pivot_table_with_subtotals = add_subtotals(pivot_table, ['Domaine', 'Grappe_Bilan_Steve'], 'CRD 31/12/Année N')
+
+# Afficher le tableau croisé dynamique avec sous-totaux
+print(pivot_table_with_subtotals)
+
+# Enregistrer le tableau croisé dynamique avec sous-totaux dans un nouveau fichier Excel
+output_file_path = '/mnt/data/tableau_croise_dynamique_avec_sous_totaux.xlsx'
+pivot_table_with_subtotals.to_excel(output_file_path, index=False)
