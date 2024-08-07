@@ -1,47 +1,30 @@
 
 import pandas as pd
 
-# Fonction pour ajouter les sous-totaux
-def add_subtotals(df, group_columns, subtotal_column):
-    subtotal_rows = []
-    
-    # Ajouter les sous-totaux pour chaque groupe
-    for name, group in df.groupby(group_columns):
-        subtotal = group[subtotal_column].sum()
-        subtotal_row = {col: 'Total ' + ' - '.join(str(n) for n in name) if col in group_columns else '' for col in df.columns}
-        subtotal_row[subtotal_column] = subtotal
-        subtotal_rows.extend(group.to_dict('records'))
-        subtotal_rows.append(subtotal_row)
+# Supposons que df soit votre dataframe initial
+# df = pd.read_csv('votre_fichier.csv')
 
-    return pd.DataFrame(subtotal_rows)
+# Étape 1: Créer la colonne 'key'
+df['key'] = df.iloc[:, [4, 6, 8, 11]].astype(str).agg('-'.join, axis=1)
 
-# Charger le fichier Excel
-file_path = '/mnt/data/your_file.xlsx'  # Remplacez par le chemin de votre fichier
-df = pd.read_excel(file_path)
+# Étape 2: Filtrer les lignes basées sur les conditions données
+# Supposons que 'produits_annexe' est votre liste de produits annexe
+produits_annexe = ['produit1', 'produit2', 'produit3']  # à remplacer par votre liste réelle
 
-# Créer le tableau croisé dynamique
-pivot_table = pd.pivot_table(
-    df,
-    values='CRD 31/12/Année N',
-    index=['Domaine', 'Grappe_Bilan_Steve', 'Devise'],
-    aggfunc=sum
-).reset_index()
+condition = (df.iloc[:, 21] < 0) | (df.iloc[:, 17].isin(produits_annexe))
+filtered_keys = df.loc[condition, 'key'].unique()
 
-# Ajouter les sous-totaux par 'Grappe_Bilan_Steve' et 'Domaine'
-pivot_table_with_subtotals = add_subtotals(pivot_table, ['Domaine', 'Grappe_Bilan_Steve'], 'CRD 31/12/Année N')
+# Étape 3: Filtrer toutes les lignes qui partagent ces clés
+filtered_df = df[df['key'].isin(filtered_keys)]
 
-# Ajouter les sous-totaux par 'Domaine' seulement
-pivot_table_with_subtotals = add_subtotals(pivot_table_with_subtotals, ['Domaine'], 'CRD 31/12/Année N')
+# Étape 4: Ajouter la somme des colonnes de 21 à 700 tout en conservant les colonnes catégorielles identiques
+# Supposons que les colonnes catégorielles sont toutes sauf les colonnes de 21 à 700
+categorical_columns = list(set(df.columns) - set(df.columns[21:701]))
 
-# Calculer le total général
-total_general = pivot_table['CRD 31/12/Année N'].sum()
-total_general_row = {col: 'Total Général' if col == 'Domaine' else '' for col in pivot_table.columns}
-total_general_row['CRD 31/12/Année N'] = total_general
-pivot_table_with_subtotals = pivot_table_with_subtotals.append(total_general_row, ignore_index=True)
+# Grouper par les colonnes catégorielles et 'key', puis sommer les colonnes numériques
+grouped_df = filtered_df.groupby(categorical_columns + ['key']).sum().reset_index()
 
-# Afficher le tableau croisé dynamique avec sous-totaux
-print(pivot_table_with_subtotals)
+# Affichage du dataframe résultant
+import ace_tools as tools; tools.display_dataframe_to_user(name="Grouped DataFrame", dataframe=grouped_df)
 
-# Enregistrer le tableau croisé dynamique avec sous-totaux dans un nouveau fichier Excel
-output_file_path = '/mnt/data/tableau_croise_dynamique_avec_sous_totaux.xlsx'
-pivot_table_with_subtotals.to_excel(output_file_path, index=False)
+grouped_df
