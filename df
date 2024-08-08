@@ -1,65 +1,17 @@
-[python]
 
-Oui, il est possible de traduire une formule Excel complexe en utilisant la méthode `apply` dans pandas. La formule Excel que vous avez fournie semble inclure des fonctions de recherche et des conditions. Pour la traduire en pandas, nous devons d'abord comprendre les éléments de la formule.
-
-### Traduction de la formule Excel en pandas
-La formule Excel semble être une combinaison de `SI`, `RECHERCHEV`, et peut-être d'autres fonctions. Voici un exemple général de comment on peut convertir ces fonctions en pandas.
-
-#### Exemple de la formule
-```excel
-=SI((OU('BILAN STEVE CONT!D7="INTERNE_BB_vs_TB";'BILAN STEVE CONT!D7="INTRAGROUPE_BB_vs_TB")),RECHERCHEV('BILAN STEVE CONT!E7;'Mapping Compartiment ITAC'!A:B;2;FAUX),RECHERCHEV('BILAN STEVE CONT!D7;'Mapping Compartiment ITAC'!A:B;2;FAUX))
-```
-
-#### Traduction en pandas
-Nous allons traduire cela en pandas en utilisant une fonction avec `apply`.
-
-1. **Chargement des DataFrames** :
-   - `df_main` pour les données principales (équivalent à `'BILAN STEVE CONT'`).
-   - `df_mapping` pour les données de mapping (équivalent à `'Mapping Compartiment ITAC'`).
-
-2. **Définir la fonction `lookup_value`** :
-   - Cette fonction appliquera la logique de la formule Excel.
-
-3. **Utiliser `apply` pour appliquer la fonction à chaque ligne**.
-
-#### Exemple de code en pandas
-
-```python
 import pandas as pd
 
-# Simuler les DataFrames pour l'exemple
-data_main = {
-    'D7': ['INTERNE_BB_vs_TB', 'OTHER', 'INTRAGROUPE_BB_vs_TB'],
-    'E7': [1, 2, 3]
-}
+# Supposons que df soit votre DataFrame original
+df = pd.DataFrame(...)  # Votre DataFrame initial ici
 
-data_mapping = {
-    'A': [1, 2, 3],
-    'B': ['Result1', 'Result2', 'Result3']
-}
+# Sélectionner les colonnes de la 20e à la 600e (en tenant compte que l'indexation commence à 0)
+df_20_to_600 = df.iloc[:, 19:600]
 
-df_main = pd.DataFrame(data_main)
-df_mapping = pd.DataFrame(data_mapping)
+# Sélectionner les colonnes 15 et 750
+df_15_and_750 = df.iloc[:, [14, 749]]
 
-# Création d'un dictionnaire pour une recherche rapide
-mapping_dict = df_mapping.set_index('A')['B'].to_dict()
+# Combiner les deux DataFrames en un seul
+df_combined = pd.concat([df_20_to_600, df_15_and_750], axis=1)
 
-# Fonction pour appliquer la logique de la formule Excel
-def lookup_value(row):
-    if row['D7'] in ["INTERNE_BB_vs_TB", "INTRAGROUPE_BB_vs_TB"]:
-        return mapping_dict.get(row['E7'], None)
-    else:
-        return mapping_dict.get(row['D7'], None)
-
-# Application de la fonction avec apply
-df_main['Result'] = df_main.apply(lookup_value, axis=1)
-
-print(df_main)
-```
-
-### Conclusion
-- **Flexibilité** : La méthode `apply` permet de reproduire des formules Excel complexes en pandas, en utilisant des fonctions personnalisées.
-- **Performance** : Bien que l'utilisation de `apply` soit flexible, elle peut ne pas être la plus rapide pour des très grands ensembles de données. Pour optimiser les performances, essayez de vectoriser les opérations autant que possible.
-
-### Recommandation
-Fournissez plus de détails sur la structure exacte de vos DataFrames (les colonnes et les types de données), et si vous avez d'autres formules complexes, cela aidera à fournir un code encore plus précis et optimisé.
+# Afficher le DataFrame résultant
+print(df_combined)
