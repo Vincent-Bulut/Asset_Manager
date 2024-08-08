@@ -1,63 +1,30 @@
-Oui, vous pouvez utiliser `TransferSpreadsheet` dans VBA pour intégrer une feuille de calcul Excel dans une table Access. Voici un guide complet pour y parvenir :
 
-### Étapes de l'algorithme en VBA
+import pandas as pd
 
-1. Ouvrir la base de données Access.
-2. Créer une nouvelle macro ou module VBA.
-3. Utiliser la commande `TransferSpreadsheet` pour importer les données.
+# Supposons que df soit votre dataframe initial
+# df = pd.read_csv('votre_fichier.csv')
 
-### Exemple de code VBA
+# Étape 1: Créer la colonne 'key'
+df['key'] = df.iloc[:, [4, 6, 8, 11]].astype(str).agg('-'.join, axis=1)
 
-```vba
-Sub ImporterTableDepuisExcel()
-    ' Définir les variables
-    Dim CheminFichier As String
-    Dim NomFeuille As String
-    Dim NomTable As String
-    Dim TypeFeuille As AcSpreadSheetType
-    
-    ' Initialiser les variables
-    CheminFichier = "C:\Chemin\Vers\Données.xlsx" ' Chemin du fichier Excel
-    NomFeuille = "Feuille1" ' Nom de la feuille Excel
-    NomTable = "TableImportée" ' Nom de la table Access
-    TypeFeuille = acSpreadsheetTypeExcel12Xml ' Pour Excel 2007 et versions ultérieures (xlsx)
-    
-    ' Utiliser TransferSpreadsheet pour importer les données
-    DoCmd.TransferSpreadsheet _
-        TransferType:=acImport, _
-        SpreadsheetType:=TypeFeuille, _
-        TableName:=NomTable, _
-        FileName:=CheminFichier, _
-        HasFieldNames:=True, _
-        Range:=NomFeuille & "$"
-    
-    ' Message de confirmation
-    MsgBox "Importation terminée avec succès !", vbInformation
-End Sub
-```
+# Étape 2: Filtrer les lignes basées sur les conditions données
+# Supposons que 'produits_annexe' est votre liste de produits annexe
+produits_annexe = ['produit1', 'produit2', 'produit3']  # à remplacer par votre liste réelle
 
-### Explication du code
+condition = (df.iloc[:, 21] < 0) | (df.iloc[:, 17].isin(produits_annexe))
+filtered_keys = df.loc[condition, 'key'].unique()
 
-- **CheminFichier** : Le chemin complet du fichier Excel à importer. Remplacez `"C:\Chemin\Vers\Données.xlsx"` par le chemin réel de votre fichier Excel.
-- **NomFeuille** : Le nom de la feuille de calcul Excel à partir de laquelle les données seront importées. Remplacez `"Feuille1"` par le nom de votre feuille.
-- **NomTable** : Le nom de la table Access dans laquelle les données seront importées. Remplacez `"TableImportée"` par le nom souhaité pour votre table dans Access.
-- **TypeFeuille** : Le type de fichier Excel. `acSpreadsheetTypeExcel12Xml` est utilisé pour les fichiers .xlsx. Pour les fichiers Excel plus anciens, utilisez `acSpreadsheetTypeExcel8` (pour .xls).
-- **TransferType** : `acImport` spécifie que nous importons des données.
-- **HasFieldNames** : `True` indique que la première ligne de la feuille de calcul contient les noms des champs.
-- **Range** : Spécifie la feuille et la plage de cellules (ici, toute la feuille).
+# Étape 3: Filtrer toutes les lignes qui partagent ces clés
+filtered_df = df[df['key'].isin(filtered_keys)]
 
-### Ajouter le code VBA dans Access
+# Étape 4: Ajouter la somme des colonnes de 21 à 700 tout en conservant les colonnes catégorielles identiques
+# Supposons que les colonnes catégorielles sont toutes sauf les colonnes de 21 à 700
+categorical_columns = list(set(df.columns) - set(df.columns[21:701]))
 
-1. Ouvrez votre base de données Access.
-2. Appuyez sur `Alt + F11` pour ouvrir l'éditeur VBA.
-3. Dans l'éditeur VBA, cliquez sur `Insert` > `Module` pour créer un nouveau module.
-4. Copiez et collez le code VBA fourni dans le module.
-5. Enregistrez le module et fermez l'éditeur VBA.
+# Grouper par les colonnes catégorielles et 'key', puis sommer les colonnes numériques
+grouped_df = filtered_df.groupby(categorical_columns + ['key']).sum().reset_index()
 
-### Exécuter le script VBA
+# Affichage du dataframe résultant
+import ace_tools as tools; tools.display_dataframe_to_user(name="Grouped DataFrame", dataframe=grouped_df)
 
-1. Revenez à Access.
-2. Appuyez sur `Alt + F8` pour ouvrir la boîte de dialogue `Macro`.
-3. Sélectionnez `ImporterTableDepuisExcel` dans la liste des macros et cliquez sur `Run`.
-
-Le script VBA va maintenant importer les données de la feuille de calcul Excel spécifiée dans une table Access. Assurez-vous que le chemin du fichier et les noms de la feuille et de la table sont correctement définis avant d'exécuter le script.
+grouped_df
