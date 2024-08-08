@@ -1,36 +1,20 @@
 
-class TraderAllocationCore(Core):
+import pandas as pd
+import numpy as np
 
-    def create_trader_alloc(self, id_trd: int, id_struct: int):
-        # Vérifier si l'allocation existe déjà
-        existing_alloc = self.session.scalars(
-            select(TraderAllocation).where(
-                TraderAllocation.id_trd == id_trd,
-                TraderAllocation.id_struct == id_struct
-            )
-        ).first()
+# Exemple de création d'un DataFrame avec 800 colonnes et des données aléatoires
+data = pd.DataFrame(np.random.rand(10, 800))
 
-        if existing_alloc is not None:
-            # Allocation existe déjà, vous pouvez lever une exception ou simplement retourner
-            print("Allocation already exists")
-            return existing_alloc
+# Utiliser les valeurs absolues des colonnes 100 à 199
+abs_values = data.iloc[:, 100:200].abs()
 
-        # Créer une nouvelle allocation si elle n'existe pas
-        new_trd_alloc = TraderAllocation(
-            id_trd=id_trd,
-            id_struct=id_struct
-        )
+# Multiplier les colonnes 200 à 299 par les valeurs absolues des colonnes 100 à 199
+data.iloc[:, 200:300] = data.iloc[:, 200:300].values * abs_values.values
 
-        self.session.add(new_trd_alloc)
-        self.session.commit()
+# Multiplier les colonnes 300 à 399 par les valeurs absolues des colonnes 100 à 199
+data.iloc[:, 300:400] = data.iloc[:, 300:400].values * abs_values.values
 
-        return new_trd_alloc
+# Multiplier les colonnes 400 à 499 par les valeurs absolues des colonnes 100 à 199
+data.iloc[:, 400:500] = data.iloc[:, 400:500].values * abs_values.values
 
-    def get_trader_allocation(self, req: TraderAllocModel):
-        query = self.session.scalars(
-            select(TraderAllocation).where(
-                TraderAllocation.id_trd == req.id_trader,
-                TraderAllocation.id_struct == req.id_structure
-            )
-        ).all()
-        return query
+print(data)
