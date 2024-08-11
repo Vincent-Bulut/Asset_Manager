@@ -1,97 +1,16 @@
-Les DataFrames pandas peuvent contenir des multi-index, non seulement pour les lignes (index), mais aussi pour les colonnes. Cela permet de manipuler des structures de données plus complexes et hiérarchiques. Un multi-index pour les colonnes est particulièrement utile lorsque vous avez des données organisées en plusieurs niveaux ou catégories.
 
-### Exemple de Création d'un DataFrame avec Multi-Index pour les Colonnes
-
-Voici comment créer et manipuler un DataFrame avec un multi-index pour les colonnes :
-
-#### Création d'un DataFrame avec un Multi-Index pour les Colonnes
-```python
 import pandas as pd
-import numpy as np
 
-# Création d'un DataFrame avec des multi-index pour les colonnes
-arrays = [
-    ['A', 'A', 'B', 'B'],
-    ['one', 'two', 'one', 'two']
-]
-tuples = list(zip(*arrays))
-index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-df = pd.DataFrame(np.random.randn(4, 4), columns=index)
+# Supposons que df est votre DataFrame et 'clé' est le nom de votre colonne clé
 
-print("DataFrame avec Multi-Index pour les Colonnes:")
-print(df)
-```
+# Ajouter une colonne temporaire pour stocker la valeur absolue de la colonne 19
+df['col_19_abs'] = df['colonne_19'].abs()
 
-#### Accès aux Données avec un Multi-Index pour les Colonnes
-Pour accéder aux données dans un DataFrame avec des colonnes multi-indexées, vous devez spécifier tous les niveaux de l'index.
+# Grouper par la colonne clé et garder l'index du maximum de la colonne 19 en valeur absolue
+result_df = df.loc[df.groupby('clé')['col_19_abs'].idxmax()]
 
-##### Accès aux Données d'une Colonne Spécifique
-```python
-print("\nAccès aux données de la colonne ('A', 'one'):")
-print(df['A']['one'])
-```
+# Supprimer la colonne temporaire
+result_df = result_df.drop(columns=['col_19_abs'])
 
-##### Accès aux Données de Toutes les Colonnes d'un Niveau Supérieur
-```python
-print("\nAccès aux données de toutes les colonnes sous 'A':")
-print(df['A'])
-```
-
-#### Réinitialisation du Multi-Index pour les Colonnes
-Vous pouvez également réinitialiser le multi-index des colonnes pour aplatir la structure.
-
-##### Réinitialisation du Multi-Index
-```python
-# Réinitialisation du multi-index des colonnes
-df.columns = ['_'.join(col).strip() for col in df.columns.values]
-
-print("\nDataFrame après réinitialisation du Multi-Index des Colonnes:")
-print(df)
-```
-
-### Exemple Complet
-Mettons tout cela ensemble dans un exemple complet que nous pouvons exécuter.
-
-```python
-import pandas as pd
-import numpy as np
-
-# Création d'un DataFrame avec des multi-index pour les colonnes
-arrays = [
-    ['A', 'A', 'B', 'B'],
-    ['one', 'two', 'one', 'two']
-]
-tuples = list(zip(*arrays))
-index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-df = pd.DataFrame(np.random.randn(4, 4), columns=index)
-
-print("DataFrame avec Multi-Index pour les Colonnes:")
-print(df)
-
-# Accès aux données de la colonne ('A', 'one')
-print("\nAccès aux données de la colonne ('A', 'one'):")
-print(df['A']['one'])
-
-# Accès aux données de toutes les colonnes sous 'A'
-print("\nAccès aux données de toutes les colonnes sous 'A':")
-print(df['A'])
-
-# Réinitialisation du multi-index des colonnes
-df.columns = ['_'.join(col).strip() for col in df.columns.values]
-
-print("\nDataFrame après réinitialisation du Multi-Index des Colonnes:")
-print(df)
-```
-
-Exécutons cet exemple pour voir les 
-résultats.
-
-# Utilisation de .loc pour accéder à la valeur spécifique
-value_loc = df.loc[1, ('A', 'one')]
-print("\nValeur de la deuxième ligne pour la colonne ('A', 'one') avec .loc:")
-print(value_loc)
-
-# Utilisation de .iloc pour accéder à la valeur spécifique
-value_iloc = df.iloc[1, df.columns.get_loc(('A', 'one'))]
-print("\nValeur de la deuxième ligne pour la colonne ('A', 'one') avec .iloc:")
-print(value_iloc)
+# Résultat final
+print(result_df)
