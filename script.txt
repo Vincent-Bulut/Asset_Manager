@@ -1,16 +1,49 @@
 
 import pandas as pd
 
-# Exemple de création d'un DataFrame avec 800 colonnes et des données aléatoires
-data = pd.DataFrame(np.random.rand(10, 800))
+# Exemple de dataframe
+data = {
+    'Key': ['A', 'A', 'A', 'B', 'B', 'B'],
+    'montants': [100, -50, 200, -150, 300, 50],
+    'montant à corriger': [0, 0, 0, 0, 0, 0]
+}
 
-# Multiplier les colonnes 200 à 299 par les valeurs des colonnes 100 à 199
-data.iloc[:, 200:300] = data.iloc[:, 200:300].values * data.iloc[:, 100:200].values
+df = pd.DataFrame(data)
 
-# Multiplier les colonnes 300 à 399 par les valeurs des colonnes 100 à 199
-data.iloc[:, 300:400] = data.iloc[:, 300:400].values * data.iloc[:, 100:200].values
+def corriger_montants(df):
+    keys = df['Key'].unique()
 
-# Multiplier les colonnes 400 à 499 par les valeurs des colonnes 100 à 199
-data.iloc[:, 400:500] = data.iloc[:, 400:500].values * data.iloc[:, 100:200].values
+    for key in keys:
+        # Sélectionner les données pour la clé actuelle
+        key_df = df[df['Key'] == key]
+        
+        # Tant qu'il y a des montants négatifs dans cette clé
+        while (key_df['montants'] < 0).any():
+            # Récupérer l'index du montant négatif le plus grand en valeur absolue
+            idx_neg = key_df[key_df['montants'] < 0]['montants'].idxmin()
+            montant_neg = key_df.loc[idx_neg, 'montants']
+            
+            # Trouver le maximum des montants positifs restants
+            montants_pos = key_df[key_df['montants'] > 0]
+            if not montants_pos.empty:
+                idx_pos = montants_pos['montants'].idxmax()
+                montant_max_pos = key_df.loc[idx_pos, 'montants']
+                
+                # Calculer la nouvelle valeur pour le montant négatif et le maximum positif
+                new_montant_neg = montant_neg + montant_max_pos
+                if new_montant_neg <= 0:
+                    key_df.loc[idx_neg, 'montants'] = new_montant_neg
+                    key_df.loc[idx_pos, 'montants'] = 0
+                    key_df.loc[idx_neg, 'montant à corriger'] += montant_max_pos
+                else:
+                    key_df.loc[idx_neg, 'montants'] = 0
+                    key_df.loc[idx_pos, 'montants'] -= -montant_neg
+                    key_df.loc[idx_neg, 'montant à corriger'] += -montant_neg
+            
+            df.update(key_df)
+    
+    return df
 
-print(data)
+# Appliquer la fonction
+df_corrigé = corriger_montants(df)
+print(df_corrigé)
