@@ -1,20 +1,18 @@
 
 import pandas as pd
-import numpy as np
 
-# Exemple de création d'un DataFrame avec 800 colonnes et des données aléatoires
-data = pd.DataFrame(np.random.rand(10, 800))
+# Deux DataFrames avec des indices différents
+df1 = pd.DataFrame({
+    'A': [1, 2, 3],
+    'B': [4, 5, 6]
+}, index=[0, 1, 2])
 
-# Utiliser les valeurs absolues des colonnes 100 à 199
-abs_values = data.iloc[:, 100:200].abs()
+df2 = pd.DataFrame({
+    'C': [7, 8],
+    'D': [9, 10]
+}, index=[1, 2])
 
-# Multiplier les colonnes 200 à 299 par les valeurs absolues des colonnes 100 à 199
-data.iloc[:, 200:300] = data.iloc[:, 200:300].values * abs_values.values
+# Concaténation sur l'axe des colonnes avec alignement sur les indices
+result = pd.concat([df1, df2], axis=1).fillna(0)
 
-# Multiplier les colonnes 300 à 399 par les valeurs absolues des colonnes 100 à 199
-data.iloc[:, 300:400] = data.iloc[:, 300:400].values * abs_values.values
-
-# Multiplier les colonnes 400 à 499 par les valeurs absolues des colonnes 100 à 199
-data.iloc[:, 400:500] = data.iloc[:, 400:500].values * abs_values.values
-
-print(data)
+print(result)
