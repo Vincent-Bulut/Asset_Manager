@@ -1,18 +1,22 @@
 
 import pandas as pd
 
-# Deux DataFrames avec des indices différents
-df1 = pd.DataFrame({
-    'A': [1, 2, 3],
-    'B': [4, 5, 6]
-}, index=[0, 1, 2])
+# Exemple de dataframe
+data = {'montant': [100, 200, 300, 150],
+        'categorie': ['A', 'B', 'C', 'D']}
+df = pd.DataFrame(data)
 
-df2 = pd.DataFrame({
-    'C': [7, 8],
-    'D': [9, 10]
-}, index=[1, 2])
+# Récupérer l'index de la ligne avec le montant maximum
+index_max = df['montant'].idxmax()
 
-# Concaténation sur l'axe des colonnes avec alignement sur les indices
-result = pd.concat([df1, df2], axis=1).fillna(0)
+# Récupérer toutes les lignes en dehors de celle contenant le montant maximum
+df_without_max = df.drop(index_max)
 
-print(result)
+# Récupérer uniquement la ligne avec le montant maximum
+df_max = df.loc[[index_max]]
+
+print("Toutes les lignes sauf celle avec le montant max:")
+print(df_without_max)
+
+print("\nLigne avec le montant max:")
+print(df_max)
