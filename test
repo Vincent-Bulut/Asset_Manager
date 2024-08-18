@@ -1,22 +1,25 @@
 
 import pandas as pd
 
-# Exemple de dataframe
-data = {'montant': [100, 200, 300, 150],
-        'categorie': ['A', 'B', 'C', 'D']}
+# Exemple de DataFrame
+data = {
+    'groupe': ['A', 'A', 'A', 'B', 'B', 'B'],
+    'montant': [100, 200, 150, 300, 400, 300],
+    'col1': [10, 20, 30, 40, 50, 60],
+    'col2': [5, 15, 25, 35, 45, 55]
+}
+
 df = pd.DataFrame(data)
 
-# Récupérer l'index de la ligne avec le montant maximum
-index_max = df['montant'].idxmax()
+# 1. Trouver le montant maximal par groupe
+max_montant = df.groupby('groupe')['montant'].transform('max')
 
-# Récupérer toutes les lignes en dehors de celle contenant le montant maximum
-df_without_max = df.drop(index_max)
+# 2. Filtrer les lignes où le montant est égal au montant maximal du groupe
+df_max = df[df['montant'] == max_montant]
 
-# Récupérer uniquement la ligne avec le montant maximum
-df_max = df.loc[[index_max]]
+# 3. Effectuer des manipulations sur les lignes filtrées
+# Exemple de manipulation : multiplier les colonnes numériques par 2
+df_max[['col1', 'col2']] = df_max[['col1', 'col2']] * 2
 
-print("Toutes les lignes sauf celle avec le montant max:")
-print(df_without_max)
-
-print("\nLigne avec le montant max:")
+# Affichage du DataFrame modifié
 print(df_max)
