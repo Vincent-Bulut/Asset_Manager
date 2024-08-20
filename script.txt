@@ -1,35 +1,6 @@
 
-import pandas as pd
-import numpy as np
+# Supposons que la condition soit que la colonne 'colonne_condition' soit supérieure à une certaine valeur
+condition = df['colonne_condition'] > 10  # Ajustez cette condition selon vos besoins
 
-# DataFrame original avec des indices spécifiques
-df1 = pd.DataFrame({
-    'A': [1, 2, 3, 4],  # Colonne à mettre à jour (position 0)
-    'B': [5, 6, 7, 8],  # Colonne à mettre à jour (position 1)
-    'C': [9, 10, 11, 12]  # Colonne inchangée
-}, index=[100, 101, 102, 103])
-
-# DataFrame avec moins de lignes et des indices correspondant à df1
-df2 = pd.DataFrame({
-    'X': [10, 20],  # Correspond à la colonne 0 dans df1
-    'Y': [40, 50]   # Correspond à la colonne 1 dans df1
-}, index=[100, 101])
-
-# Trouver les indices communs
-common_indices = df1.index.intersection(df2.index)
-
-# Récupérer les positions des colonnes à mettre à jour
-col_positions = [0, 1]
-
-# Convertir les valeurs des DataFrames en NumPy arrays pour performance
-df1_array = df1.values
-df2_array = df2.values
-
-# Mettre à jour les valeurs de df1 uniquement pour les indices et colonnes communs
-for i, idx in enumerate(common_indices):
-    df1_array[df1.index.get_loc(idx), col_positions] = df2_array[i, :]
-
-# Recréer le DataFrame df1 à partir du tableau mis à jour
-df1_updated = pd.DataFrame(df1_array, index=df1.index, columns=df1.columns)
-
-print(df1_updated)
+# Appliquer l'opération uniquement sur les lignes qui satisfont la condition
+df.loc[condition, df.columns[100:201]] = df.loc[condition, df.columns[100:201]].abs().div(df.loc[condition, 'colonne_780'], axis=0).mul(df.loc[condition, df.columns[21]], axis=0)
