@@ -1,6 +1,0 @@
-
-# Supposons que la condition soit que la colonne 'colonne_condition' soit supérieure à une certaine valeur
-condition = df['colonne_condition'] > 10  # Ajustez cette condition selon vos besoins
-
-# Appliquer l'opération uniquement sur les lignes qui satisfont la condition
-df.loc[condition, df.columns[100:201]] = df.loc[condition, df.columns[100:201]].abs().div(df.loc[condition, 'colonne_780'], axis=0).mul(df.loc[condition, df.columns[21]], axis=0)
