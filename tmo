@@ -1,42 +1,79 @@
-Effectivement, j'ai omis l'intégration des dépendances pour Python dans le pipeline CI/CD. Voici comment vous pouvez l'intégrer dans le processus CI/CD avec des outils comme **GitLab CI** ou **GitHub Actions**.
 
-### Exemple d'intégration des dépendances Python dans le processus CI/CD
+Voici un exemple de script YAML qui couvre à la fois les dépendances **JavaScript** (via npm) et **Python** (via pip) dans un pipeline CI/CD. Ce script fonctionne pour **GitLab CI**, mais peut également être adapté à **GitHub Actions**.
 
-#### 1. **Extraction des dépendances pour Python**
+### Exemple GitLab CI (`.gitlab-ci.yml`)
 
-Pour un projet Python, les commandes suivantes sont couramment utilisées pour générer un rapport de dépendances :
-   - **pip freeze** : lister les dépendances installées dans l'environnement avec leurs versions.
-   - **pip list --format=json** : obtenir la liste des dépendances au format JSON, plus pratique pour le traitement automatique.
-
-#### 2. **Exemple avec GitLab CI**
-
-Voici un exemple de configuration pour **GitLab CI** (`.gitlab-ci.yml`) pour un projet Python, avec la génération et le stockage des dépendances.
+Ce fichier CI/YML permet de gérer les dépendances pour les deux environnements (JavaScript et Python), génère un rapport pour chaque environnement et les stocke sous forme d'artifacts.
 
 ```yaml
 stages:
+  - install_dependencies
   - report
 
-# Job pour générer le rapport des dépendances Python
-generate_dependencies_report:
-  stage: report
-  image: python:3.9  # Utilise une image Docker avec Python pré-installé
+# Job pour installer les dépendances JavaScript et générer le rapport
+js_dependencies:
+  stage: install_dependencies
+  image: node:16  # Utilise une image Docker Node.js
   before_script:
-    - pip install -r requirements.txt  # Installation des dépendances à partir du fichier requirements.txt
+    - npm ci  # Installe les dépendances via npm
   script:
-    - pip list --format=json > dependencies-report.json  # Générer le rapport au format JSON
+    - npm ls --json > js-dependencies-report.json  # Génère le rapport de dépendances npm au format JSON
   artifacts:
     paths:
-      - dependencies-report.json  # Sauvegarder le rapport en tant qu'artifact
+      - js-dependencies-report.json  # Sauvegarde le rapport comme artifact
+    expire_in: 1 week  # Garde l'artifact pendant 1 semaine
+
+# Job pour installer les dépendances Python et générer le rapport
+python_dependencies:
+  stage: install_dependencies
+  image: python:3.9  # Utilise une image Docker avec Python pré-installé
+  before_script:
+    - pip install -r requirements.txt  # Installe les dépendances via pip
+  script:
+    - pip list --format=json > python-dependencies-report.json  # Génère le rapport de dépendances pip au format JSON
+  artifacts:
+    paths:
+      - python-dependencies-report.json  # Sauvegarde le rapport comme artifact
+    expire_in: 1 week  # Garde l'artifact pendant 1 semaine
+
+# Job combinant les rapports dans la même étape si souhaité
+combine_reports:
+  stage: report
+  image: alpine  # Utilisation d'une image légère
+  script:
+    - echo "Combinaison des rapports de dépendances"
+    - cat js-dependencies-report.json python-dependencies-report.json > combined-dependencies-report.json
+  artifacts:
+    paths:
+      - combined-dependencies-report.json  # Sauvegarde le rapport combiné
+    expire_in: 1 week
 ```
 
-- **pip install -r requirements.txt** : Cette commande installe toutes les dépendances définies dans le fichier `requirements.txt`.
-- **pip list --format=json > dependencies-report.json** : Cette commande crée un rapport des dépendances au format JSON.
+### Détails :
 
-L’artifact `dependencies-report.json` sera disponible pour être téléchargé depuis GitLab après chaque exécution du pipeline.
+1. **Image Docker** :
+   - Utilise l'image **Node.js** (version 16) pour gérer les dépendances JavaScript via npm.
+   - Utilise l'image **Python** (version 3.9) pour gérer les dépendances Python via pip.
+   - **Alpine** est utilisée pour le job final léger de combinaison des rapports.
 
-#### 3. **Exemple avec GitHub Actions**
+2. **Installations des dépendances** :
+   - `npm ci` : Cette commande installe les dépendances de manière déterministe pour les projets JavaScript (basée sur `package-lock.json`).
+   - `pip install -r requirements.txt` : Installe les dépendances Python définies dans le fichier `requirements.txt`.
 
-Pour **GitHub Actions**, voici un exemple similaire d'intégration dans le fichier de workflow (`.github/workflows/ci.yml`).
+3. **Génération des rapports** :
+   - Pour **npm**, la commande `npm ls --json` est utilisée pour générer un rapport des dépendances JavaScript en format JSON.
+   - Pour **pip**, la commande `pip list --format=json` génère le rapport des dépendances Python au format JSON.
+
+4. **Artifacts** :
+   - Chaque rapport de dépendances (`js-dependencies-report.json` et `python-dependencies-report.json`) est sauvegardé comme un artifact, et peut être téléchargé depuis l'interface de GitLab après l'exécution du pipeline.
+   - Les artifacts sont configurés pour expirer après 1 semaine (`expire_in: 1 week`), ce qui peut être ajusté en fonction de vos besoins.
+
+5. **Combinaison des rapports (optionnel)** :
+   - Le dernier job combine les deux rapports (`cat js-dependencies-report.json python-dependencies-report.json`) dans un seul fichier `combined-dependencies-report.json`, qui est également sauvegardé en tant qu'artifact.
+
+### Exemple GitHub Actions
+
+Voici un exemple similaire pour **GitHub Actions** (`.github/workflows/dependencies.yml`), où nous traitons à la fois les dépendances JavaScript et Python.
 
 ```yaml
 name: CI
@@ -48,7 +85,30 @@ on:
   pull_request:
 
 jobs:
-  dependencies-report:
+  js_dependencies:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+
+    - name: Install JavaScript dependencies
+      run: npm ci
+
+    - name: Generate JavaScript dependencies report
+      run: npm ls --json > js-dependencies-report.json
+
+    - name: Upload JavaScript dependencies report
+      uses: actions/upload-artifact@v2
+      with:
+        name: js-dependencies-report
+        path: js-dependencies-report.json
+
+  python_dependencies:
     runs-on: ubuntu-latest
     steps:
     - name: Check out the repository
@@ -57,58 +117,49 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.x'  # Choisir la version de Python souhaitée
+        python-version: '3.x'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+    - name: Install Python dependencies
+      run: pip install -r requirements.txt
 
     - name: Generate Python dependencies report
-      run: pip list --format=json > dependencies-report.json
+      run: pip list --format=json > python-dependencies-report.json
 
-    - name: Upload dependencies report artifact
+    - name: Upload Python dependencies report
       uses: actions/upload-artifact@v2
       with:
-        name: dependencies-report
-        path: dependencies-report.json
-```
+        name: python-dependencies-report
+        path: python-dependencies-report.json
 
-- **actions/setup-python@v2** : Configure Python sur l'environnement CI.
-- **pip install -r requirements.txt** : Installe les dépendances définies dans `requirements.txt`.
-- **pip list --format=json > dependencies-report.json** : Génère un fichier JSON avec la liste des dépendances et leurs versions.
-- **actions/upload-artifact@v2** : Télécharge l'artifact `dependencies-report.json` pour le rendre disponible à la fin de l'exécution du workflow.
+  combine_reports:
+    runs-on: ubuntu-latest
+    needs: [js_dependencies, python_dependencies]
+    steps:
+    - name: Download all reports
+      uses: actions/download-artifact@v2
+      with:
+        name: js-dependencies-report
 
-### 4. **Envoi ou stockage du rapport**
+    - uses: actions/download-artifact@v2
+      with:
+        name: python-dependencies-report
 
-- Pour **GitLab CI**, vous pouvez récupérer l'artifact directement depuis l'interface GitLab CI/CD après l'exécution du pipeline.
-- Pour **GitHub Actions**, le fichier sera disponible dans la section "Artifacts" après chaque exécution.
+    - name: Combine reports
+      run: cat js-dependencies-report.json python-dependencies-report.json > combined-dependencies-report.json
 
-### 5. **Vérification de sécurité des dépendances Python**
-
-Si vous souhaitez également vérifier la sécurité des dépendances Python, vous pouvez utiliser des outils comme :
-   - **Snyk** : pour scanner les vulnérabilités dans les dépendances et générer un rapport de sécurité.
-   - **Safety** : un autre outil dédié à la vérification de la sécurité des dépendances Python.
-   - **Dependabot** : pour gérer les mises à jour de dépendances et alerter sur les versions vulnérables.
-
-Exemple d'ajout de **Safety** dans un pipeline GitHub Actions :
-
-```yaml
-    - name: Install Safety
-      run: pip install safety
-
-    - name: Run Safety check
-      run: safety check --full-report > safety-report.txt
-
-    - name: Upload Safety report artifact
+    - name: Upload combined dependencies report
       uses: actions/upload-artifact@v2
       with:
-        name: safety-report
-        path: safety-report.txt
+        name: combined-dependencies-report
+        path: combined-dependencies-report.json
 ```
 
-Cela permettra d'ajouter un rapport sur les vulnérabilités dans les dépendances Python à chaque déploiement CI/CD.
+### Détails GitHub Actions :
+
+- **actions/setup-node@v2** et **actions/setup-python@v2** : Utilisés pour configurer l'environnement Node.js et Python respectivement.
+- Les étapes suivent le même processus que dans GitLab CI, générant des rapports pour chaque environnement et les téléchargeant comme artifacts.
+- Le job **combine_reports** combine les rapports si nécessaire, de manière similaire à l'exemple GitLab CI.
 
 ### Conclusion
 
-L'intégration des dépendances Python dans un pipeline CI/CD peut se faire facilement en utilisant des commandes comme `pip list` pour générer un rapport des dépendances, et en automatisant ce processus dans des outils CI comme GitLab ou GitHub Actions. Vous pouvez également ajouter des vérifications de sécurité avec des outils comme Safety ou Snyk pour garantir la sécurité des dépendances utilisées dans le projet.
+Avec ces scripts YAML, vous pouvez automatiser la gestion des dépendances JavaScript et Python dans vos pipelines CI/CD. Ces fichiers permettent non seulement de générer des rapports de dépendances, mais aussi de les sauvegarder sous forme d'artifacts pour être examinés ultérieurement.
