@@ -1,9 +1,7 @@
 
-Voici un exemple de script YAML qui couvre à la fois les dépendances **JavaScript** (via npm) et **Python** (via pip) dans un pipeline CI/CD. Ce script fonctionne pour **GitLab CI**, mais peut également être adapté à **GitHub Actions**.
+Voici un exemple complet de fichier **GitLab CI** (`.gitlab-ci.yml`) qui prend en compte à la fois les dépendances **Python** et **JavaScript** dans un même pipeline CI/CD. Ce script installe les dépendances des deux environnements, génère des rapports pour chacune d'entre elles, et les combine dans un seul fichier si nécessaire.
 
-### Exemple GitLab CI (`.gitlab-ci.yml`)
-
-Ce fichier CI/YML permet de gérer les dépendances pour les deux environnements (JavaScript et Python), génère un rapport pour chaque environnement et les stocke sous forme d'artifacts.
+### Exemple de fichier `.gitlab-ci.yml`
 
 ```yaml
 stages:
@@ -13,153 +11,70 @@ stages:
 # Job pour installer les dépendances JavaScript et générer le rapport
 js_dependencies:
   stage: install_dependencies
-  image: node:16  # Utilise une image Docker Node.js
+  image: node:16  # Utilise une image Docker Node.js pour gérer les dépendances JavaScript
   before_script:
     - npm ci  # Installe les dépendances via npm
   script:
-    - npm ls --json > js-dependencies-report.json  # Génère le rapport de dépendances npm au format JSON
+    - npm ls --json > js-dependencies-report.json  # Génère le rapport des dépendances npm au format JSON
   artifacts:
     paths:
       - js-dependencies-report.json  # Sauvegarde le rapport comme artifact
-    expire_in: 1 week  # Garde l'artifact pendant 1 semaine
+    expire_in: 1 week  # L'artifact expire après 1 semaine
 
 # Job pour installer les dépendances Python et générer le rapport
 python_dependencies:
   stage: install_dependencies
   image: python:3.9  # Utilise une image Docker avec Python pré-installé
   before_script:
-    - pip install -r requirements.txt  # Installe les dépendances via pip
+    - pip install -r requirements.txt  # Installe les dépendances Python à partir du fichier requirements.txt
   script:
-    - pip list --format=json > python-dependencies-report.json  # Génère le rapport de dépendances pip au format JSON
+    - pip list --format=json > python-dependencies-report.json  # Génère le rapport des dépendances Python au format JSON
   artifacts:
     paths:
       - python-dependencies-report.json  # Sauvegarde le rapport comme artifact
-    expire_in: 1 week  # Garde l'artifact pendant 1 semaine
+    expire_in: 1 week  # L'artifact expire après 1 semaine
 
-# Job combinant les rapports dans la même étape si souhaité
+# Job combinant les rapports des dépendances JavaScript et Python dans un fichier unique
 combine_reports:
   stage: report
-  image: alpine  # Utilisation d'une image légère
+  image: alpine  # Utilise une image Docker légère pour la combinaison des rapports
   script:
     - echo "Combinaison des rapports de dépendances"
     - cat js-dependencies-report.json python-dependencies-report.json > combined-dependencies-report.json
+  dependencies:  # Ce job dépend des jobs précédents pour accéder aux rapports
+    - js_dependencies
+    - python_dependencies
   artifacts:
     paths:
       - combined-dependencies-report.json  # Sauvegarde le rapport combiné
-    expire_in: 1 week
+    expire_in: 1 week  # L'artifact expire après 1 semaine
 ```
 
-### Détails :
+### Explication du fichier :
 
-1. **Image Docker** :
-   - Utilise l'image **Node.js** (version 16) pour gérer les dépendances JavaScript via npm.
-   - Utilise l'image **Python** (version 3.9) pour gérer les dépendances Python via pip.
-   - **Alpine** est utilisée pour le job final léger de combinaison des rapports.
+1. **Stages** :
+   - Le pipeline est divisé en deux étapes principales : `install_dependencies` et `report`.
+   - L'étape `install_dependencies` s'occupe d'installer les dépendances et de générer des rapports pour JavaScript et Python.
+   - L'étape `report` combine les rapports générés dans un fichier unique.
 
-2. **Installations des dépendances** :
-   - `npm ci` : Cette commande installe les dépendances de manière déterministe pour les projets JavaScript (basée sur `package-lock.json`).
-   - `pip install -r requirements.txt` : Installe les dépendances Python définies dans le fichier `requirements.txt`.
+2. **Job `js_dependencies`** :
+   - Utilise une image Docker Node.js (`node:16`) pour gérer les dépendances JavaScript.
+   - Installe les dépendances à l'aide de `npm ci`.
+   - Génère un rapport des dépendances sous forme de fichier JSON (`npm ls --json > js-dependencies-report.json`).
+   - Sauvegarde le rapport sous forme d’artifact, avec une expiration d'une semaine.
 
-3. **Génération des rapports** :
-   - Pour **npm**, la commande `npm ls --json` est utilisée pour générer un rapport des dépendances JavaScript en format JSON.
-   - Pour **pip**, la commande `pip list --format=json` génère le rapport des dépendances Python au format JSON.
+3. **Job `python_dependencies`** :
+   - Utilise une image Docker Python (`python:3.9`) pour gérer les dépendances Python.
+   - Installe les dépendances Python via `pip install -r requirements.txt`.
+   - Génère un rapport des dépendances sous forme de fichier JSON (`pip list --format=json > python-dependencies-report.json`).
+   - Sauvegarde le rapport sous forme d’artifact, avec une expiration d'une semaine.
 
-4. **Artifacts** :
-   - Chaque rapport de dépendances (`js-dependencies-report.json` et `python-dependencies-report.json`) est sauvegardé comme un artifact, et peut être téléchargé depuis l'interface de GitLab après l'exécution du pipeline.
-   - Les artifacts sont configurés pour expirer après 1 semaine (`expire_in: 1 week`), ce qui peut être ajusté en fonction de vos besoins.
-
-5. **Combinaison des rapports (optionnel)** :
-   - Le dernier job combine les deux rapports (`cat js-dependencies-report.json python-dependencies-report.json`) dans un seul fichier `combined-dependencies-report.json`, qui est également sauvegardé en tant qu'artifact.
-
-### Exemple GitHub Actions
-
-Voici un exemple similaire pour **GitHub Actions** (`.github/workflows/dependencies.yml`), où nous traitons à la fois les dépendances JavaScript et Python.
-
-```yaml
-name: CI
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-jobs:
-  js_dependencies:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check out the repository
-      uses: actions/checkout@v2
-
-    - name: Install Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '16'
-
-    - name: Install JavaScript dependencies
-      run: npm ci
-
-    - name: Generate JavaScript dependencies report
-      run: npm ls --json > js-dependencies-report.json
-
-    - name: Upload JavaScript dependencies report
-      uses: actions/upload-artifact@v2
-      with:
-        name: js-dependencies-report
-        path: js-dependencies-report.json
-
-  python_dependencies:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check out the repository
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.x'
-
-    - name: Install Python dependencies
-      run: pip install -r requirements.txt
-
-    - name: Generate Python dependencies report
-      run: pip list --format=json > python-dependencies-report.json
-
-    - name: Upload Python dependencies report
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-dependencies-report
-        path: python-dependencies-report.json
-
-  combine_reports:
-    runs-on: ubuntu-latest
-    needs: [js_dependencies, python_dependencies]
-    steps:
-    - name: Download all reports
-      uses: actions/download-artifact@v2
-      with:
-        name: js-dependencies-report
-
-    - uses: actions/download-artifact@v2
-      with:
-        name: python-dependencies-report
-
-    - name: Combine reports
-      run: cat js-dependencies-report.json python-dependencies-report.json > combined-dependencies-report.json
-
-    - name: Upload combined dependencies report
-      uses: actions/upload-artifact@v2
-      with:
-        name: combined-dependencies-report
-        path: combined-dependencies-report.json
-```
-
-### Détails GitHub Actions :
-
-- **actions/setup-node@v2** et **actions/setup-python@v2** : Utilisés pour configurer l'environnement Node.js et Python respectivement.
-- Les étapes suivent le même processus que dans GitLab CI, générant des rapports pour chaque environnement et les téléchargeant comme artifacts.
-- Le job **combine_reports** combine les rapports si nécessaire, de manière similaire à l'exemple GitLab CI.
+4. **Job `combine_reports`** :
+   - Ce job combine les deux rapports de dépendances (JavaScript et Python) dans un fichier unique (`combined-dependencies-report.json`).
+   - Utilise une image Docker Alpine (légère) pour effectuer cette opération.
+   - Ce job dépend des jobs `js_dependencies` et `python_dependencies` pour pouvoir accéder aux fichiers générés.
+   - Sauvegarde le fichier combiné sous forme d'artifact.
 
 ### Conclusion
 
-Avec ces scripts YAML, vous pouvez automatiser la gestion des dépendances JavaScript et Python dans vos pipelines CI/CD. Ces fichiers permettent non seulement de générer des rapports de dépendances, mais aussi de les sauvegarder sous forme d'artifacts pour être examinés ultérieurement.
+Ce fichier **GitLab CI** prend en charge les dépendances **JavaScript** et **Python** dans un même pipeline. Il génère des rapports pour chacune d'elles et les combine dans un fichier final, tout en stockant les rapports comme artifacts. Vous pouvez adapter les étapes en fonction de vos besoins, par exemple pour modifier l'expiration des artifacts ou les formats de rapport.
