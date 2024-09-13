@@ -1,37 +1,111 @@
-Le mot-clé `yield` dans Python, lorsqu'utilisé dans le contexte de FastAPI avec une dépendance comme `get_db()`, joue un rôle crucial pour la gestion de la session de base de données au sein de chaque requête. Voici une explication détaillée de son fonctionnement et son importance :
+Pour construire une API simple utilisant FastAPI et SQLAlchemy pour gérer un modèle de base, nous allons créer un exemple qui définit une classe de modèle, configure une base de données, et expose des fonctions API pour insérer et récupérer des données. Nous utiliserons également Pydantic pour la validation des données.
 
-### Contexte FastAPI et SQLAlchemy
+### Étape 1: Définir les modèles SQLAlchemy
 
-Dans FastAPI, l'utilisation de `yield` dans une fonction de dépendance permet de gérer les ressources de manière efficace, en s'assurant qu'elles sont correctement ouvertes avant le traitement d'une requête et fermées après. C'est particulièrement utile pour les sessions de bases de données avec SQLAlchemy.
+Créons un modèle simple pour un utilisateur. Les fichiers suivants seront dans votre projet:
 
-### Fonction `get_db()` Expliquée
+1. **`database.py`**: Configuration de la base de données et session.
+2. **`models.py`**: Définition des modèles SQLAlchemy.
+3. **`schemas.py`**: Schémas Pydantic pour la validation des données.
+4. **`main.py`**: Application FastAPI avec les routes.
+
+**database.py:**
 
 ```python
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"  # Utiliser SQLite pour l'exemple
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+```
+
+**models.py:**
+
+```python
+from sqlalchemy import Column, Integer, String
+from database import Base
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String, unique=True, index=True)
+```
+
+### Étape 2: Créer les schémas Pydantic
+
+**schemas.py:**
+
+```python
+from pydantic import BaseModel
+
+class UserBase(BaseModel):
+    name: str
+    email: str
+
+class UserCreate(UserBase):
+    pass
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+```
+
+### Étape 3: Application FastAPI
+
+**main.py:**
+
+```python
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+import models, schemas
+from database import SessionLocal, engine
+
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+# Dependency
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+@app.post("/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = models.User(name=user.name, email=user.email)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.get("/users/", response_model=List[schemas.User])
+def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    users = db.query(models.User).offset(skip).limit(limit).all()
+    return users
 ```
 
-#### **Création et Ouverture de Session**
-- `db = SessionLocal()`: Une session SQLAlchemy est créée en utilisant le `sessionmaker` configuré. Cette session est liée à la base de données et permet de faire des opérations comme des requêtes ou des transactions.
+### Exécution et test
 
-#### **Yield**
-- `yield db`: Le mot-clé `yield` suspend l'exécution de la fonction tout en retournant temporairement la session `db` à la fonction appelante (ici, à un endpoint de FastAPI). FastAPI reprendra cette fonction à partir de ce point pour la prochaine requête utilisant cette dépendance.
-- Ce mécanisme est crucial car il permet à l'endpoint de faire usage de cette session pour effectuer des opérations sur la base de données. Toutes les opérations effectuées sont dans le contexte de cette session, qui n'est pas encore fermée grâce à `yield`.
+1. **Exécuter l'API**:
+   Lancez votre application FastAPI en utilisant `uvicorn main:app --reload` à partir de la ligne de commande.
 
-#### **Nettoyage Après Réponse**
-- `finally`: Ce bloc s'exécute après que la réponse de l'API a été envoyée au client. Peu importe si la requête a réussi ou si une exception a été levée, ce bloc s'assure que la session de base de données est fermée proprement.
-- `db.close()`: Ferme la session de base de données, libérant ainsi les ressources associées. Cela prévient les fuites de connexion et d'autres problèmes potentiels comme des verrous de base de données restants.
+2. **Tester avec HTTP requests**:
+   Utilisez des outils comme curl, Postman, ou simplement votre navigateur pour tester les endpoints `/users/` pour créer et lire les utilisateurs.
 
-### Avantages de `yield` dans ce Contexte
+### Conclusion
 
-1. **Gestion Automatique des Ressources**: FastAPI s'occupe de reprendre l'exécution de la fonction `get_db()` après la fin de la requête pour exécuter le bloc `finally`, garantissant que la session est fermée correctement.
-   
-2. **Concurrence et Sécurité**: Chaque requête obtient sa propre session, isolée des autres. Cela évite les problèmes de concurrence et assure que les opérations de base de données sont sécurisées et indépendantes.
-
-3. **Simplicité de Code**: Le développeur n'a pas à se soucier de la fermeture manuelle de la session à chaque endpoint, réduisant ainsi le risque d'erreurs.
-
-En conclusion, l'utilisation de `yield` pour gérer la session de base de données dans FastAPI assure une gestion efficace et sûre des ressources de base de données, tout en rendant le code plus propre et plus facile à maintenir.
+Ce script de base vous montre comment configurer une API simple avec FastAPI et SQLAlchemy, y compris la création et la gestion d'un modèle simple d'utilisateur. Vous pouvez facilement étendre cet exemple avec des fonctionnalités plus avancées comme la gestion des erreurs, l'authentification, et plus encore.
