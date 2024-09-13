@@ -1,0 +1,37 @@
+Le mot-clé `yield` dans Python, lorsqu'utilisé dans le contexte de FastAPI avec une dépendance comme `get_db()`, joue un rôle crucial pour la gestion de la session de base de données au sein de chaque requête. Voici une explication détaillée de son fonctionnement et son importance :
+
+### Contexte FastAPI et SQLAlchemy
+
+Dans FastAPI, l'utilisation de `yield` dans une fonction de dépendance permet de gérer les ressources de manière efficace, en s'assurant qu'elles sont correctement ouvertes avant le traitement d'une requête et fermées après. C'est particulièrement utile pour les sessions de bases de données avec SQLAlchemy.
+
+### Fonction `get_db()` Expliquée
+
+```python
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+#### **Création et Ouverture de Session**
+- `db = SessionLocal()`: Une session SQLAlchemy est créée en utilisant le `sessionmaker` configuré. Cette session est liée à la base de données et permet de faire des opérations comme des requêtes ou des transactions.
+
+#### **Yield**
+- `yield db`: Le mot-clé `yield` suspend l'exécution de la fonction tout en retournant temporairement la session `db` à la fonction appelante (ici, à un endpoint de FastAPI). FastAPI reprendra cette fonction à partir de ce point pour la prochaine requête utilisant cette dépendance.
+- Ce mécanisme est crucial car il permet à l'endpoint de faire usage de cette session pour effectuer des opérations sur la base de données. Toutes les opérations effectuées sont dans le contexte de cette session, qui n'est pas encore fermée grâce à `yield`.
+
+#### **Nettoyage Après Réponse**
+- `finally`: Ce bloc s'exécute après que la réponse de l'API a été envoyée au client. Peu importe si la requête a réussi ou si une exception a été levée, ce bloc s'assure que la session de base de données est fermée proprement.
+- `db.close()`: Ferme la session de base de données, libérant ainsi les ressources associées. Cela prévient les fuites de connexion et d'autres problèmes potentiels comme des verrous de base de données restants.
+
+### Avantages de `yield` dans ce Contexte
+
+1. **Gestion Automatique des Ressources**: FastAPI s'occupe de reprendre l'exécution de la fonction `get_db()` après la fin de la requête pour exécuter le bloc `finally`, garantissant que la session est fermée correctement.
+   
+2. **Concurrence et Sécurité**: Chaque requête obtient sa propre session, isolée des autres. Cela évite les problèmes de concurrence et assure que les opérations de base de données sont sécurisées et indépendantes.
+
+3. **Simplicité de Code**: Le développeur n'a pas à se soucier de la fermeture manuelle de la session à chaque endpoint, réduisant ainsi le risque d'erreurs.
+
+En conclusion, l'utilisation de `yield` pour gérer la session de base de données dans FastAPI assure une gestion efficace et sûre des ressources de base de données, tout en rendant le code plus propre et plus facile à maintenir.
