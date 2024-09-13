@@ -1,18 +1,24 @@
 
+from flask import Flask, jsonify, request
+from models import Session, BusinessManager
 
-import logging
-from logging.config import fileConfig
+app = Flask(__name__)
 
-# Activer la configuration de logging depuis le fichier alembic.ini
-fileConfig(config.config_file_name)
+@app.route('/business_manager/<ut>', methods=['GET'])
+def get_business_manager(ut):
+    session = Session()  # Assumons que Session est configuré correctement pour SQLAlchemy
+    business_manager = session.query(BusinessManager).filter_by(ut=ut).first()
+    if business_manager is not None:
+        assistants_data = [
+            {"ut": assistant.ut, "ut_bm": assistant.ut_bm}
+            for assistant in business_manager.assistants
+        ]
+        return jsonify({
+            "ut": business_manager.ut,
+            "assistants": assistants_data
+        })
+    else:
+        return jsonify({"error": "BusinessManager not found"}), 404
 
-# Configurer un logger manuellement
-logger = logging.getLogger('alembic')
-logger.setLevel(logging.INFO)  # Tu peux changer cela en DEBUG pour plus de détails
-
-# Ajouter un gestionnaire de log pour afficher les logs à la console
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)  # Définir le niveau de détail pour la console
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+if __name__ == '__main__':
+    app.run(debug=True)
