@@ -1,24 +1,61 @@
 
-from flask import Flask, jsonify, request
-from models import Session, BusinessManager
+Oui, il est possible d'automatiser un reporting sur les versions utilisées dans un projet GitLab à l'aide de **SAST (Static Application Security Testing)** et de la **CI/CD**. GitLab intègre divers outils pour le faire, comme l'utilisation de **GitLab SAST**, **Dependency Scanning**, et les pipelines de CI/CD.
 
-app = Flask(__name__)
+Voici les étapes générales pour mettre en place un tel reporting :
 
-@app.route('/business_manager/<ut>', methods=['GET'])
-def get_business_manager(ut):
-    session = Session()  # Assumons que Session est configuré correctement pour SQLAlchemy
-    business_manager = session.query(BusinessManager).filter_by(ut=ut).first()
-    if business_manager is not None:
-        assistants_data = [
-            {"ut": assistant.ut, "ut_bm": assistant.ut_bm}
-            for assistant in business_manager.assistants
-        ]
-        return jsonify({
-            "ut": business_manager.ut,
-            "assistants": assistants_data
-        })
-    else:
-        return jsonify({"error": "BusinessManager not found"}), 404
+### 1. **Configurer GitLab SAST**
+   - GitLab propose un scanner de sécurité SAST intégré, qui peut être utilisé pour détecter les vulnérabilités de sécurité dans le code source.
+   - Pour activer GitLab SAST, il suffit d'ajouter la configuration nécessaire dans le fichier `.gitlab-ci.yml` de votre projet.
 
-if __name__ == '__main__':
-    app.run(debug=True)
+   Par exemple, pour un projet Python, vous pourriez ajouter ceci :
+
+   ```yaml
+   include:
+     - template: Security/SAST.gitlab-ci.yml
+   ```
+
+   GitLab s'occupera ensuite de télécharger et d'exécuter les outils SAST appropriés pour votre projet lors de chaque pipeline CI/CD.
+
+### 2. **Configurer le Dependency Scanning**
+   Le Dependency Scanning vous permet de détecter les vulnérabilités dans les dépendances utilisées par votre projet. Pour l'activer, vous devez également ajouter cette configuration à votre `.gitlab-ci.yml`.
+
+   Par exemple, pour un projet JavaScript (Node.js), vous ajouteriez ceci :
+
+   ```yaml
+   include:
+     - template: Security/Dependency-Scanning.gitlab-ci.yml
+   ```
+
+   Cela va scanner les dépendances de votre projet, telles que définies dans le fichier `package.json`, et générer un rapport de vulnérabilités basé sur les bibliothèques utilisées.
+
+### 3. **Ajouter une étape de Reporting dans la CI/CD**
+   Vous pouvez également automatiser la génération de rapports à partir des résultats de SAST et du Dependency Scanning. GitLab propose déjà des rapports intégrés que vous pouvez visualiser dans l'onglet **Security & Compliance**.
+
+   Vous pouvez également exporter ces rapports en format JSON ou autre format souhaité pour une intégration avec d'autres outils ou pour un traitement personnalisé.
+
+   Voici un exemple d’étape additionnelle dans la CI/CD pour générer un rapport JSON des dépendances avec une analyse de sécurité :
+
+   ```yaml
+   sast_report:
+     script:
+       - echo "Generating SAST report..."
+       - cat gl-sast-report.json
+     artifacts:
+       reports:
+         sast: gl-sast-report.json
+     dependencies:
+       - sast
+   ```
+
+### 4. **Automatisation et Intégration**
+   - Vous pouvez configurer une tâche dans le pipeline CI/CD pour envoyer les rapports générés vers un système externe (comme un serveur de reporting, une base de données, ou un dashboard spécifique).
+   - Vous pourriez utiliser un script personnalisé pour extraire les informations sur les versions des dépendances, les failles de sécurité trouvées, et les afficher de manière plus structurée.
+
+### 5. **Notifications et Alertes**
+   - GitLab CI/CD permet également de configurer des notifications ou des alertes automatisées sur des canaux spécifiques (comme un canal Slack, un email, ou des systèmes de monitoring) lorsque des versions vulnérables ou des problèmes de sécurité sont détectés dans les dépendances du projet.
+
+### Conclusion
+
+Avec GitLab, vous pouvez configurer des outils de sécurité intégrés comme SAST et Dependency Scanning pour automatiser la détection des vulnérabilités et générer des rapports sur les versions utilisées dans vos projets via la CI/CD. Vous pouvez ensuite personnaliser ces rapports et les exporter ou automatiser des actions en fonction des résultats obtenus.
+
+Cela vous offre une vue centralisée sur la sécurité de votre code et de vos dépendances, tout en facilitant l'intégration dans des processus automatisés de reporting ou d'alertes.
