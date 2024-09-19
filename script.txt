@@ -1,25 +1,18 @@
 
-stages:
-  - dependencies-report
+import pandas as pd
+import numpy as np
 
-# Étape pour générer un rapport des dépendances Python
-python_dependencies_report:
-  stage: dependencies-report
-  image: python:3.9
-  script:
-    - pip install -r requirements.txt  # Installer les dépendances
-    - pip freeze > python-dependencies.txt  # Générer le rapport des dépendances Python
-  artifacts:
-    paths:
-      - python-dependencies.txt
+# Supposons que ton DataFrame s'appelle df
 
-# Étape pour générer un rapport des dépendances JavaScript
-javascript_dependencies_report:
-  stage: dependencies-report
-  image: node:16
-  script:
-    - npm install  # Installer les dépendances
-    - npm list --depth=0 > javascript-dependencies.txt  # Générer le rapport des dépendances JS
-  artifacts:
-    paths:
-      - javascript-dependencies.txt
+# 1. Sélectionner les colonnes 100 à 300 et 600 à 800
+cols_100_300 = df.iloc[:, 100:301].values  # Extraire les valeurs comme un array NumPy
+cols_600_800 = df.iloc[:, 600:801].values  # Extraire les valeurs comme un array NumPy
+
+# 2. Utiliser np.sort avec l'option axis=1 pour trier les colonnes horizontalement
+# Le [::-1] inversera l'ordre pour obtenir un tri décroissant
+sorted_100_300 = -np.sort(-cols_100_300, axis=1)  # Tri décroissant pour 100 à 300
+sorted_600_800 = -np.sort(-cols_600_800, axis=1)  # Tri décroissant pour 600 à 800
+
+# 3. Remplacer les colonnes originales par les colonnes triées
+df.iloc[:, 100:301] = sorted_100_300
+df.iloc[:, 600:801] = sorted_600_800
