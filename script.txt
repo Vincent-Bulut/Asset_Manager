@@ -2,17 +2,20 @@
 import pandas as pd
 import numpy as np
 
-# Supposons que ton DataFrame s'appelle df
+# Supposons que 'df' soit ton DataFrame avec 900 colonnes
 
-# 1. Sélectionner les colonnes 100 à 300 et 600 à 800
-cols_100_300 = df.iloc[:, 100:301].values  # Extraire les valeurs comme un array NumPy
-cols_600_800 = df.iloc[:, 600:801].values  # Extraire les valeurs comme un array NumPy
+# Extraire les colonnes de 100 à 150
+df_sub = df.iloc[:, 100:151]
 
-# 2. Utiliser np.sort avec l'option axis=1 pour trier les colonnes horizontalement
-# Le [::-1] inversera l'ordre pour obtenir un tri décroissant
-sorted_100_300 = -np.sort(-cols_100_300, axis=1)  # Tri décroissant pour 100 à 300
-sorted_600_800 = -np.sort(-cols_600_800, axis=1)  # Tri décroissant pour 600 à 800
+# Fonction pour trouver la dernière valeur non nulle et son indice
+def last_non_null_index(row):
+    # Parcours des colonnes de droite à gauche (de la colonne 150 à 100)
+    for col in reversed(df_sub.columns):
+        if pd.notnull(row[col]):
+            return col  # Retourne l'indice de la colonne
+    return np.nan  # Si toutes les valeurs sont nulles, retourne NaN
 
-# 3. Remplacer les colonnes originales par les colonnes triées
-df.iloc[:, 100:301] = sorted_100_300
-df.iloc[:, 600:801] = sorted_600_800
+# Appliquer cette fonction à chaque ligne du DataFrame
+df['last_non_null_col'] = df_sub.apply(last_non_null_index, axis=1)
+
+# La nouvelle colonne 'last_non_null_col' contiendra l'indice de la colonne de la dernière valeur non nulle
