@@ -1,21 +1,40 @@
 
 import pandas as pd
-import numpy as np
+import re
 
-# Supposons que 'df' soit ton DataFrame avec 900 colonnes
+class DataFrameProcessor:
+    def __init__(self, df):
+        self.df = df  # Le dataframe est un membre de la classe
 
-# Extraire les colonnes de 100 à 150
-df_sub = df.iloc[:, 100:151]
+    def convert_label_to_years(self, column_name):
+        # Fonction interne pour convertir les labels
+        def convert_label(label):
+            match = re.search(r'(\d+)\s*(M|Y)', label)
+            if match:
+                value, unit = match.groups()
+                value = int(value)
+                if unit == 'M':  # Convertir les mois en années
+                    return value / 12
+                elif unit == 'Y':  # Garder les années telles quelles
+                    return value
+            return None  # Si aucun match n'est trouvé
 
-# Fonction pour trouver la dernière valeur non nulle et son indice
-def last_non_null_index(row):
-    # Parcours des colonnes de droite à gauche (de la colonne 150 à 100)
-    for col in reversed(df_sub.columns):
-        if pd.notnull(row[col]):
-            return col  # Retourne l'indice de la colonne
-    return np.nan  # Si toutes les valeurs sont nulles, retourne NaN
+        # Appliquer la fonction sur la colonne spécifiée du dataframe
+        self.df['converted_years'] = self.df[column_name].apply(convert_label)
+    
+    def display(self):
+        # Fonction pour afficher le dataframe
+        print(self.df)
 
-# Appliquer cette fonction à chaque ligne du DataFrame
-df['last_non_null_col'] = df_sub.apply(last_non_null_index, axis=1)
+# Exemple d'utilisation
+data = {'labels': ['xxxx M1', 'xxxx Y10', 'xxxx M12', 'xxxx Y5', 'sample M6', 'example Y20']}
+df = pd.DataFrame(data)
 
-# La nouvelle colonne 'last_non_null_col' contiendra l'indice de la colonne de la dernière valeur non nulle
+# Créer une instance de la classe avec le dataframe
+processor = DataFrameProcessor(df)
+
+# Appliquer la conversion sur la colonne 'labels'
+processor.convert_label_to_years('labels')
+
+# Afficher les résultats
+processor.display()
