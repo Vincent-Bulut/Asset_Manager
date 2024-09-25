@@ -1,40 +1,18 @@
 
 import pandas as pd
-import re
+import numpy as np
 
-class DataFrameProcessor:
-    def __init__(self, df):
-        self.df = df  # Le dataframe est un membre de la classe
+# Création d'un exemple de DataFrame avec 400 colonnes et des noms de colonnes aléatoires
+data = np.random.rand(10, 400)
+columns = [f"col_{i}" for i in range(400)]  # Générer des noms de colonnes
+df = pd.DataFrame(data, columns=columns)
 
-    def convert_label_to_years(self, column_name):
-        # Fonction interne pour convertir les labels
-        def convert_label(label):
-            match = re.search(r'(\d+)\s*(M|Y)', label)
-            if match:
-                value, unit = match.groups()
-                value = int(value)
-                if unit == 'M':  # Convertir les mois en années
-                    return value / 12
-                elif unit == 'Y':  # Garder les années telles quelles
-                    return value
-            return None  # Si aucun match n'est trouvé
+# Récupérer les labels des colonnes 100 à 150 et 300 à 350
+colonnes_100_150_labels = df.columns[100:151]
+colonnes_300_350_labels = df.columns[300:351]
 
-        # Appliquer la fonction sur la colonne spécifiée du dataframe
-        self.df['converted_years'] = self.df[column_name].apply(convert_label)
-    
-    def display(self):
-        # Fonction pour afficher le dataframe
-        print(self.df)
+# Remplacer les colonnes 100 à 150 par les colonnes 300 à 350
+df.loc[:, colonnes_100_150_labels] = df.loc[:, colonnes_300_350_labels]
 
-# Exemple d'utilisation
-data = {'labels': ['xxxx M1', 'xxxx Y10', 'xxxx M12', 'xxxx Y5', 'sample M6', 'example Y20']}
-df = pd.DataFrame(data)
-
-# Créer une instance de la classe avec le dataframe
-processor = DataFrameProcessor(df)
-
-# Appliquer la conversion sur la colonne 'labels'
-processor.convert_label_to_years('labels')
-
-# Afficher les résultats
-processor.display()
+# Vérification : Afficher les colonnes modifiées
+print(df[colonnes_100_150_labels])
