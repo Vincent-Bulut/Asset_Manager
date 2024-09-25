@@ -1,80 +1,31 @@
 
-Voici un exemple complet de fichier **GitLab CI** (`.gitlab-ci.yml`) qui prend en compte à la fois les dépendances **Python** et **JavaScript** dans un même pipeline CI/CD. Ce script installe les dépendances des deux environnements, génère des rapports pour chacune d'entre elles, et les combine dans un seul fichier si nécessaire.
+import pandas as pd
+import numpy as np
+import re
 
-### Exemple de fichier `.gitlab-ci.yml`
+# Création d'un exemple de DataFrame avec des colonnes nommées contenant des maturités
+data = np.random.rand(10, 900)
+columns = [f"col_{i}_M{i % 10 + 1}" for i in range(900)]  # Colonnes avec maturité M1, M2,...M10 répétées
+df = pd.DataFrame(data, columns=columns)
 
-```yaml
-stages:
-  - install_dependencies
-  - report
+# Étape 1 : Extraire la maturité depuis le nom des colonnes avec une regex
+def extract_maturity(column_name):
+    # Ici on suppose que la maturité est après le dernier '_M' suivi d'un nombre, comme dans 'col_100_M15'
+    match = re.search(r'_M(\d+)', column_name)
+    return int(match.group(1)) if match else 1  # Si pas de maturité, on prend une valeur par défaut (1 ici)
 
-# Job pour installer les dépendances JavaScript et générer le rapport
-js_dependencies:
-  stage: install_dependencies
-  image: node:16  # Utilise une image Docker Node.js pour gérer les dépendances JavaScript
-  before_script:
-    - npm ci  # Installe les dépendances via npm
-  script:
-    - npm ls --json > js-dependencies-report.json  # Génère le rapport des dépendances npm au format JSON
-  artifacts:
-    paths:
-      - js-dependencies-report.json  # Sauvegarde le rapport comme artifact
-    expire_in: 1 week  # L'artifact expire après 1 semaine
+# Extraire les maturités pour les colonnes de 99 à 200
+maturities = [extract_maturity(col) for col in df.columns[99:201]]
 
-# Job pour installer les dépendances Python et générer le rapport
-python_dependencies:
-  stage: install_dependencies
-  image: python:3.9  # Utilise une image Docker avec Python pré-installé
-  before_script:
-    - pip install -r requirements.txt  # Installe les dépendances Python à partir du fichier requirements.txt
-  script:
-    - pip list --format=json > python-dependencies-report.json  # Génère le rapport des dépendances Python au format JSON
-  artifacts:
-    paths:
-      - python-dependencies-report.json  # Sauvegarde le rapport comme artifact
-    expire_in: 1 week  # L'artifact expire après 1 semaine
+# Étape 2 : Appliquer la transformation (différence) multipliée par la maturité
+cols_to_transform = df.iloc[:, 99:201].values
 
-# Job combinant les rapports des dépendances JavaScript et Python dans un fichier unique
-combine_reports:
-  stage: report
-  image: alpine  # Utilise une image Docker légère pour la combinaison des rapports
-  script:
-    - echo "Combinaison des rapports de dépendances"
-    - cat js-dependencies-report.json python-dependencies-report.json > combined-dependencies-report.json
-  dependencies:  # Ce job dépend des jobs précédents pour accéder aux rapports
-    - js_dependencies
-    - python_dependencies
-  artifacts:
-    paths:
-      - combined-dependencies-report.json  # Sauvegarde le rapport combiné
-    expire_in: 1 week  # L'artifact expire après 1 semaine
-```
+for i in range(1, cols_to_transform.shape[1]):
+    # Soustraction puis multiplication par la maturité associée
+    cols_to_transform[:, i] = (cols_to_transform[:, i] - cols_to_transform[:, i-1]) * maturities[i]
 
-### Explication du fichier :
+# Étape 3 : Réinjecter les résultats dans le DataFrame
+df.iloc[:, 100:201] = cols_to_transform[:, 1:]
 
-1. **Stages** :
-   - Le pipeline est divisé en deux étapes principales : `install_dependencies` et `report`.
-   - L'étape `install_dependencies` s'occupe d'installer les dépendances et de générer des rapports pour JavaScript et Python.
-   - L'étape `report` combine les rapports générés dans un fichier unique.
-
-2. **Job `js_dependencies`** :
-   - Utilise une image Docker Node.js (`node:16`) pour gérer les dépendances JavaScript.
-   - Installe les dépendances à l'aide de `npm ci`.
-   - Génère un rapport des dépendances sous forme de fichier JSON (`npm ls --json > js-dependencies-report.json`).
-   - Sauvegarde le rapport sous forme d’artifact, avec une expiration d'une semaine.
-
-3. **Job `python_dependencies`** :
-   - Utilise une image Docker Python (`python:3.9`) pour gérer les dépendances Python.
-   - Installe les dépendances Python via `pip install -r requirements.txt`.
-   - Génère un rapport des dépendances sous forme de fichier JSON (`pip list --format=json > python-dependencies-report.json`).
-   - Sauvegarde le rapport sous forme d’artifact, avec une expiration d'une semaine.
-
-4. **Job `combine_reports`** :
-   - Ce job combine les deux rapports de dépendances (JavaScript et Python) dans un fichier unique (`combined-dependencies-report.json`).
-   - Utilise une image Docker Alpine (légère) pour effectuer cette opération.
-   - Ce job dépend des jobs `js_dependencies` et `python_dependencies` pour pouvoir accéder aux fichiers générés.
-   - Sauvegarde le fichier combiné sous forme d'artifact.
-
-### Conclusion
-
-Ce fichier **GitLab CI** prend en charge les dépendances **JavaScript** et **Python** dans un même pipeline. Il génère des rapports pour chacune d'elles et les combine dans un fichier final, tout en stockant les rapports comme artifacts. Vous pouvez adapter les étapes en fonction de vos besoins, par exemple pour modifier l'expiration des artifacts ou les formats de rapport.
+# Vérification : Afficher les colonnes 99 à 201 pour voir la transformation
+print(df.iloc[:, 99:201])
