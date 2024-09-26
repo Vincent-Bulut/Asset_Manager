@@ -1,17 +1,22 @@
 
-# On suppose que le DataFrame s'appelle 'df'
+import numpy as np
+import pandas as pd
 
-# Récupérer les colonnes de 100 à 200 (les indices des colonnes commencent à 0 donc colonne 100 correspond à df.iloc[:, 100])
-df_selected = df.iloc[:, 100:201]  # On prend les colonnes 100 à 200 inclus
+# Exemple d'un DataFrame avec 900 colonnes
+df = pd.DataFrame(np.random.rand(1000, 900))  # 1000 lignes, 900 colonnes avec des valeurs aléatoires
 
-# Créer une copie pour ne pas affecter les valeurs lors du calcul
-df_transformed = df_selected.copy()
+# Étape 1: Extraire les colonnes 100 à 200 et 500 à 600 en tant que tableaux NumPy
+col_100_200_np = df.iloc[:, 100:201].to_numpy()
+col_500_600_np = df.iloc[:, 500:601].to_numpy()
 
-# Appliquer les différences entre colonnes consécutives
-for i in range(1, df_transformed.shape[1]):  # Commence à la 2ème colonne (index 1)
-    df_transformed.iloc[:, i] = df_selected.iloc[:, i - 1] - df_selected.iloc[:, i]
+# Étape 2: Calculer la différence entre les colonnes
+difference_np = col_100_200_np - col_500_600_np
 
-# Réinjecter les colonnes modifiées dans le DataFrame original
-df.iloc[:, 101:201] = df_transformed.iloc[:, 1:]  # On saute la première colonne (100) car elle reste inchangée
+# Étape 3: Appliquer np.maximum pour prendre le max entre 0 et la différence
+result_np = np.maximum(difference_np, 0)
 
-# df contient maintenant les colonnes modifiées
+# Étape 4: Réinjecter les résultats modifiés dans les colonnes 100 à 200 du DataFrame original
+df.iloc[:, 100:201] = result_np
+
+# Afficher les premières lignes du DataFrame pour vérifier la modification
+df.head()
