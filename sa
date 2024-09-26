@@ -1,111 +1,17 @@
-Pour construire une API simple utilisant FastAPI et SQLAlchemy pour gérer un modèle de base, nous allons créer un exemple qui définit une classe de modèle, configure une base de données, et expose des fonctions API pour insérer et récupérer des données. Nous utiliserons également Pydantic pour la validation des données.
 
-### Étape 1: Définir les modèles SQLAlchemy
+# On suppose que le DataFrame s'appelle 'df'
 
-Créons un modèle simple pour un utilisateur. Les fichiers suivants seront dans votre projet:
+# Récupérer les colonnes de 100 à 200 (les indices des colonnes commencent à 0 donc colonne 100 correspond à df.iloc[:, 100])
+df_selected = df.iloc[:, 100:201]  # On prend les colonnes 100 à 200 inclus
 
-1. **`database.py`**: Configuration de la base de données et session.
-2. **`models.py`**: Définition des modèles SQLAlchemy.
-3. **`schemas.py`**: Schémas Pydantic pour la validation des données.
-4. **`main.py`**: Application FastAPI avec les routes.
+# Créer une copie pour ne pas affecter les valeurs lors du calcul
+df_transformed = df_selected.copy()
 
-**database.py:**
+# Appliquer les différences entre colonnes consécutives
+for i in range(1, df_transformed.shape[1]):  # Commence à la 2ème colonne (index 1)
+    df_transformed.iloc[:, i] = df_selected.iloc[:, i - 1] - df_selected.iloc[:, i]
 
-```python
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+# Réinjecter les colonnes modifiées dans le DataFrame original
+df.iloc[:, 101:201] = df_transformed.iloc[:, 1:]  # On saute la première colonne (100) car elle reste inchangée
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"  # Utiliser SQLite pour l'exemple
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-```
-
-**models.py:**
-
-```python
-from sqlalchemy import Column, Integer, String
-from database import Base
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    email = Column(String, unique=True, index=True)
-```
-
-### Étape 2: Créer les schémas Pydantic
-
-**schemas.py:**
-
-```python
-from pydantic import BaseModel
-
-class UserBase(BaseModel):
-    name: str
-    email: str
-
-class UserCreate(UserBase):
-    pass
-
-class User(UserBase):
-    id: int
-
-    class Config:
-        orm_mode = True
-```
-
-### Étape 3: Application FastAPI
-
-**main.py:**
-
-```python
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
-import models, schemas
-from database import SessionLocal, engine
-
-models.Base.metadata.create_all(bind=engine)
-
-app = FastAPI()
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = models.User(name=user.name, email=user.email)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-@app.get("/users/", response_model=List[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = db.query(models.User).offset(skip).limit(limit).all()
-    return users
-```
-
-### Exécution et test
-
-1. **Exécuter l'API**:
-   Lancez votre application FastAPI en utilisant `uvicorn main:app --reload` à partir de la ligne de commande.
-
-2. **Tester avec HTTP requests**:
-   Utilisez des outils comme curl, Postman, ou simplement votre navigateur pour tester les endpoints `/users/` pour créer et lire les utilisateurs.
-
-### Conclusion
-
-Ce script de base vous montre comment configurer une API simple avec FastAPI et SQLAlchemy, y compris la création et la gestion d'un modèle simple d'utilisateur. Vous pouvez facilement étendre cet exemple avec des fonctionnalités plus avancées comme la gestion des erreurs, l'authentification, et plus encore.
+# df contient maintenant les colonnes modifiées
