@@ -1,22 +1,20 @@
 
-import numpy as np
-import pandas as pd
+Sub ExtraireRequetePowerQuery()
+    Dim wb As Workbook
+    Dim pq As WorkbookQuery
+    Dim codeM As String
 
-# Exemple d'un DataFrame avec 900 colonnes
-df = pd.DataFrame(np.random.rand(1000, 900))  # 1000 lignes, 900 colonnes avec des valeurs aléatoires
-
-# Étape 1: Extraire les colonnes 100 à 200 et 500 à 600 en tant que tableaux NumPy
-col_100_200_np = df.iloc[:, 100:201].to_numpy()
-col_500_600_np = df.iloc[:, 500:601].to_numpy()
-
-# Étape 2: Calculer la différence entre les colonnes
-difference_np = col_100_200_np - col_500_600_np
-
-# Étape 3: Appliquer np.maximum pour prendre le max entre 0 et la différence
-result_np = np.maximum(difference_np, 0)
-
-# Étape 4: Réinjecter les résultats modifiés dans les colonnes 100 à 200 du DataFrame original
-df.iloc[:, 100:201] = result_np
-
-# Afficher les premières lignes du DataFrame pour vérifier la modification
-df.head()
+    ' Définir le classeur actif
+    Set wb = ThisWorkbook
+    
+    ' Boucler sur toutes les requêtes dans le classeur
+    For Each pq In wb.Queries
+        ' Extraire le nom de la requête et le code M
+        codeM = pq.Formula
+        
+        ' Afficher le nom de la requête et le code M dans la fenêtre Exécution
+        Debug.Print "Nom de la requête : " & pq.Name
+        Debug.Print "Code M : " & codeM
+        Debug.Print "----------------------"
+    Next pq
+End Sub
