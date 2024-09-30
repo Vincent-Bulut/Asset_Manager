@@ -1,20 +1,106 @@
 
-import pandas as pd
-import numpy as np
+Pour créer un reporting des vulnérabilités dans un projet qui inclut à la fois du **Python** et du **JavaScript**, il est essentiel de choisir des outils SAST qui supportent ces deux technologies et d’intégrer ces outils dans votre pipeline CI/CD. En plus, il faut envisager la manière dont les résultats des analyses peuvent être consolidés en un seul rapport.
 
-# Création d'un exemple de DataFrame avec 900 colonnes
-data = np.random.rand(10, 900)  # 10 lignes et 900 colonnes avec des valeurs aléatoires
-df = pd.DataFrame(data, columns=[f"col_{i}" for i in range(900)])
+### Étapes pour un reporting complet des vulnérabilités
 
-# Étape 1 : Extraire les colonnes 99 à 200 sous forme de tableau NumPy
-cols_to_transform = df.iloc[:, 99:201].values
+#### 1. **Choisir les bons outils SAST pour Python et JavaScript**
+Pour une analyse combinée de Python et de JavaScript, voici des outils que vous pouvez utiliser pour détecter les vulnérabilités dans les deux langages :
 
-# Étape 2 : Appliquer la transformation cumulative en NumPy
-for i in range(1, cols_to_transform.shape[1]):
-    cols_to_transform[:, i] = cols_to_transform[:, i] - cols_to_transform[:, i-1]
+- **SonarQube** : Prend en charge plusieurs langages, dont Python et JavaScript, et fournit une interface de reporting globale avec des visualisations.
+- **Bandit** : Spécifique à Python, il détecte les failles de sécurité dans les scripts Python.
+- **ESLint** avec des plugins de sécurité pour JavaScript : Il permet de détecter des failles dans le code JavaScript, y compris les projets Node.js.
+- **Snyk** : Pour une analyse des vulnérabilités liées aux dépendances, aussi bien en Python qu'en JavaScript.
 
-# Étape 3 : Réinjecter les résultats dans le DataFrame
-df.iloc[:, 100:201] = cols_to_transform[:, 1:]
+#### 2. **Configurer l’analyse de vulnérabilités pour les deux langages**
+Voici un exemple d'intégration des outils pour les deux langages dans une pipeline CI/CD (par exemple sur **GitLab CI**), tout en prévoyant de générer un reporting à la fin.
 
-# Vérification : Afficher les colonnes 99 à 201 pour voir la transformation
-print(df.iloc[:, 99:201])
+##### Fichier `.gitlab-ci.yml`
+
+```yaml
+stages:
+  - build
+  - test
+  - sast
+  - report
+
+# Étape de build
+build:
+  script:
+    - echo "Compilation de l'application"
+  stage: build
+
+# Étape de tests unitaires
+test:
+  script:
+    - echo "Exécution des tests"
+  stage: test
+
+# Étape SAST pour Python avec Bandit
+sast-python:
+  image: python:3.9
+  stage: sast
+  script:
+    - pip install bandit
+    - bandit -r . -f json -o bandit-report.json  # Générer un rapport JSON
+  artifacts:
+    paths:
+      - bandit-report.json  # Stocker le rapport comme artefact
+  allow_failure: true  # Ne pas stopper le pipeline si des problèmes sont détectés
+
+# Étape SAST pour JavaScript avec ESLint
+sast-javascript:
+  image: node:14
+  stage: sast
+  script:
+    - npm install eslint eslint-plugin-security
+    - eslint . --ext .js --format json -o eslint-report.json  # Générer un rapport JSON
+  artifacts:
+    paths:
+      - eslint-report.json  # Stocker le rapport comme artefact
+  allow_failure: true
+
+# Étape SAST avec SonarQube pour une analyse combinée
+sonarqube-sast:
+  image: maven:3.8-jdk-11  # Peut être adapté selon vos besoins
+  stage: sast
+  variables:
+    SONAR_HOST_URL: "http://your-sonarqube-server-url"
+    SONAR_TOKEN: $SONAR_TOKEN  # Token SonarQube configuré
+  script:
+    - mvn clean verify sonar:sonar -Dsonar.projectKey="your_project_key" -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
+  allow_failure: true
+
+# Étape de reporting final
+generate-report:
+  image: python:3.9
+  stage: report
+  script:
+    - pip install json2html  # Installer un outil pour transformer JSON en HTML
+    - cat bandit-report.json eslint-report.json > combined-report.json
+    - python -c "from json2html import *; report = open('combined-report.json').read(); print(json2html.convert(json=report))" > final-report.html
+  artifacts:
+    paths:
+      - final-report.html  # Le rapport HTML final avec les vulnérabilités combinées
+```
+
+#### 3. **Explication du processus**
+- **Étape `sast-python`** : Utilisation de **Bandit** pour l'analyse de sécurité des fichiers Python, générant un rapport JSON.
+- **Étape `sast-javascript`** : Utilisation d'**ESLint** avec le plugin de sécurité pour l'analyse JavaScript, également avec un rapport JSON.
+- **Étape `sonarqube-sast`** : Intégration de **SonarQube** pour une analyse globale des vulnérabilités. SonarQube offre une visualisation des vulnérabilités pour plusieurs langages sur son tableau de bord.
+- **Étape `generate-report`** : Une fois que les étapes SAST sont terminées, les rapports JSON sont combinés en un seul fichier, puis transformés en un rapport HTML via la bibliothèque `json2html` de Python, ce qui permet une visualisation plus facile.
+
+#### 4. **Consolidation des résultats**
+- **SonarQube** : Si vous utilisez SonarQube, il fournira un tableau de bord centralisé avec les résultats d'analyse pour les deux langages.
+- **Rapports JSON** : Si vous n'utilisez pas SonarQube, l’étape de reporting combine les résultats des outils spécifiques à Python (Bandit) et JavaScript (ESLint) en un rapport unique. Vous pouvez utiliser des outils comme `json2html` pour générer un rapport HTML à partir des fichiers JSON afin de mieux visualiser les résultats.
+
+#### 5. **Personnalisation et extensions**
+Vous pouvez aller plus loin dans le reporting en ajoutant des métadonnées comme :
+- **Nombre total de vulnérabilités par gravité** (ex. : critiques, majeures, mineures).
+- **Liens vers des solutions ou corrections** (certains outils SAST comme Snyk proposent des recommandations pour résoudre les vulnérabilités).
+- **Comparaison avec les rapports précédents** : pour suivre l'évolution des vulnérabilités sur plusieurs exécutions de la CI/CD.
+
+### Conclusion
+
+Avec cette configuration, vous pouvez automatiser la détection des vulnérabilités pour le code Python et JavaScript dans une seule pipeline CI/CD et générer un rapport combiné. Cela permet de centraliser la gestion des vulnérabilités et d'avoir un aperçu clair de l'état de sécurité de votre projet.
+
+Si vous souhaitez un ajustement particulier dans cette configuration ou un exemple de rapport plus détaillé, faites-le moi savoir !
