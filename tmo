@@ -1,31 +1,98 @@
 
-import pandas as pd
-import numpy as np
-import re
+GitLab propose un ensemble d'outils de sécurité intégrés, y compris un analyseur SAST avancé, qui permet d’analyser le code source à la recherche de vulnérabilités. Le SAST de GitLab peut couvrir plusieurs langages, y compris **Python** et **JavaScript**. Si vous souhaitez utiliser l'analyseur SAST avancé dans votre pipeline CI/CD GitLab, voici comment procéder.
 
-# Création d'un exemple de DataFrame avec des colonnes nommées contenant des maturités
-data = np.random.rand(10, 900)
-columns = [f"col_{i}_M{i % 10 + 1}" for i in range(900)]  # Colonnes avec maturité M1, M2,...M10 répétées
-df = pd.DataFrame(data, columns=columns)
+### Étapes pour intégrer GitLab Advanced SAST dans votre pipeline CI/CD
 
-# Étape 1 : Extraire la maturité depuis le nom des colonnes avec une regex
-def extract_maturity(column_name):
-    # Ici on suppose que la maturité est après le dernier '_M' suivi d'un nombre, comme dans 'col_100_M15'
-    match = re.search(r'_M(\d+)', column_name)
-    return int(match.group(1)) if match else 1  # Si pas de maturité, on prend une valeur par défaut (1 ici)
+#### 1. **Activer les fonctionnalités de sécurité dans GitLab**
+Pour utiliser le **GitLab Advanced SAST**, il faut vous assurer que les fonctionnalités de sécurité et de conformité sont activées pour votre projet :
 
-# Extraire les maturités pour les colonnes de 99 à 200
-maturities = [extract_maturity(col) for col in df.columns[99:201]]
+1. Allez dans les paramètres de votre projet GitLab.
+2. Accédez à l'onglet **Security & Compliance**.
+3. Activez le **Static Application Security Testing (SAST)** si ce n'est pas déjà fait.
 
-# Étape 2 : Appliquer la transformation (différence) multipliée par la maturité
-cols_to_transform = df.iloc[:, 99:201].values
+#### 2. **Configurer le fichier `.gitlab-ci.yml`**
 
-for i in range(1, cols_to_transform.shape[1]):
-    # Soustraction puis multiplication par la maturité associée
-    cols_to_transform[:, i] = (cols_to_transform[:, i] - cols_to_transform[:, i-1]) * maturities[i]
+GitLab fournit une configuration prête à l'emploi pour intégrer leur SAST avancé. Vous pouvez utiliser leur modèle SAST prédéfini dans votre pipeline CI/CD, ce qui vous permet de bénéficier des dernières règles et configurations de sécurité maintenues par GitLab.
 
-# Étape 3 : Réinjecter les résultats dans le DataFrame
-df.iloc[:, 100:201] = cols_to_transform[:, 1:]
+Voici comment modifier votre fichier `.gitlab-ci.yml` pour utiliser l'analyseur GitLab Advanced SAST :
 
-# Vérification : Afficher les colonnes 99 à 201 pour voir la transformation
-print(df.iloc[:, 99:201])
+##### Exemple de configuration `.gitlab-ci.yml`
+
+```yaml
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+stages:
+  - build
+  - test
+  - security
+
+# Étape de build (facultative, dépend de votre projet)
+build:
+  stage: build
+  script:
+    - echo "Compilation de l'application"
+  tags:
+    - docker
+
+# Étape de tests unitaires (facultative, dépend de votre projet)
+test:
+  stage: test
+  script:
+    - echo "Exécution des tests"
+
+# Étape de sécurité SAST
+sast:
+  stage: security
+  tags:
+    - docker  # Spécifiez un runner avec support Docker, si nécessaire
+  allow_failure: true  # Autoriser la continuité du pipeline même si des failles sont détectées
+
+```
+
+#### 3. **Explication de la configuration**
+
+- **Inclusion du template SAST** : Le fichier `.gitlab-ci.yml` inclut le modèle `Security/SAST.gitlab-ci.yml` fourni par GitLab. Ce modèle contient toutes les configurations nécessaires pour activer l'analyse SAST pour plusieurs langages, y compris Python et JavaScript.
+- **Étape `sast`** : L'étape `sast` utilise les outils de sécurité GitLab pour scanner le code de votre projet. Elle est définie avec un **tag Docker** pour s'assurer que l'analyseur SAST fonctionne dans un environnement avec Docker. Si votre runner GitLab ne supporte pas Docker, vous devrez ajuster ce tag en fonction de votre environnement.
+
+#### 4. **Résultats et reporting**
+
+- Une fois l'analyse SAST terminée, GitLab génère un **rapport de vulnérabilité** dans l'onglet **Security & Compliance** de l'interface GitLab pour votre projet. Ce rapport contient :
+  - Une liste des vulnérabilités détectées.
+  - Des informations sur leur gravité (critique, haute, moyenne, faible).
+  - Des recommandations pour corriger ces vulnérabilités.
+  
+- GitLab fournit également un **Security Dashboard** qui permet de suivre l'état des vulnérabilités dans le temps.
+
+#### 5. **Personnalisation des règles SAST**
+
+Si vous avez besoin d'ajuster les règles de sécurité SAST (par exemple, désactiver certaines vérifications ou ajouter des règles spécifiques), vous pouvez personnaliser la configuration SAST. Voici un exemple pour ignorer certaines règles spécifiques dans le fichier `.gitlab-ci.yml` :
+
+```yaml
+sast:
+  variables:
+    SAST_EXCLUDED_PATHS: "tests/,docs/"  # Exclure certains répertoires
+    SAST_DISABLE_DIND: "true"  # Désactiver l'utilisation de Docker-in-Docker si nécessaire
+```
+
+Vous pouvez aussi ajuster les **rulesets** dans le fichier de configuration SAST `.gitlab-ci.yml` pour qu’il s'adapte à vos besoins spécifiques. Vous pouvez par exemple désactiver certaines règles qui vous semblent moins pertinentes.
+
+#### 6. **Rapports consolidés**
+
+GitLab permet de visualiser les vulnérabilités détectées pour plusieurs langages dans un seul endroit via le **Security Dashboard**. Ce tableau de bord permet :
+- De visualiser toutes les vulnérabilités dans un seul rapport.
+- D’obtenir des détails sur chaque vulnérabilité, y compris des informations comme le fichier concerné, la ligne de code, et des recommandations de correction.
+- D’établir des règles de qualité (Quality Gates) pour bloquer les déploiements si certaines vulnérabilités sont détectées.
+
+#### 7. **Exemples d'extensions**
+
+Si vous avez besoin d'une étape supplémentaire pour générer un rapport consolidé en dehors de GitLab (par exemple, pour partager un rapport HTML avec d'autres parties prenantes), vous pouvez utiliser des scripts supplémentaires pour générer un fichier `final-report.html` comme dans l'exemple précédent.
+
+### Conclusion
+
+L'intégration de l'analyseur SAST avancé de GitLab est assez simple grâce aux modèles prêts à l'emploi. Voici les principaux avantages :
+- **Multi-langage** : Prend en charge Python, JavaScript et d'autres langages.
+- **Rapport centralisé** : Toutes les vulnérabilités sont consolidées dans le **Security Dashboard** de GitLab.
+- **Configuration flexible** : Vous pouvez ajuster les règles SAST et personnaliser votre pipeline pour répondre aux besoins spécifiques de votre projet.
+
+N'hésitez pas à me poser des questions supplémentaires si vous avez besoin de personnaliser davantage cette configuration ou si vous rencontrez des difficultés spécifiques avec GitLab !
