@@ -1,98 +1,19 @@
 
-GitLab propose un ensemble d'outils de sécurité intégrés, y compris un analyseur SAST avancé, qui permet d’analyser le code source à la recherche de vulnérabilités. Le SAST de GitLab peut couvrir plusieurs langages, y compris **Python** et **JavaScript**. Si vous souhaitez utiliser l'analyseur SAST avancé dans votre pipeline CI/CD GitLab, voici comment procéder.
+import pandas as pd
+import json
 
-### Étapes pour intégrer GitLab Advanced SAST dans votre pipeline CI/CD
+# Lire le fichier Excel (assurez-vous de spécifier le chemin correct vers votre fichier Excel)
+file_path = 'votre_fichier.xlsx'
+df = pd.read_excel(file_path)
 
-#### 1. **Activer les fonctionnalités de sécurité dans GitLab**
-Pour utiliser le **GitLab Advanced SAST**, il faut vous assurer que les fonctionnalités de sécurité et de conformité sont activées pour votre projet :
+# Extraire les noms des colonnes
+headers = list(df.columns)
 
-1. Allez dans les paramètres de votre projet GitLab.
-2. Accédez à l'onglet **Security & Compliance**.
-3. Activez le **Static Application Security Testing (SAST)** si ce n'est pas déjà fait.
+# Convertir la liste des en-têtes en format JSON
+json_data = json.dumps(headers, indent=4)
 
-#### 2. **Configurer le fichier `.gitlab-ci.yml`**
+# Sauvegarder dans un fichier JSON
+with open('headers.json', 'w') as json_file:
+    json_file.write(json_data)
 
-GitLab fournit une configuration prête à l'emploi pour intégrer leur SAST avancé. Vous pouvez utiliser leur modèle SAST prédéfini dans votre pipeline CI/CD, ce qui vous permet de bénéficier des dernières règles et configurations de sécurité maintenues par GitLab.
-
-Voici comment modifier votre fichier `.gitlab-ci.yml` pour utiliser l'analyseur GitLab Advanced SAST :
-
-##### Exemple de configuration `.gitlab-ci.yml`
-
-```yaml
-include:
-  - template: Security/SAST.gitlab-ci.yml
-
-stages:
-  - build
-  - test
-  - security
-
-# Étape de build (facultative, dépend de votre projet)
-build:
-  stage: build
-  script:
-    - echo "Compilation de l'application"
-  tags:
-    - docker
-
-# Étape de tests unitaires (facultative, dépend de votre projet)
-test:
-  stage: test
-  script:
-    - echo "Exécution des tests"
-
-# Étape de sécurité SAST
-sast:
-  stage: security
-  tags:
-    - docker  # Spécifiez un runner avec support Docker, si nécessaire
-  allow_failure: true  # Autoriser la continuité du pipeline même si des failles sont détectées
-
-```
-
-#### 3. **Explication de la configuration**
-
-- **Inclusion du template SAST** : Le fichier `.gitlab-ci.yml` inclut le modèle `Security/SAST.gitlab-ci.yml` fourni par GitLab. Ce modèle contient toutes les configurations nécessaires pour activer l'analyse SAST pour plusieurs langages, y compris Python et JavaScript.
-- **Étape `sast`** : L'étape `sast` utilise les outils de sécurité GitLab pour scanner le code de votre projet. Elle est définie avec un **tag Docker** pour s'assurer que l'analyseur SAST fonctionne dans un environnement avec Docker. Si votre runner GitLab ne supporte pas Docker, vous devrez ajuster ce tag en fonction de votre environnement.
-
-#### 4. **Résultats et reporting**
-
-- Une fois l'analyse SAST terminée, GitLab génère un **rapport de vulnérabilité** dans l'onglet **Security & Compliance** de l'interface GitLab pour votre projet. Ce rapport contient :
-  - Une liste des vulnérabilités détectées.
-  - Des informations sur leur gravité (critique, haute, moyenne, faible).
-  - Des recommandations pour corriger ces vulnérabilités.
-  
-- GitLab fournit également un **Security Dashboard** qui permet de suivre l'état des vulnérabilités dans le temps.
-
-#### 5. **Personnalisation des règles SAST**
-
-Si vous avez besoin d'ajuster les règles de sécurité SAST (par exemple, désactiver certaines vérifications ou ajouter des règles spécifiques), vous pouvez personnaliser la configuration SAST. Voici un exemple pour ignorer certaines règles spécifiques dans le fichier `.gitlab-ci.yml` :
-
-```yaml
-sast:
-  variables:
-    SAST_EXCLUDED_PATHS: "tests/,docs/"  # Exclure certains répertoires
-    SAST_DISABLE_DIND: "true"  # Désactiver l'utilisation de Docker-in-Docker si nécessaire
-```
-
-Vous pouvez aussi ajuster les **rulesets** dans le fichier de configuration SAST `.gitlab-ci.yml` pour qu’il s'adapte à vos besoins spécifiques. Vous pouvez par exemple désactiver certaines règles qui vous semblent moins pertinentes.
-
-#### 6. **Rapports consolidés**
-
-GitLab permet de visualiser les vulnérabilités détectées pour plusieurs langages dans un seul endroit via le **Security Dashboard**. Ce tableau de bord permet :
-- De visualiser toutes les vulnérabilités dans un seul rapport.
-- D’obtenir des détails sur chaque vulnérabilité, y compris des informations comme le fichier concerné, la ligne de code, et des recommandations de correction.
-- D’établir des règles de qualité (Quality Gates) pour bloquer les déploiements si certaines vulnérabilités sont détectées.
-
-#### 7. **Exemples d'extensions**
-
-Si vous avez besoin d'une étape supplémentaire pour générer un rapport consolidé en dehors de GitLab (par exemple, pour partager un rapport HTML avec d'autres parties prenantes), vous pouvez utiliser des scripts supplémentaires pour générer un fichier `final-report.html` comme dans l'exemple précédent.
-
-### Conclusion
-
-L'intégration de l'analyseur SAST avancé de GitLab est assez simple grâce aux modèles prêts à l'emploi. Voici les principaux avantages :
-- **Multi-langage** : Prend en charge Python, JavaScript et d'autres langages.
-- **Rapport centralisé** : Toutes les vulnérabilités sont consolidées dans le **Security Dashboard** de GitLab.
-- **Configuration flexible** : Vous pouvez ajuster les règles SAST et personnaliser votre pipeline pour répondre aux besoins spécifiques de votre projet.
-
-N'hésitez pas à me poser des questions supplémentaires si vous avez besoin de personnaliser davantage cette configuration ou si vous rencontrez des difficultés spécifiques avec GitLab !
+print("Les en-têtes ont été stockées dans headers.json")
