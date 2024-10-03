@@ -1,32 +1,10 @@
 
-Sub MettreAJourCodeM()
-    Dim wb As Workbook
-    Dim pq As WorkbookQuery
-    Dim nouveauCodeM As String
-    Dim nomRequete As String
+before_script:
+  - apt-get update && apt-get install -y curl
+  - curl -sL https://deb.nodesource.com/setup_14.x | bash -
+  - apt-get install -y nodejs
+  - node --version
+  - npm --version
 
-    ' Définir le classeur actif
-    Set wb = ThisWorkbook
-
-    ' Spécifiez ici le nom de la requête Power Query que vous souhaitez mettre à jour
-    nomRequete = "NomDeVotreRequete"
-    
-    ' Code M mis à jour
-    nouveauCodeM = "let" & vbCrLf & _
-                   "    Source = Excel.CurrentWorkbook(){[Name=""Table1""]}[Content]," & vbCrLf & _
-                   "    FiltrerLignes = Table.SelectRows(Source, each ([Colonne1] = ""Valeur""))" & vbCrLf & _
-                   "in" & vbCrLf & _
-                   "    FiltrerLignes"
-    
-    ' Boucler sur toutes les requêtes pour trouver la requête à mettre à jour
-    For Each pq In wb.Queries
-        If pq.Name = nomRequete Then
-            ' Mettre à jour le code M
-            pq.Formula = nouveauCodeM
-            
-            ' Informer l'utilisateur que la mise à jour a été effectuée
-            MsgBox "La requête '" & nomRequete & "' a été mise à jour avec succès.", vbInformation
-            Exit For
-        End If
-    Next pq
-End Sub
+script:
+  - npm install eslint eslint-plugin-security
