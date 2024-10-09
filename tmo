@@ -1,6 +1,42 @@
 
-# Garder seulement la première occurrence de chaque valeur de la colonne 'X'
-df_first_occurrence = df.drop_duplicates(subset='X', keep='first')
 
-print("\nDataFrame après avoir gardé la première occurrence de chaque valeur de la colonne X:")
-print(df_first_occurrence)
+Sub VerifierEtConvertirDate()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim cell As Range
+    Dim dateLocale As String
+    Dim dateUS As Date
+    Dim dateFR As String
+    Dim localeID As String
+    
+    ' Définir la feuille de calcul
+    Set ws = ThisWorkbook.Sheets("Feuille1") ' Remplace "Feuille1" par le nom de ta feuille
+    
+    ' Obtenir l'ID de la langue des paramètres régionaux (LCID)
+    localeID = Application.International(xlCountrySetting)
+    
+    ' Vérifier si les paramètres régionaux sont français
+    ' LCID de la France = 33
+    If localeID = 33 Then
+        MsgBox "Les paramètres régionaux sont déjà en français."
+    Else
+        MsgBox "Les paramètres régionaux ne sont pas en français. Conversion des dates."
+        
+        ' Trouver la dernière ligne avec des données dans la colonne A
+        lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+        
+        ' Boucle pour vérifier et convertir les dates
+        For Each cell In ws.Range("A1:A" & lastRow) ' Adapte la plage selon tes besoins
+            If IsDate(cell.Value) Then
+                ' Lire la date au format américain
+                dateUS = cell.Value
+                
+                ' Convertir la date au format français
+                dateFR = Format(dateUS, "dd/mm/yyyy")
+                
+                ' Écrire la date convertie dans la colonne B
+                cell.Offset(0, 1).Value = dateFR
+            End If
+        Next cell
+    End If
+End Sub
