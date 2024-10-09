@@ -1,19 +1,6 @@
 
-import pandas as pd
-import json
+# Garder seulement la première occurrence de chaque valeur de la colonne 'X'
+df_first_occurrence = df.drop_duplicates(subset='X', keep='first')
 
-# Lire le fichier Excel (assurez-vous de spécifier le chemin correct vers votre fichier Excel)
-file_path = 'votre_fichier.xlsx'
-df = pd.read_excel(file_path)
-
-# Extraire les noms des colonnes
-headers = list(df.columns)
-
-# Convertir la liste des en-têtes en format JSON
-json_data = json.dumps(headers, indent=4)
-
-# Sauvegarder dans un fichier JSON
-with open('headers.json', 'w') as json_file:
-    json_file.write(json_data)
-
-print("Les en-têtes ont été stockées dans headers.json")
+print("\nDataFrame après avoir gardé la première occurrence de chaque valeur de la colonne X:")
+print(df_first_occurrence)
