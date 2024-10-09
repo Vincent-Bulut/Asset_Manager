@@ -1,49 +1,35 @@
 
-Pour charger un fichier JSON dans une variable en Python afin d’exploiter les objets qu’il contient, vous pouvez utiliser le module json, qui est inclus dans la bibliothèque standard de Python. Voici comment procéder étape par étape :
+Sub ConvertirDateUSenFRReelle()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim cell As Range
+    Dim dateTexte As String
+    Dim jour As String, mois As String, annee As String
+    Dim dateFR As Date
+    
+    ' Définir la feuille où tu travailles
+    Set ws = ThisWorkbook.Sheets("Feuille1") ' Remplace "Feuille1" par le nom de ta feuille
 
-1. Importer le module json
-
-import json
-
-2. Lire le fichier JSON
-
-Vous devez ouvrir votre fichier JSON pour le lire. Utilisez un gestionnaire de contexte pour vous assurer que le fichier est correctement fermé après sa lecture :
-
-with open('chemin/vers/votre/fichier.json', 'r') as file:
-    data = json.load(file)
-
-Explication :
-
-	•	open() : Cette fonction ouvre le fichier JSON. Le mode 'r' signifie que le fichier est ouvert en lecture.
-	•	json.load() : Cette fonction lit le fichier ouvert et le convertit en un dictionnaire Python ou en une liste, selon la structure du JSON. Si votre JSON est un objet (encapsulé par des accolades {}), json.load() renverra un dictionnaire. S’il s’agit d’un tableau (encapsulé par des crochets []), il renverra une liste.
-
-3. Utiliser les données
-
-Une fois que vous avez chargé les données, vous pouvez les manipuler comme n’importe quel dictionnaire ou liste en Python. Par exemple, si votre JSON contient une liste d’utilisateurs avec leurs détails, vous pouvez accéder à chaque utilisateur et à ses détails comme suit :
-
-for user in data['users']:  # Supposons que le JSON contienne une clé 'users' qui est une liste
-    print(user['name'])  # Accéder à la clé 'name' de chaque utilisateur
-
-4. Gérer les exceptions
-
-Il est judicieux de gérer les exceptions pour s’occuper des erreurs potentielles, comme des problèmes d’ouverture de fichier ou de mauvaise structure de données :
-
-try:
-    with open('chemin/vers/votre/fichier.json', 'r') as file:
-        data = json.load(file)
-except FileNotFoundError:
-    print("Le fichier spécifié n'a pas été trouvé.")
-except json.JSONDecodeError:
-    print("Le fichier JSON est mal formé.")
-
-5. Lire un JSON depuis une chaîne (alternative)
-
-Si vous avez une chaîne JSON au lieu d’un fichier et que vous souhaitez la convertir en un dictionnaire ou en une liste, vous pouvez utiliser json.loads() :
-
-json_string = '{"name": "John", "age": 30}'
-data = json.loads(json_string)
-print(data['name'])  # Affiche "John"
-
-Résumé
-
-Le chargement de fichiers JSON en Python est une tâche courante et simple grâce au module json. En utilisant les fonctions json.load() ou json.loads(), vous pouvez facilement convertir vos données JSON en structures de données Python, ce qui vous permet de manipuler et d’exploiter ces données de manière flexible et puissante.
+    ' Trouver la dernière ligne avec des données dans la colonne A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Boucle pour convertir les dates de format US à FR
+    For Each cell In ws.Range("A1:A" & lastRow) ' Adapte la plage selon tes besoins
+        If IsDate(cell.Value) Then
+            ' Lire la date comme texte en supposant que c'est au format MM/DD/YYYY
+            dateTexte = Format(cell.Value, "MM/DD/YYYY")
+            
+            ' Extraire le mois, le jour et l'année du texte de la date américaine
+            mois = Left(dateTexte, 2)
+            jour = Mid(dateTexte, 4, 2)
+            annee = Right(dateTexte, 4)
+            
+            ' Construire la date française (dd/mm/yyyy)
+            dateFR = DateSerial(annee, mois, jour)
+            
+            ' Écrire la vraie date au format français dans la colonne B
+            cell.Offset(0, 1).Value = dateFR
+            cell.Offset(0, 1).NumberFormat = "dd/mm/yyyy" ' Appliquer le format d'affichage correct
+        End If
+    Next cell
+End Sub
