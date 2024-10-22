@@ -1,35 +1,51 @@
 
-Sub ConvertirDateUSenFRReelle()
-    Dim ws As Worksheet
-    Dim lastRow As Long
-    Dim cell As Range
-    Dim dateTexte As String
-    Dim jour As String, mois As String, annee As String
-    Dim dateFR As Date
-    
-    ' Définir la feuille où tu travailles
-    Set ws = ThisWorkbook.Sheets("Feuille1") ' Remplace "Feuille1" par le nom de ta feuille
+Pour utiliser Axios au lieu de l’API native fetch pour envoyer des données à votre API depuis une application Svelte, vous devrez d’abord installer Axios. Voici comment vous pouvez mettre à jour le script pour intégrer Axios :
 
-    ' Trouver la dernière ligne avec des données dans la colonne A
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
-    
-    ' Boucle pour convertir les dates de format US à FR
-    For Each cell In ws.Range("A1:A" & lastRow) ' Adapte la plage selon tes besoins
-        If IsDate(cell.Value) Then
-            ' Lire la date comme texte en supposant que c'est au format MM/DD/YYYY
-            dateTexte = Format(cell.Value, "MM/DD/YYYY")
-            
-            ' Extraire le mois, le jour et l'année du texte de la date américaine
-            mois = Left(dateTexte, 2)
-            jour = Mid(dateTexte, 4, 2)
-            annee = Right(dateTexte, 4)
-            
-            ' Construire la date française (dd/mm/yyyy)
-            dateFR = DateSerial(annee, mois, jour)
-            
-            ' Écrire la vraie date au format français dans la colonne B
-            cell.Offset(0, 1).Value = dateFR
-            cell.Offset(0, 1).NumberFormat = "dd/mm/yyyy" ' Appliquer le format d'affichage correct
-        End If
-    Next cell
-End Sub
+	1.	Installer Axios:
+Ouvrez votre terminal dans le répertoire de votre projet et exécutez :
+
+npm install axios
+
+
+	2.	Mettre à jour le script dans Form.svelte:
+Vous pouvez remplacer la partie de soumission du formulaire par une fonction qui utilise Axios pour envoyer une requête POST.
+
+<script>
+  import axios from 'axios';
+
+  let formData = {
+    account_reference: "",
+    accounts: [],
+    flow_perimeters: {
+      XAE099: []
+    },
+    economic_agents: []
+  };
+
+  const submitForm = async () => {
+    try {
+      const response = await axios.post('URL_DE_VOTRE_API', formData);
+      console.log(response.data); // Traitez la réponse ici
+    } catch (error) {
+      console.error('There was an error!', error);
+    }
+  };
+</script>
+
+<form on:submit|preventDefault={submitForm}>
+  <input type="text" bind:value={formData.account_reference} placeholder="Account Reference" />
+  <input type="text" 
+         bind:value={formData.accounts}
+         on:input={(e) => formData.accounts = e.target.value.split(',')}
+         placeholder="Accounts (comma separated)" />
+  <!-- Ajoutez d'autres champs nécessaires ici -->
+  <button type="submit">Submit</button>
+</form>
+
+
+	3.	Gestion des entrées de tableau:
+Pour le champ accounts qui est un tableau, cet exemple permet à l’utilisateur de saisir des valeurs séparées par des virgules, et l’événement on:input met à jour la propriété accounts de formData en divisant la chaîne saisie en un tableau de chaînes.
+	4.	Utilisation de Axios pour la requête POST:
+La fonction submitForm utilise maintenant Axios pour envoyer la requête. Axios gère automatiquement la conversion de l’objet JavaScript en JSON et configure les en-têtes appropriés. En cas d’erreur, elle est capturée et loguée dans la console.
+
+Ce script amélioré avec Axios offre une gestion plus robuste des erreurs et une syntaxe plus concise pour les requêtes asynchrones. Vous pouvez ajuster l’URL et d’autres détails de la requête selon les spécifications de votre backend.
