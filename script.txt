@@ -1,51 +1,16 @@
+import pandas as pd
+import json
 
-Pour utiliser Axios au lieu de l’API native fetch pour envoyer des données à votre API depuis une application Svelte, vous devrez d’abord installer Axios. Voici comment vous pouvez mettre à jour le script pour intégrer Axios :
+# Charger le fichier Excel en spécifiant que la première ligne est l'en-tête
+excel_file_path = 'votre_fichier.xlsx'
+df = pd.read_excel(excel_file_path, header=0)
 
-	1.	Installer Axios:
-Ouvrez votre terminal dans le répertoire de votre projet et exécutez :
+# Extraire les noms des colonnes (le header) sous forme de liste
+header_list = df.columns.tolist()
 
-npm install axios
+# Sauvegarder cette liste dans un fichier JSON
+json_file_path = 'header.json'
+with open(json_file_path, 'w', encoding='utf-8') as json_file:
+    json.dump(header_list, json_file, ensure_ascii=False, indent=4)
 
-
-	2.	Mettre à jour le script dans Form.svelte:
-Vous pouvez remplacer la partie de soumission du formulaire par une fonction qui utilise Axios pour envoyer une requête POST.
-
-<script>
-  import axios from 'axios';
-
-  let formData = {
-    account_reference: "",
-    accounts: [],
-    flow_perimeters: {
-      XAE099: []
-    },
-    economic_agents: []
-  };
-
-  const submitForm = async () => {
-    try {
-      const response = await axios.post('URL_DE_VOTRE_API', formData);
-      console.log(response.data); // Traitez la réponse ici
-    } catch (error) {
-      console.error('There was an error!', error);
-    }
-  };
-</script>
-
-<form on:submit|preventDefault={submitForm}>
-  <input type="text" bind:value={formData.account_reference} placeholder="Account Reference" />
-  <input type="text" 
-         bind:value={formData.accounts}
-         on:input={(e) => formData.accounts = e.target.value.split(',')}
-         placeholder="Accounts (comma separated)" />
-  <!-- Ajoutez d'autres champs nécessaires ici -->
-  <button type="submit">Submit</button>
-</form>
-
-
-	3.	Gestion des entrées de tableau:
-Pour le champ accounts qui est un tableau, cet exemple permet à l’utilisateur de saisir des valeurs séparées par des virgules, et l’événement on:input met à jour la propriété accounts de formData en divisant la chaîne saisie en un tableau de chaînes.
-	4.	Utilisation de Axios pour la requête POST:
-La fonction submitForm utilise maintenant Axios pour envoyer la requête. Axios gère automatiquement la conversion de l’objet JavaScript en JSON et configure les en-têtes appropriés. En cas d’erreur, elle est capturée et loguée dans la console.
-
-Ce script amélioré avec Axios offre une gestion plus robuste des erreurs et une syntaxe plus concise pour les requêtes asynchrones. Vous pouvez ajuster l’URL et d’autres détails de la requête selon les spécifications de votre backend.
+print("Le header a été sauvegardé dans le fichier JSON.")
