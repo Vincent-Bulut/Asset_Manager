@@ -1,16 +1,127 @@
-import pandas as pd
-import json
 
-# Charger le fichier Excel en spécifiant que la première ligne est l'en-tête
-excel_file_path = 'votre_fichier.xlsx'
-df = pd.read_excel(excel_file_path, header=0)
+Pour créer une application Svelte avec un bouton de téléchargement de fichier CSV vers Amazon S3 via une API FastAPI, voici une approche étape par étape :
 
-# Extraire les noms des colonnes (le header) sous forme de liste
-header_list = df.columns.tolist()
+1. Configurer Amazon S3
 
-# Sauvegarder cette liste dans un fichier JSON
-json_file_path = 'header.json'
-with open(json_file_path, 'w', encoding='utf-8') as json_file:
-    json.dump(header_list, json_file, ensure_ascii=False, indent=4)
+Assurez-vous d’avoir un bucket S3 configuré et de disposer des clés d’accès AWS (AWS_ACCESS_KEY_ID et AWS_SECRET_ACCESS_KEY) pour y accéder.
 
-print("Le header a été sauvegardé dans le fichier JSON.")
+2. Configurer l’API FastAPI
+
+FastAPI servira d’interface entre Svelte et S3. Il faudra écrire un endpoint qui accepte un fichier, le traite, et le télécharge sur S3.
+
+Créer un fichier main.py pour FastAPI
+
+Installez les dépendances nécessaires :
+
+pip install fastapi uvicorn boto3 python-multipart
+
+Ensuite, créez le fichier main.py :
+
+from fastapi import FastAPI, File, UploadFile
+import boto3
+from botocore.exceptions import NoCredentialsError
+import os
+
+app = FastAPI()
+
+# Configuration de S3
+AWS_ACCESS_KEY_ID = "votre_aws_access_key_id"
+AWS_SECRET_ACCESS_KEY = "votre_aws_secret_access_key"
+BUCKET_NAME = "votre_nom_du_bucket"
+
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+)
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        file_content = await file.read()
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=file.filename, Body=file_content)
+        return {"message": f"Le fichier '{file.filename}' a été téléchargé avec succès"}
+    except NoCredentialsError:
+        return {"error": "Les informations d'identification AWS ne sont pas correctes"}
+    except Exception as e:
+        return {"error": str(e)}
+
+Lancez l’API avec :
+
+uvicorn main:app --reload
+
+3. Créer l’interface Svelte
+
+Nous allons maintenant créer un composant Svelte qui contient un bouton pour sélectionner un fichier et l’envoie via une requête POST vers notre API FastAPI.
+
+Composant Svelte Upload.svelte
+
+Dans votre application Svelte, créez un composant nommé Upload.svelte :
+
+<script>
+  import { onMount } from "svelte";
+
+  let file = null;
+
+  // Fonction pour gérer l'upload du fichier
+  async function handleUpload() {
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("http://localhost:8000/upload/", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert(result.message);
+        } else {
+          alert("Erreur: " + result.error);
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'upload :", error);
+      }
+    } else {
+      alert("Veuillez sélectionner un fichier.");
+    }
+  }
+</script>
+
+<style>
+  .upload-container {
+    margin-top: 20px;
+  }
+</style>
+
+<div class="upload-container">
+  <input
+    type="file"
+    accept=".csv"
+    on:change="{(e) => (file = e.target.files[0])}"
+  />
+  <button on:click="{handleUpload}">Uploader vers S3</button>
+</div>
+
+4. Exécuter l’application
+
+	1.	Démarrez le backend : Assurez-vous que l’API FastAPI est en cours d’exécution (à l’adresse http://localhost:8000 par défaut).
+
+uvicorn main:app --reload
+
+
+	2.	Démarrez votre application Svelte : Cela peut varier selon votre configuration, mais généralement :
+
+npm run dev
+
+
+
+Résumé
+
+Ce projet vous permet de :
+
+	•	Sélectionner un fichier CSV dans l’interface Svelte.
+	•	Le fichier est envoyé via fetch à votre API FastAPI.
+	•	FastAPI reçoit le fichier et l’upload directement vers S3
