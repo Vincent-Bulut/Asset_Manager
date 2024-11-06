@@ -1,42 +1,111 @@
 
+Pour utiliser Axios au lieu de fetch et manipuler le fichier CSV avant de le stocker dans S3, voici un guide détaillé. Vous pouvez lire le fichier CSV dans FastAPI, le manipuler, puis l’envoyer vers S3.
 
-Sub VerifierEtConvertirDate()
-    Dim ws As Worksheet
-    Dim lastRow As Long
-    Dim cell As Range
-    Dim dateLocale As String
-    Dim dateUS As Date
-    Dim dateFR As String
-    Dim localeID As String
-    
-    ' Définir la feuille de calcul
-    Set ws = ThisWorkbook.Sheets("Feuille1") ' Remplace "Feuille1" par le nom de ta feuille
-    
-    ' Obtenir l'ID de la langue des paramètres régionaux (LCID)
-    localeID = Application.International(xlCountrySetting)
-    
-    ' Vérifier si les paramètres régionaux sont français
-    ' LCID de la France = 33
-    If localeID = 33 Then
-        MsgBox "Les paramètres régionaux sont déjà en français."
-    Else
-        MsgBox "Les paramètres régionaux ne sont pas en français. Conversion des dates."
+1. Manipuler le fichier CSV dans FastAPI
+
+Pré-requis :
+
+Installez les bibliothèques nécessaires :
+
+pip install pandas boto3 fastapi python-multipart
+
+Voici un exemple de code modifié pour FastAPI :
+
+main.py :
+
+from fastapi import FastAPI, File, UploadFile
+import pandas as pd
+import boto3
+from botocore.exceptions import NoCredentialsError
+import io
+
+app = FastAPI()
+
+# Configuration S3
+AWS_ACCESS_KEY_ID = "votre_aws_access_key_id"
+AWS_SECRET_ACCESS_KEY = "votre_aws_secret_access_key"
+BUCKET_NAME = "votre_nom_du_bucket"
+
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+)
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        # Lire le fichier CSV en mémoire
+        contents = await file.read()
+        df = pd.read_csv(io.BytesIO(contents))
         
-        ' Trouver la dernière ligne avec des données dans la colonne A
-        lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+        # Manipulation : multiplier une colonne par 100
+        if 'colonne_a_multiplier' in df.columns:  # Remplacez par le nom de votre colonne
+            df['colonne_a_multiplier'] = df['colonne_a_multiplier'] * 100
         
-        ' Boucle pour vérifier et convertir les dates
-        For Each cell In ws.Range("A1:A" & lastRow) ' Adapte la plage selon tes besoins
-            If IsDate(cell.Value) Then
-                ' Lire la date au format américain
-                dateUS = cell.Value
-                
-                ' Convertir la date au format français
-                dateFR = Format(dateUS, "dd/mm/yyyy")
-                
-                ' Écrire la date convertie dans la colonne B
-                cell.Offset(0, 1).Value = dateFR
-            End If
-        Next cell
-    End If
-End Sub
+        # Convertir le DataFrame en CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+        
+        # Télécharger sur S3
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=f"processed/{file.filename}", Body=output.getvalue())
+        
+        return {"message": f"Le fichier '{file.filename}' a été traité et téléchargé avec succès"}
+    
+    except NoCredentialsError:
+        return {"error": "Les informations d'identification AWS ne sont pas correctes"}
+    except Exception as e:
+        return {"error": str(e)}
+
+2. Utiliser Axios dans Svelte
+
+Ensuite, modifiez le client dans Svelte pour utiliser Axios au lieu de fetch.
+
+Installer Axios :
+
+Dans votre projet Svelte :
+
+npm install axios
+
+Upload.svelte :
+
+<script>
+  import axios from "axios";
+  let file = null;
+
+  async function handleUpload() {
+    if (file) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await axios.post("http://localhost:8000/upload/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        alert(response.data.message);
+      } catch (error) {
+        console.error("Erreur lors de l'upload :", error);
+        alert("Erreur : " + (error.response?.data?.error || error.message));
+      }
+    } else {
+      alert("Veuillez sélectionner un fichier.");
+    }
+  }
+</script>
+
+<div>
+  <input type="file" accept=".csv" on:change="{(e) => (file = e.target.files[0])}" />
+  <button on:click="{handleUpload}">Uploader vers S3</button>
+</div>
+
+Points Clés
+
+	1.	Manipulation des données : Vous pouvez modifier le DataFrame comme vous le souhaitez (par exemple, effectuer des calculs, ajouter ou supprimer des colonnes).
+	2.	Structure S3 : Les fichiers manipulés sont stockés dans un dossier processed/ sur S3.
+	3.	Axios : Axios simplifie la gestion des requêtes HTTP, avec un meilleur support des erreurs par rapport à fetch.
+
+Avec cette configuration, vous manipulez les données dans FastAPI avant de les envoyer sur S3 et utilisez Axios pour envoyer les fichiers depuis Svelte.
