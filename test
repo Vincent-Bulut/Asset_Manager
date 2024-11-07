@@ -1,84 +1,76 @@
+Pour renommer le fichier avant de le télécharger sur S3 avec un format de type input_yyyy_mm_dd_hh_mm_ss, vous pouvez utiliser la bibliothèque datetime pour générer un horodatage lors du traitement du fichier.
 
-Pour parcourir le JSON structuré et appliquer votre algorithme à chaque configuration de compte, vous pouvez utiliser une boucle pour itérer sur chaque élément de la liste accounts_configurations. Voici un exemple de script Python pour illustrer comment procéder :
+Voici comment modifier votre code :
 
-Exemple de script Python :
+1. Modifier le fichier FastAPI
 
-import json
+Ajoutez l’importation de datetime et générez le nouveau nom de fichier avant de le stocker sur S3.
 
-# Exemple de JSON adapté
-data = {
-    "accounts_configurations": [
-        {
-            "account_reference": "XP0800",
-            "accounts": ["XP0410", "XP0412"],
-            "flow_perimeters": {
-                "XAE099": [["D_XX"], ["D_YY", "D_ZZ"]],
-                "XEP": [["D_ZZ"]]
-            },
-            "economic_agents": ["XMA009", "XMA010"]
-        },
-        {
-            "account_reference": "XP0900",
-            "accounts": ["XP0510", "XP0512"],
-            "flow_perimeters": {
-                "XAE099": [["D_AA"], ["D_BB", "D_CC"]],
-                "XEP": [["D_CC"]]
-            },
-            "economic_agents": ["XMA011", "XMA012"]
-        }
-    ]
-}
+Exemple de main.py :
 
-# Votre fonction d'algorithme (remplacez par votre logique)
-def process_account_configuration(config):
-    account_reference = config['account_reference']
-    accounts = config['accounts']
-    flow_perimeters = config['flow_perimeters']
-    economic_agents = config['economic_agents']
+from fastapi import FastAPI, File, UploadFile
+import pandas as pd
+import boto3
+from botocore.exceptions import NoCredentialsError
+import io
+from datetime import datetime
+
+app = FastAPI()
+
+# Configuration S3
+AWS_ACCESS_KEY_ID = "votre_aws_access_key_id"
+AWS_SECRET_ACCESS_KEY = "votre_aws_secret_access_key"
+BUCKET_NAME = "votre_nom_du_bucket"
+
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+)
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        # Lire le fichier CSV en mémoire
+        contents = await file.read()
+        df = pd.read_csv(io.BytesIO(contents))
+        
+        # Manipulation : multiplier une colonne par 100
+        if 'colonne_a_multiplier' in df.columns:  # Remplacez par le nom de votre colonne
+            df['colonne_a_multiplier'] = df['colonne_a_multiplier'] * 100
+        
+        # Convertir le DataFrame en CSV
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        output.seek(0)
+        
+        # Générer le nouveau nom de fichier avec horodatage
+        timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        new_filename = f"input_{timestamp}.csv"
+        
+        # Télécharger sur S3 avec le nouveau nom
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=f"processed/{new_filename}", Body=output.getvalue())
+        
+        return {"message": f"Le fichier '{file.filename}' a été transformé et stocké sous le nom '{new_filename}'"}
     
-    # Exemple de traitement (remplacez par votre algorithme)
-    print(f"Processing account reference: {account_reference}")
-    print(f"Accounts: {accounts}")
-    print(f"Flow Perimeters: {flow_perimeters}")
-    print(f"Economic Agents: {economic_agents}")
-    print("-" * 40)
+    except NoCredentialsError:
+        return {"error": "Les informations d'identification AWS ne sont pas correctes"}
+    except Exception as e:
+        return {"error": str(e)}
 
-# Parcourir et appliquer l'algorithme
-for config in data['accounts_configurations']:
-    process_account_configuration(config)
+2. Explications des modifications
 
-Explication du script :
+	•	Génération du nom de fichier :
+	•	On utilise datetime.now().strftime("%Y_%m_%d_%H_%M_%S") pour obtenir un horodatage au format yyyy_mm_dd_hh_mm_ss.
+	•	Le nouveau nom est généré avec un préfixe input_ suivi de cet horodatage.
+	•	Téléchargement sur S3 :
+	•	Le fichier est stocké avec ce nouveau nom dans un dossier processed/ de votre bucket S3.
 
-	1.	Chargement des données JSON : Les données JSON peuvent être chargées directement depuis un fichier ou définies en ligne.
-	2.	Fonction process_account_configuration :
-	•	Cette fonction reçoit une configuration individuelle et exécute l’algorithme sur cette dernière.
-	•	Vous pouvez remplacer la logique par votre algorithme réel.
-	3.	Boucle sur accounts_configurations :
-	•	Une boucle for permet de parcourir chaque configuration de compte.
-	•	Chaque configuration est passée à la fonction process_account_configuration.
+3. Résultat attendu
 
-Sortie attendue :
+Lors de l’upload :
 
-Processing account reference: XP0800
-Accounts: ['XP0410', 'XP0412']
-Flow Perimeters: {'XAE099': [['D_XX'], ['D_YY', 'D_ZZ']], 'XEP': [['D_ZZ']]}
-Economic Agents: ['XMA009', 'XMA010']
-----------------------------------------
-Processing account reference: XP0900
-Accounts: ['XP0510', 'XP0512']
-Flow Perimeters: {'XAE099': [['D_AA'], ['D_BB', 'D_CC']], 'XEP': [['D_CC']]}
-Economic Agents: ['XMA011', 'XMA012']
-----------------------------------------
+	•	Un fichier nommé par exemple input_2024_11_04_15_30_45.csv sera créé dans le dossier processed de S3.
+	•	La réponse de l’API contiendra également ce nouveau nom pour confirmation.
 
-Étapes suivantes :
-
-	1.	Ajoutez votre algorithme : Intégrez votre logique de traitement spécifique dans la fonction process_account_configuration.
-	2.	Gestion des erreurs : Ajoutez des vérifications pour gérer les cas où certains champs pourraient être manquants ou mal formés.
-	3.	Chargement depuis un fichier : Si votre JSON est stocké dans un fichier, vous pouvez le charger comme suit :
-
-with open('config.json', 'r') as file:
-    data = json.load(file)
-
-
-
-N’hésitez pas à me dire si vous avez besoin d’une aide supplémentaire pour adapter ce script à votre contexte !
+Cela garantit que chaque fichier est unique et facilement identifiable.
