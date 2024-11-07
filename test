@@ -1,76 +1,35 @@
-Pour renommer le fichier avant de le télécharger sur S3 avec un format de type input_yyyy_mm_dd_hh_mm_ss, vous pouvez utiliser la bibliothèque datetime pour générer un horodatage lors du traitement du fichier.
 
-Voici comment modifier votre code :
+import json
 
-1. Modifier le fichier FastAPI
-
-Ajoutez l’importation de datetime et générez le nouveau nom de fichier avant de le stocker sur S3.
-
-Exemple de main.py :
-
-from fastapi import FastAPI, File, UploadFile
-import pandas as pd
-import boto3
-from botocore.exceptions import NoCredentialsError
-import io
-from datetime import datetime
-
-app = FastAPI()
-
-# Configuration S3
-AWS_ACCESS_KEY_ID = "votre_aws_access_key_id"
-AWS_SECRET_ACCESS_KEY = "votre_aws_secret_access_key"
-BUCKET_NAME = "votre_nom_du_bucket"
-
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-)
-
-@app.post("/upload/")
-async def upload_file(file: UploadFile = File(...)):
-    try:
-        # Lire le fichier CSV en mémoire
-        contents = await file.read()
-        df = pd.read_csv(io.BytesIO(contents))
-        
-        # Manipulation : multiplier une colonne par 100
-        if 'colonne_a_multiplier' in df.columns:  # Remplacez par le nom de votre colonne
-            df['colonne_a_multiplier'] = df['colonne_a_multiplier'] * 100
-        
-        # Convertir le DataFrame en CSV
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-        
-        # Générer le nouveau nom de fichier avec horodatage
-        timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-        new_filename = f"input_{timestamp}.csv"
-        
-        # Télécharger sur S3 avec le nouveau nom
-        s3_client.put_object(Bucket=BUCKET_NAME, Key=f"processed/{new_filename}", Body=output.getvalue())
-        
-        return {"message": f"Le fichier '{file.filename}' a été transformé et stocké sous le nom '{new_filename}'"}
+def get_role_for_id(json_data, target_id):
+    """
+    Cette fonction prend en entrée un dictionnaire JSON et un ID cible.
+    Elle retourne le rôle associé à cet ID dans les droits utilisateur.
     
-    except NoCredentialsError:
-        return {"error": "Les informations d'identification AWS ne sont pas correctes"}
-    except Exception as e:
-        return {"error": str(e)}
+    :param json_data: dict, les données JSON.
+    :param target_id: int, l'ID cible.
+    :return: str ou None, le rôle associé à l'ID ou None si non trouvé.
+    """
+    for right in json_data.get("user_rights", []):
+        if right.get("app_id") == target_id:
+            return right.get("role")
+    return None
 
-2. Explications des modifications
+# Exemple d'utilisation :
+data = {
+    "nbt": "xxx_594092",
+    "exp": "xxx_594092",
+    "iss": "xxxxx",
+    "user_login": "xxxxx",
+    "first_name": "xxxxx",
+    "last_name": "xxxxx",
+    "isManager": True,
+    "isAdmin": True,
+    "user_rights": [
+        {"app_id": 12, "app_name": "datalake-exm", "role": "user"},
+        {"app_id": 12, "app_name": "datalake-exm", "role": "user"},
+    ]
+}
 
-	•	Génération du nom de fichier :
-	•	On utilise datetime.now().strftime("%Y_%m_%d_%H_%M_%S") pour obtenir un horodatage au format yyyy_mm_dd_hh_mm_ss.
-	•	Le nouveau nom est généré avec un préfixe input_ suivi de cet horodatage.
-	•	Téléchargement sur S3 :
-	•	Le fichier est stocké avec ce nouveau nom dans un dossier processed/ de votre bucket S3.
-
-3. Résultat attendu
-
-Lors de l’upload :
-
-	•	Un fichier nommé par exemple input_2024_11_04_15_30_45.csv sera créé dans le dossier processed de S3.
-	•	La réponse de l’API contiendra également ce nouveau nom pour confirmation.
-
-Cela garantit que chaque fichier est unique et facilement identifiable.
+role = get_role_for_id(data, 12)
+print("Rôle trouvé:", role)
