@@ -1,35 +1,76 @@
 
-import json
+To implement a scrollable table with a vertically scrolling tbody while keeping the tfoot frozen, you can achieve this using CSS. Below is an approach to accomplish this:
 
-def get_role_for_id(json_data, target_id):
-    """
-    Cette fonction prend en entrée un dictionnaire JSON et un ID cible.
-    Elle retourne le rôle associé à cet ID dans les droits utilisateur.
-    
-    :param json_data: dict, les données JSON.
-    :param target_id: int, l'ID cible.
-    :return: str ou None, le rôle associé à l'ID ou None si non trouvé.
-    """
-    for right in json_data.get("user_rights", []):
-        if right.get("app_id") == target_id:
-            return right.get("role")
-    return None
+HTML Structure
 
-# Exemple d'utilisation :
-data = {
-    "nbt": "xxx_594092",
-    "exp": "xxx_594092",
-    "iss": "xxxxx",
-    "user_login": "xxxxx",
-    "first_name": "xxxxx",
-    "last_name": "xxxxx",
-    "isManager": True,
-    "isAdmin": True,
-    "user_rights": [
-        {"app_id": 12, "app_name": "datalake-exm", "role": "user"},
-        {"app_id": 12, "app_name": "datalake-exm", "role": "user"},
-    ]
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>Header 1</th>
+        <th>Header 2</th>
+        <th>Header 3</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Data 1</td>
+        <td>Data 2</td>
+        <td>Data 3</td>
+      </tr>
+      <!-- Add more rows as needed -->
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>Footer 1</td>
+        <td>Footer 2</td>
+        <td>Footer 3</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+CSS for Scrollable Table with Frozen tfoot
+
+.table-container {
+  height: 400px; /* Set desired height */
+  overflow-y: auto;
+  position: relative;
 }
 
-role = get_role_for_id(data, 12)
-print("Rôle trouvé:", role)
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  background-color: #f9f9f9; /* Optional: for better visibility */
+  z-index: 2;
+}
+
+tfoot {
+  position: sticky;
+  bottom: 0;
+  background-color: #f1f1f1; /* Optional: for better visibility */
+  z-index: 2;
+}
+
+td, th {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+Explanation:
+
+	1.	position: sticky;:
+	•	The thead is sticky to the top of the container when scrolling.
+	•	The tfoot is sticky to the bottom of the container.
+	2.	overflow-y: auto;:
+	•	Enables vertical scrolling inside the .table-container.
+	3.	Z-index:
+	•	Ensures that the thead and tfoot stay above the scrolling content.
+
+This setup ensures that the table footer (tfoot) remains visible at the bottom, while the body of the table scrolls vertically.
