@@ -1,0 +1,125 @@
+<script>
+  import axios from 'axios';
+
+  let folderName = '';
+  let description = '';
+  let category = '';
+  let errors = {};
+
+  function validateForm() {
+    const newErrors = {};
+
+    if (!folderName.trim()) {
+      newErrors.folderName = "Folder name is required";
+    } else if (folderName.length < 3) {
+      newErrors.folderName = "Folder name must be at least 3 characters";
+    }
+
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (description.length > 100) {
+      newErrors.description = "Description must be less than 100 characters";
+    }
+
+    if (!category) {
+      newErrors.category = "Category is required";
+    }
+
+    errors = newErrors;
+
+    return Object.keys(newErrors).length === 0; // Return true if no errors
+  }
+
+  async function handleSubmit() {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:8000/submit-form', {
+        folder_name: folderName,
+        description: description,
+        category: category
+      });
+      console.log('Success:', response.data);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
+  }
+</script>
+
+<form on:submit|preventDefault={handleSubmit} class="form-container">
+  <h2>Create a New Folder</h2>
+  
+  <div class="form-group">
+    <label for="folderName">Folder Name:</label>
+    <input
+      type="text"
+      id="folderName"
+      bind:value={folderName}
+      required
+      minlength="3"
+      class={errors.folderName ? 'error' : ''}
+    />
+    {#if errors.folderName}
+      <span class="error-message">{errors.folderName}</span>
+    {/if}
+  </div>
+
+  <div class="form-group">
+    <label for="description">Description:</label>
+    <textarea
+      id="description"
+      bind:value={description}
+      maxlength="100"
+      required
+      class={errors.description ? 'error' : ''}
+    ></textarea>
+    {#if errors.description}
+      <span class="error-message">{errors.description}</span>
+    {/if}
+  </div>
+
+  <div class="form-group">
+    <label for="category">Category:</label>
+    <select id="category" bind:value={category} required class={errors.category ? 'error' : ''}>
+      <option value="">Select</option>
+      <option value="work">Work</option>
+      <option value="personal">Personal</option>
+      <option value="other">Other</option>
+    </select>
+    {#if errors.category}
+      <span class="error-message">{errors.category}</span>
+    {/if}
+  </div>
+
+  <button type="submit">Submit</button>
+</form>
+
+<style>
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .error {
+    border-color: red;
+  }
+
+  .error-message {
+    color: red;
+    font-size: 0.875rem;
+  }
+
+  button {
+    background-color: #007bff;
+    color: white;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+</style>
