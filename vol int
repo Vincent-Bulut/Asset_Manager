@@ -1,0 +1,173 @@
+Pour stocker des fichiers dans Amazon S3 tout en enregistrant les métadonnées des dossiers (nom, description, catégorie, etc.) dans une base PostgreSQL via SQLAlchemy avec une API FastAPI, voici un guide détaillé.
+
+1. Architecture générale
+
+	•	Amazon S3 : Stocke les fichiers (PDF).
+	•	PostgreSQL : Stocke les métadonnées des dossiers (nom, description, catégorie, URL S3 des fichiers, etc.).
+	•	FastAPI + SQLAlchemy : Gère les interactions avec PostgreSQL et S3.
+
+2. Configuration de S3
+
+Vous devez avoir un compte AWS et un bucket S3 configuré.
+
+Installer le SDK Boto3 (pour interagir avec S3) :
+
+pip install boto3
+
+3. Configuration de la base PostgreSQL avec SQLAlchemy
+
+Installer SQLAlchemy et asyncpg (pour PostgreSQL asynchrone) :
+
+pip install sqlalchemy asyncpg
+
+4. Configuration FastAPI avec SQLAlchemy et S3
+
+a. Créer le modèle SQLAlchemy
+
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+from datetime import datetime
+
+Base = declarative_base()
+
+class Folder(Base):
+    __tablename__ = "folders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    category = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    files = relationship("File", back_populates="folder")
+
+class File(Base):
+    __tablename__ = "files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    folder_id = Column(Integer, ForeignKey("folders.id"))
+    filename = Column(String, nullable=False)
+    s3_url = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    folder = relationship("Folder", back_populates="files")
+
+b. Configurer la connexion à PostgreSQL
+
+Dans un fichier database.py :
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+DATABASE_URL = "postgresql+asyncpg://user:password@localhost/dbname"
+
+engine = create_async_engine(DATABASE_URL, echo=True)
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
+
+c. Interagir avec S3 et la base de données
+
+Dans votre fichier principal main.py :
+
+from fastapi import FastAPI, File, Form, UploadFile, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from database import get_db, engine
+from models import Folder, File as FileModel
+import boto3
+import uuid
+
+# Configurer l'application FastAPI
+app = FastAPI()
+
+# Configurer Boto3 pour S3
+s3_client = boto3.client('s3',
+    aws_access_key_id='YOUR_AWS_ACCESS_KEY',
+    aws_secret_access_key='YOUR_AWS_SECRET_KEY',
+    region_name='YOUR_AWS_REGION'
+)
+
+BUCKET_NAME = 'your-s3-bucket-name'
+
+@app.post("/submit-form")
+async def submit_form(
+    folder_name: str = Form(...),
+    description: str = Form(...),
+    category: str = Form(...),
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. Créer une entrée dans la base de données pour le dossier
+    new_folder = Folder(name=folder_name, description=description, category=category)
+    db.add(new_folder)
+    await db.commit()
+    await db.refresh(new_folder)
+
+    # 2. Upload des fichiers dans S3
+    uploaded_files = []
+    for file in files:
+        if file.content_type != "application/pdf":
+            raise HTTPException(status_code=400, detail=f"File {file.filename} is not a PDF")
+
+        # Générer un ID unique pour le fichier
+        file_id = str(uuid.uuid4())
+        s3_key = f"{new_folder.id}/{file_id}-{file.filename}"
+
+        # Upload dans S3
+        s3_client.upload_fileobj(file.file, BUCKET_NAME, s3_key)
+
+        # Générer l'URL S3
+        s3_url = f"https://{BUCKET_NAME}.s3.{s3_client.meta.region_name}.amazonaws.com/{s3_key}"
+
+        # 3. Créer une entrée dans la base de données pour le fichier
+        new_file = FileModel(
+            folder_id=new_folder.id,
+            filename=file.filename,
+            s3_url=s3_url
+        )
+        db.add(new_file)
+        uploaded_files.append({"filename": file.filename, "s3_url": s3_url})
+
+    await db.commit()
+    return {"message": "Form submitted successfully", "files": uploaded_files}
+
+5. Explications
+
+	1.	Création de dossiers :
+	•	Les métadonnées du dossier (nom, description, catégorie) sont stockées dans la table folders.
+	2.	Téléversement des fichiers :
+	•	Les fichiers sont téléchargés dans Amazon S3.
+	•	Chaque fichier reçoit un identifiant unique et son URL S3 est enregistrée dans la base.
+	3.	SQLAlchemy + PostgreSQL :
+	•	Utilisation d’AsyncSession pour gérer des interactions asynchrones avec PostgreSQL.
+
+6. Initialisation de la base de données
+
+N’oubliez pas d’initialiser les tables avec :
+
+from database import engine
+from models import Base
+
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+import asyncio
+asyncio.run(init_db())
+
+7. Conclusion
+
+Avec cette architecture :
+	•	Fichiers PDF : Stockés dans Amazon S3.
+	•	Métadonnées : Stockées dans PostgreSQL.
+	•	FastAPI + SQLAlchemy : Gèrent les transactions, valident les fichiers, et orchestrent les interactions entre S3 et PostgreSQL.
+
+Cela garantit une solution scalable et performante pour gérer vos fichiers et leurs métadonnées.
