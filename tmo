@@ -1,111 +1,207 @@
 
-Pour utiliser Axios au lieu de fetch et manipuler le fichier CSV avant de le stocker dans S3, voici un guide détaillé. Vous pouvez lire le fichier CSV dans FastAPI, le manipuler, puis l’envoyer vers S3.
+Pour inclure la fonctionnalité de téléversement de fichiers PDF dans un formulaire Svelte et envoyer les données ainsi que les fichiers à une API FastAPI, voici une solution complète :
 
-1. Manipuler le fichier CSV dans FastAPI
+1. Front-end : Formulaire avec téléversement de fichiers
 
-Pré-requis :
-
-Installez les bibliothèques nécessaires :
-
-pip install pandas boto3 fastapi python-multipart
-
-Voici un exemple de code modifié pour FastAPI :
-
-main.py :
-
-from fastapi import FastAPI, File, UploadFile
-import pandas as pd
-import boto3
-from botocore.exceptions import NoCredentialsError
-import io
-
-app = FastAPI()
-
-# Configuration S3
-AWS_ACCESS_KEY_ID = "votre_aws_access_key_id"
-AWS_SECRET_ACCESS_KEY = "votre_aws_secret_access_key"
-BUCKET_NAME = "votre_nom_du_bucket"
-
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-)
-
-@app.post("/upload/")
-async def upload_file(file: UploadFile = File(...)):
-    try:
-        # Lire le fichier CSV en mémoire
-        contents = await file.read()
-        df = pd.read_csv(io.BytesIO(contents))
-        
-        # Manipulation : multiplier une colonne par 100
-        if 'colonne_a_multiplier' in df.columns:  # Remplacez par le nom de votre colonne
-            df['colonne_a_multiplier'] = df['colonne_a_multiplier'] * 100
-        
-        # Convertir le DataFrame en CSV
-        output = io.StringIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-        
-        # Télécharger sur S3
-        s3_client.put_object(Bucket=BUCKET_NAME, Key=f"processed/{file.filename}", Body=output.getvalue())
-        
-        return {"message": f"Le fichier '{file.filename}' a été traité et téléchargé avec succès"}
-    
-    except NoCredentialsError:
-        return {"error": "Les informations d'identification AWS ne sont pas correctes"}
-    except Exception as e:
-        return {"error": str(e)}
-
-2. Utiliser Axios dans Svelte
-
-Ensuite, modifiez le client dans Svelte pour utiliser Axios au lieu de fetch.
-
-Installer Axios :
-
-Dans votre projet Svelte :
-
-npm install axios
-
-Upload.svelte :
+Modifiez le formulaire Svelte pour inclure un champ d’upload de fichiers.
 
 <script>
-  import axios from "axios";
-  let file = null;
+  import axios from 'axios';
 
-  async function handleUpload() {
-    if (file) {
+  let folderName = '';
+  let description = '';
+  let category = '';
+  let files = []; // Pour stocker les fichiers sélectionnés
+  let errors = {};
+
+  function validateForm() {
+    const newErrors = {};
+
+    if (!folderName.trim()) {
+      newErrors.folderName = "Folder name is required";
+    } else if (folderName.length < 3) {
+      newErrors.folderName = "Folder name must be at least 3 characters";
+    }
+
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    }
+
+    if (!category) {
+      newErrors.category = "Category is required";
+    }
+
+    if (files.length === 0) {
+      newErrors.files = "At least one PDF file is required";
+    } else if (!files.every(file => file.type === "application/pdf")) {
+      newErrors.files = "Only PDF files are allowed";
+    }
+
+    errors = newErrors;
+
+    return Object.keys(newErrors).length === 0;
+  }
+
+  async function handleSubmit() {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append('folder_name', folderName);
+      formData.append('description', description);
+      formData.append('category', category);
+      files.forEach(file => formData.append('files', file)); // Ajoute tous les fichiers
 
-      try {
-        const response = await axios.post("http://localhost:8000/upload/", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
-        alert(response.data.message);
-      } catch (error) {
-        console.error("Erreur lors de l'upload :", error);
-        alert("Erreur : " + (error.response?.data?.error || error.message));
-      }
-    } else {
-      alert("Veuillez sélectionner un fichier.");
+      const response = await axios.post('http://localhost:8000/submit-form', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      console.log('Success:', response.data);
+    } catch (error) {
+      console.error('Error submitting form:', error);
     }
   }
 </script>
 
-<div>
-  <input type="file" accept=".csv" on:change="{(e) => (file = e.target.files[0])}" />
-  <button on:click="{handleUpload}">Uploader vers S3</button>
-</div>
+<form on:submit|preventDefault={handleSubmit} class="form-container">
+  <h2>Create a New Folder</h2>
+  
+  <div class="form-group">
+    <label for="folderName">Folder Name:</label>
+    <input
+      type="text"
+      id="folderName"
+      bind:value={folderName}
+      required
+      minlength="3"
+      class={errors.folderName ? 'error' : ''}
+    />
+    {#if errors.folderName}
+      <span class="error-message">{errors.folderName}</span>
+    {/if}
+  </div>
 
-Points Clés
+  <div class="form-group">
+    <label for="description">Description:</label>
+    <textarea
+      id="description"
+      bind:value={description}
+      required
+      class={errors.description ? 'error' : ''}
+    ></textarea>
+    {#if errors.description}
+      <span class="error-message">{errors.description}</span>
+    {/if}
+  </div>
 
-	1.	Manipulation des données : Vous pouvez modifier le DataFrame comme vous le souhaitez (par exemple, effectuer des calculs, ajouter ou supprimer des colonnes).
-	2.	Structure S3 : Les fichiers manipulés sont stockés dans un dossier processed/ sur S3.
-	3.	Axios : Axios simplifie la gestion des requêtes HTTP, avec un meilleur support des erreurs par rapport à fetch.
+  <div class="form-group">
+    <label for="category">Category:</label>
+    <select id="category" bind:value={category} required class={errors.category ? 'error' : ''}>
+      <option value="">Select</option>
+      <option value="work">Work</option>
+      <option value="personal">Personal</option>
+      <option value="other">Other</option>
+    </select>
+    {#if errors.category}
+      <span class="error-message">{errors.category}</span>
+    {/if}
+  </div>
 
-Avec cette configuration, vous manipulez les données dans FastAPI avant de les envoyer sur S3 et utilisez Axios pour envoyer les fichiers depuis Svelte.
+  <div class="form-group">
+    <label for="files">Upload PDF Files:</label>
+    <input
+      type="file"
+      id="files"
+      multiple
+      accept="application/pdf"
+      on:change={(e) => files = Array.from(e.target.files)}
+      class={errors.files ? 'error' : ''}
+    />
+    {#if errors.files}
+      <span class="error-message">{errors.files}</span>
+    {/if}
+  </div>
+
+  <button type="submit">Submit</button>
+</form>
+
+<style>
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .error {
+    border-color: red;
+  }
+
+  .error-message {
+    color: red;
+    font-size: 0.875rem;
+  }
+
+  button {
+    background-color: #007bff;
+    color: white;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+</style>
+
+2. Back-end : API FastAPI avec téléversement de fichiers
+
+Voici comment gérer les données reçues (y compris les fichiers PDF) dans FastAPI :
+
+from fastapi import FastAPI, Form, UploadFile, File
+from pydantic import BaseModel
+from typing import List
+
+app = FastAPI()
+
+@app.post("/submit-form")
+async def submit_form(
+    folder_name: str = Form(...),
+    description: str = Form(...),
+    category: str = Form(...),
+    files: List[UploadFile] = File(...)
+):
+    uploaded_files = []
+    for file in files:
+        if file.content_type != "application/pdf":
+            return {"error": f"File {file.filename} is not a PDF"}
+        uploaded_files.append({"filename": file.filename, "content_type": file.content_type})
+    
+    return {
+        "message": "Form submitted successfully!",
+        "folder_name": folder_name,
+        "description": description,
+        "category": category,
+        "files": uploaded_files
+    }
+
+Explications :
+
+	•	Form : Récupère les champs du formulaire standard.
+	•	File : Gère les fichiers envoyés via le champ d’upload.
+	•	List[UploadFile] : Permet de recevoir plusieurs fichiers.
+
+3. Étapes supplémentaires :
+
+	•	Validation côté serveur : Vérifiez que tous les fichiers sont bien des PDF.
+	•	Sauvegarde des fichiers : Vous pouvez sauvegarder les fichiers sur le serveur si nécessaire :
+
+with open(f"uploads/{file.filename}", "wb") as buffer:
+    buffer.write(file.file.read())
+
+Conclusion :
+
+	•	Front-end : Utilisez FormData pour envoyer les données du formulaire et les fichiers.
+	•	Back-end : Utilisez FastAPI pour recevoir à la fois les données et les fichiers avec une validation côté serveur.
