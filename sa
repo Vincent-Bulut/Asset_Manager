@@ -1,26 +1,120 @@
-import os
-from datetime import datetime
 
-def add_timestamp_to_filename(file_name, timestamp_format="%Y%m%d_%H%M%S"):
-    """
-    Ajoute un horodateur au nom du fichier.
-    
-    :param file_name: Nom du fichier (ex : 'document.txt').
-    :param timestamp_format: Format du timestamp (par défaut : 'YYYYMMDD_HHMMSS').
-    :return: Nouveau nom de fichier avec le timestamp (ex : 'document_20241112_153045.txt').
-    """
-    # Récupérer le nom de base et l'extension
-    base_name, ext = os.path.splitext(file_name)
-    
-    # Générer le timestamp
-    timestamp = datetime.now().strftime(timestamp_format)
-    
-    # Créer le nouveau nom de fichier
-    new_file_name = f"{base_name}_{timestamp}{ext}"
-    
-    return new_file_name
+Voici un exemple complet de formulaire avec Flexbox intégré dans la balise <style> d’un composant Svelte :
 
-# Exemple d'utilisation
-file_name = "mon_fichier.txt"
-new_file_name = add_timestamp_to_filename(file_name)
-print(new_file_name)  # Ex: mon_fichier_20241112_153045.txt
+Exemple de composant Svelte :
+
+<script>
+  let folderName = '';
+  let description = '';
+  let category = '';
+  
+  function handleSubmit() {
+    console.log('Folder Name:', folderName);
+    console.log('Description:', description);
+    console.log('Category:', category);
+  }
+</script>
+
+<main>
+  <form on:submit|preventDefault={handleSubmit} class="form-container">
+    <h2>Create a New Folder</h2>
+    
+    <div class="form-group">
+      <label for="folderName">Folder Name:</label>
+      <input type="text" id="folderName" bind:value={folderName} required />
+    </div>
+    
+    <div class="form-group">
+      <label for="description">Description:</label>
+      <textarea id="description" bind:value={description}></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="category">Category:</label>
+      <select id="category" bind:value={category}>
+        <option value="">Select a category</option>
+        <option value="work">Work</option>
+        <option value="personal">Personal</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    
+    <button type="submit">Create Folder</button>
+  </form>
+</main>
+
+<style>
+  /* Global styles */
+  main {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;
+  }
+
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 400px;
+  }
+
+  h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+  }
+
+  input, textarea, select {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  button {
+    padding: 0.75rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+</style>
+
+Explications :
+
+	1.	Structure du formulaire :
+	•	Le formulaire contient :
+	•	Un champ pour le nom du dossier.
+	•	Un champ de description.
+	•	Une liste déroulante pour la catégorie.
+	•	Un bouton de soumission.
+	2.	Utilisation de Flexbox :
+	•	main utilise Flexbox pour centrer le formulaire au milieu de la page.
+	•	.form-container utilise Flexbox pour empiler les champs verticalement avec un gap entre chaque élément.
+	3.	Design minimaliste :
+	•	Styles simples avec bordures, ombres et espaces pour rendre le formulaire esthétique et fonctionnel.
+	4.	Interaction avec Svelte :
+	•	Les champs de formulaire utilisent la liaison bidirectionnelle avec bind:value pour capturer les valeurs.
+	•	La soumission du formulaire est gérée par on:submit avec preventDefault pour empêcher le rechargement de la page.
