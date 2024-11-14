@@ -1,76 +1,83 @@
 
-To implement a scrollable table with a vertically scrolling tbody while keeping the tfoot frozen, you can achieve this using CSS. Below is an approach to accomplish this:
+import boto3
+import uuid
+from fastapi import FastAPI, Form, File, UploadFile, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from models import Dossier, File as FileModel
+from database import get_db
+from sqlalchemy.future import select
 
-HTML Structure
+app = FastAPI()
 
-<div class="table-container">
-  <table>
-    <thead>
-      <tr>
-        <th>Header 1</th>
-        <th>Header 2</th>
-        <th>Header 3</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Data 1</td>
-        <td>Data 2</td>
-        <td>Data 3</td>
-      </tr>
-      <!-- Add more rows as needed -->
-    </tbody>
-    <tfoot>
-      <tr>
-        <td>Footer 1</td>
-        <td>Footer 2</td>
-        <td>Footer 3</td>
-      </tr>
-    </tfoot>
-  </table>
-</div>
+# Configuration de Boto3 pour S3
+s3_client = boto3.client('s3',
+    aws_access_key_id='YOUR_AWS_ACCESS_KEY',
+    aws_secret_access_key='YOUR_AWS_SECRET_KEY',
+    region_name='YOUR_AWS_REGION'
+)
 
-CSS for Scrollable Table with Frozen tfoot
+BUCKET_NAME = 'your-s3-bucket-name'
 
-.table-container {
-  height: 400px; /* Set desired height */
-  overflow-y: auto;
-  position: relative;
-}
+@app.post("/submit-form")
+async def submit_form(
+    folder_name: str = Form(...),
+    description: str = Form(...),
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. Vérifiez si le dossier existe déjà
+    stmt = select(Dossier).where(Dossier.name == folder_name)
+    result = await db.execute(stmt)
+    existing_folder = result.scalar_one_or_none()
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+    if existing_folder:
+        raise HTTPException(status_code=400, detail="Folder with this name already exists")
 
-thead {
-  position: sticky;
-  top: 0;
-  background-color: #f9f9f9; /* Optional: for better visibility */
-  z-index: 2;
-}
+    # 2. Créer une entrée pour le dossier dans la base
+    new_folder = Dossier(name=folder_name, description=description)
+    db.add(new_folder)
+    await db.commit()
+    await db.refresh(new_folder)
 
-tfoot {
-  position: sticky;
-  bottom: 0;
-  background-color: #f1f1f1; /* Optional: for better visibility */
-  z-index: 2;
-}
+    # 3. Créer le dossier dans S3 (utilise l'id du dossier comme chemin)
+    folder_s3_key = f"{new_folder.id}/"
+    try:
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=folder_s3_key)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating folder in S3: {str(e)}")
 
-td, th {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
+    uploaded_files = []
 
-Explanation:
+    # 4. Upload des fichiers dans le dossier S3
+    for file in files:
+        if file.content_type != "application/pdf":
+            raise HTTPException(status_code=400, detail=f"File {file.filename} is not a PDF")
 
-	1.	position: sticky;:
-	•	The thead is sticky to the top of the container when scrolling.
-	•	The tfoot is sticky to the bottom of the container.
-	2.	overflow-y: auto;:
-	•	Enables vertical scrolling inside the .table-container.
-	3.	Z-index:
-	•	Ensures that the thead and tfoot stay above the scrolling content.
+        # Générer une clé unique pour le fichier dans le dossier S3
+        unique_key = f"{folder_s3_key}{uuid.uuid4()}_{file.filename}"
 
-This setup ensures that the table footer (tfoot) remains visible at the bottom, while the body of the table scrolls vertically.
+        # Upload du fichier dans S3
+        try:
+            s3_client.upload_fileobj(file.file, BUCKET_NAME, unique_key)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error uploading file {file.filename}: {str(e)}")
+
+        # Générer l'URL S3 publique
+        s3_url = f"https://{BUCKET_NAME}.s3.{s3_client.meta.region_name}.amazonaws.com/{unique_key}"
+
+        # Enregistrer les métadonnées du fichier dans la base de données
+        new_file = FileModel(
+            folder_id=new_folder.id,
+            filename=file.filename,
+            s3_url=s3_url
+        )
+        db.add(new_file)
+        uploaded_files.append({"filename": file.filename, "s3_url": s3_url})
+
+    await db.commit()
+
+    return {
+        "message": "Folder and files uploaded successfully",
+        "folder_id": new_folder.id,
+        "uploaded_files": uploaded_files
+    }
