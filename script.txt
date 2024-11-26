@@ -1,82 +1,111 @@
 
-Voici un composant Svelte simple qui permet d’uploader plusieurs fichiers. Il offre une interface utilisateur basique et gère les événements pour prévisualiser les fichiers sélectionnés avant de les uploader.
+Voici un exemple de code pour mettre à jour une table en utilisant un modèle SQLAlchemy, FastAPI, un formulaire, et en communiquant avec le front-end Svelte via Axios.
 
-Composant MultiFileUploader.svelte
+Backend : FastAPI avec SQLAlchemy et Pydantic
+
+Modèle SQLAlchemy :
+
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+
+Modèle Pydantic :
+
+from pydantic import BaseModel
+
+class UserUpdate(BaseModel):
+    name: str
+    email: str
+
+Dépendance pour la session :
+
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from database import SessionLocal
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+Route FastAPI :
+
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from models import User
+from schemas import UserUpdate
+from dependencies import get_db
+
+app = FastAPI()
+
+@app.put("/users/{user_id}")
+async def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.name = user_update.name
+    user.email = user_update.email
+    db.commit()
+    db.refresh(user)
+    return user
+
+Frontend : Svelte avec Axios
+
+Composant Svelte :
 
 <script>
-  let files = [];
+  import axios from "axios";
 
-  function handleFileSelect(event) {
-    const selectedFiles = Array.from(event.target.files);
-    files = [...files, ...selectedFiles];
-  }
+  let userId = 1; // ID de l'utilisateur à mettre à jour
+  let name = "";
+  let email = "";
 
-  function removeFile(index) {
-    files.splice(index, 1);
-    files = [...files];
-  }
-
-  function uploadFiles() {
-    files.forEach(file => {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      fetch('/upload', {
-        method: 'POST',
-        body: formData,
-      })
-        .then(response => response.json())
-        .then(data => {
-          console.log('Upload success:', data);
-        })
-        .catch(error => {
-          console.error('Upload error:', error);
-        });
-    });
+  async function updateUser() {
+    try {
+      const response = await axios.put(`http://localhost:8000/users/${userId}`, {
+        name: name,
+        email: email,
+      });
+      console.log("User updated:", response.data);
+    } catch (error) {
+      console.error("Error updating user:", error.response?.data || error.message);
+    }
   }
 </script>
 
-<style>
-  .file-list {
-    margin-top: 10px;
-  }
-  .file-item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-  }
-  .file-name {
-    flex: 1;
-  }
-  .remove-button {
-    margin-left: 10px;
-    cursor: pointer;
-  }
-</style>
+<form on:submit|preventDefault={updateUser}>
+  <label for="name">Name:</label>
+  <input type="text" id="name" bind:value={name} required />
 
-<div>
-  <input type="file" multiple on:change="{handleFileSelect}" />
-  <button on:click="{uploadFiles}">Upload Files</button>
+  <label for="email">Email:</label>
+  <input type="email" id="email" bind:value={email} required />
 
-  <div class="file-list">
-    {#each files as file, index}
-      <div class="file-item">
-        <span class="file-name">{file.name}</span>
-        <span class="remove-button" on:click={() => removeFile(index)}>Remove</span>
-      </div>
-    {/each}
-  </div>
-</div>
+  <button type="submit">Update User</button>
+</form>
 
-Fonctionnalités :
+Explications :
 
-	1.	Sélection multiple de fichiers : L’utilisateur peut sélectionner plusieurs fichiers en une seule fois.
-	2.	Affichage des fichiers sélectionnés : Une liste des fichiers est affichée avec un bouton pour supprimer un fichier avant l’upload.
-	3.	Upload des fichiers : Chaque fichier est envoyé individuellement via fetch à une URL /upload.
+	1.	Backend (FastAPI) :
+	•	La route PUT /users/{user_id} prend un ID utilisateur et un objet JSON avec les champs à mettre à jour.
+	•	La fonction vérifie si l’utilisateur existe dans la base de données avant de procéder à la mise à jour.
+	•	Elle utilise SQLAlchemy pour interagir avec la base de données.
+	2.	Frontend (Svelte) :
+	•	Les données du formulaire sont liées aux variables name et email via bind:value.
+	•	Lors de la soumission, la fonction updateUser envoie une requête PUT à l’API via Axios.
+	3.	Axios :
+	•	La bibliothèque Axios est utilisée pour simplifier les requêtes HTTP depuis Svelte.
+	4.	Pré-requis :
+	•	Assurez-vous que votre serveur FastAPI est en cours d’exécution sur http://localhost:8000.
+	•	Remplacez l’URL et les champs selon votre modèle et votre base de données.
 
-Notes :
-
-	•	Vous devez remplacer '/upload' par l’URL de votre backend.
-	•	Assurez-vous que votre backend supporte les requêtes multipart/form-data.
-
-N’hésitez pas à personnaliser le composant selon vos besoins !
+Ce code est une base que vous pouvez adapter à votre cas d’usage.
