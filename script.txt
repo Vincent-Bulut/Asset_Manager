@@ -1,78 +1,119 @@
+Pour permettre à un utilisateur de télécharger un fichier directement via son navigateur après avoir cliqué sur un bouton, vous pouvez configurer votre API FastAPI pour renvoyer le fichier en tant que pièce jointe. Cela se fait facilement en utilisant FileResponse, qui déclenche automatiquement un téléchargement dans le navigateur.
 
-Oui, vous pouvez récupérer le type de fichier côté backend en utilisant les informations fournies par l’objet UploadFile de FastAPI. Voici les étapes détaillées pour identifier le type de fichier, notamment son extension ou son type MIME :
+Implémentation avec FastAPI
 
-Récupérer le type de fichier avec FastAPI
+Voici une solution complète pour répondre à votre besoin :
 
-	1.	Utiliser le champ filename :
-L’objet UploadFile a un attribut filename qui contient le nom du fichier. Vous pouvez extraire l’extension en utilisant ce nom.
-	2.	Vérifier le type MIME :
-L’objet UploadFile possède aussi un attribut content_type, qui indique le type MIME (par exemple, application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet pour Excel, etc.).
-	3.	Lire le contenu pour une analyse plus approfondie (optionnel) :
-Si nécessaire, vous pouvez lire le contenu du fichier pour détecter son type à l’aide d’une bibliothèque comme python-magic ou mimetypes, qui inspecte le contenu du fichier.
-
-Exemple de Code
-
-Voici un exemple complet en FastAPI :
-
-from fastapi import FastAPI, UploadFile, File
-import mimetypes
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+import boto3
+import os
+from botocore.exceptions import ClientError
 
 app = FastAPI()
 
-@app.post("/uploadfile/")
-async def upload_file(file: UploadFile = File(...)):
-    # Obtenir le nom du fichier et son extension
-    filename = file.filename
-    file_extension = filename.split(".")[-1].lower()
+# Configuration du bucket S3
+s3_resource = boto3.resource('s3')
+bucket_name = "nom-du-bucket"
+bucket = s3_resource.Bucket(bucket_name)
 
-    # Obtenir le type MIME
-    mime_type = file.content_type
+# Fonction pour télécharger un fichier depuis S3
+def fetch_file_from_bucket(bucket, folder_name, file_name):
+    """
+    Télécharge un fichier depuis S3 vers un chemin temporaire local.
+    
+    :param bucket: Objet bucket S3
+    :param folder_name: Nom du dossier dans le bucket
+    :param file_name: Nom du fichier à télécharger
+    :return: Chemin complet vers le fichier téléchargé
+    """
+    try:
+        # Construire la clé S3
+        s3_key = f"{folder_name}/{file_name}"
+        
+        # Déterminer le chemin local de téléchargement temporaire
+        download_path = os.path.join("/tmp", file_name)
 
-    # Si besoin, vérification supplémentaire avec mimetypes
-    guessed_mime_type, _ = mimetypes.guess_type(filename)
+        # Télécharger le fichier
+        bucket.download_file(s3_key, download_path)
+        return download_path
 
-    return {
-        "filename": filename,
-        "extension": file_extension,
-        "mime_type_from_upload": mime_type,
-        "mime_type_from_guess": guessed_mime_type,
-    }
+    except ClientError as e:
+        print(f"Erreur AWS : {e}")
+        return None
+    except FileNotFoundError:
+        print("Erreur : Le chemin local de téléchargement est invalide.")
+        return None
 
-Explications
+# Endpoint API pour télécharger un fichier depuis S3
+@app.get("/download/{folder_name}/{file_name}")
+async def download_file(folder_name: str, file_name: str):
+    """
+    Télécharge un fichier depuis S3 et le renvoie en pièce jointe pour le téléchargement dans le navigateur.
+    """
+    file_path = fetch_file_from_bucket(bucket, folder_name, file_name)
+    if file_path and os.path.exists(file_path):
+        # Retourner le fichier avec `FileResponse` pour téléchargement
+        return FileResponse(
+            path=file_path,
+            media_type="application/octet-stream",
+            filename=file_name,  # Nom du fichier visible dans la barre de téléchargement du navigateur
+        )
+    else:
+        raise HTTPException(status_code=404, detail="Fichier introuvable ou téléchargement échoué")
 
-	1.	file.filename :
-Donne le nom original du fichier tel qu’il a été uploadé par le client. Utile pour extraire l’extension.
-	2.	file.content_type :
-Donne le type MIME envoyé par le client dans l’en-tête HTTP.
-	3.	mimetypes.guess_type :
-Permet de déduire le type MIME en fonction du nom du fichier. Cette méthode est utile si l’en-tête HTTP est incorrect.
-	4.	Lecture du contenu (optionnel) :
-Si vous voulez vérifier plus en profondeur (par exemple, si l’extension ne correspond pas au contenu réel), utilisez une bibliothèque comme python-magic pour inspecter le contenu binaire.
+Fonctionnement
 
-Exemple avec python-magic :
+	1.	Téléchargement local temporaire :
+	•	Le fichier est d’abord téléchargé dans un répertoire temporaire local (/tmp).
+	•	Cela permet à votre application de travailler avec un fichier local pour l’envoyer via FileResponse.
+	2.	Téléchargement dans le navigateur :
+	•	FileResponse est configuré pour inclure l’en-tête Content-Disposition: attachment, ce qui force le navigateur à télécharger le fichier plutôt que de l’afficher.
+	•	Le paramètre filename définit le nom du fichier visible dans la barre de téléchargement du navigateur.
 
-import magic
+Exemple d’intégration Frontend avec HTML et JavaScript
 
-@app.post("/uploadfile-detect/")
-async def detect_file_type(file: UploadFile = File(...)):
-    # Lire le contenu du fichier
-    content = await file.read()
+Pour appeler cet endpoint depuis un bouton sur une page web et permettre le téléchargement automatique, vous pouvez utiliser une approche simple en JavaScript.
 
-    # Utiliser python-magic pour détecter le type MIME
-    mime = magic.Magic(mime=True)
-    detected_mime_type = mime.from_buffer(content)
+Exemple HTML avec bouton de téléchargement :
 
-    return {
-        "filename": file.filename,
-        "mime_type_from_magic": detected_mime_type,
-    }
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Téléchargement de fichier</title>
+</head>
+<body>
+    <button id="download-btn">Télécharger le fichier</button>
 
-Installation de python-magic
+    <script>
+        // Ajouter un événement au clic du bouton
+        document.getElementById("download-btn").addEventListener("click", function () {
+            // Appeler l'API avec fetch
+            const folderName = "mon-dossier";  // Remplacez par le dossier réel
+            const fileName = "mon-fichier.txt";  // Remplacez par le fichier réel
+            const apiURL = `http://localhost:8000/download/${folderName}/${fileName}`;
 
-pip install python-magic
+            // Ouvrir une nouvelle fenêtre pour forcer le téléchargement
+            window.location.href = apiURL;
+        });
+    </script>
+</body>
+</html>
 
-Conclusion
+Points importants :
 
-	•	Utilisez file.content_type pour récupérer rapidement le type MIME envoyé par le client.
-	•	Pour une vérification avancée, combinez cela avec mimetypes.guess_type ou python-magic pour analyser le contenu.
-	•	Assurez-vous de vérifier la validité de l’extension si elle est critique pour votre application (par exemple, empêcher le téléchargement d’un fichier malveillant).
+	1.	Lien direct :
+	•	En cliquant sur le bouton, le navigateur envoie une requête GET vers l’URL de l’API FastAPI.
+	•	Comme l’API retourne un FileResponse avec Content-Disposition: attachment, le navigateur déclenche automatiquement le téléchargement.
+	2.	Dynamique :
+	•	Vous pouvez modifier dynamiquement les variables folderName et fileName dans le script pour correspondre à votre application.
+	3.	Pas de stockage permanent :
+	•	Le fichier est téléchargé temporairement dans /tmp et envoyé directement. Vous pouvez nettoyer ces fichiers si nécessaire après un certain temps.
+
+Exemple de requête avec curl (pour tester directement) :
+
+curl -O http://localhost:8000/download/mon-dossier/mon-fichier.txt
+
+Cela télécharge mon-fichier.txt dans le répertoire courant.
+
+Si vous avez besoin d’améliorations, comme des validations supplémentaires, un nettoyage des fichiers temporaires, ou des headers personnalisés, faites-le-moi savoir !
