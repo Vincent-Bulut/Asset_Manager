@@ -1,72 +1,178 @@
 
+Avec Svelte 5 (SvelteKit), la structure du code reste similaire, mais voici une version adaptée pour une application utilisant SvelteKit, qui inclut les nouvelles conventions et la gestion de l’API.
+
+Fichier : +page.svelte
+
 <script>
-  import { onMount } from "svelte";
+    import { createEventDispatcher } from 'svelte';
 
-  let files = [];
-  let uploading = false;
+    let files = [];
+    const dispatch = createEventDispatcher();
 
-  async function handleDrop(event) {
-    event.preventDefault();
-    const droppedFiles = [...event.dataTransfer.files]; // Fichiers drag & drop
-    files = droppedFiles; // Liste des fichiers sélectionnés
-
-    await uploadFiles();
-  }
-
-  async function uploadFiles() {
-    uploading = true;
-
-    for (let file of files) {
-      // Demandez une URL pré-signée à votre backend
-      const response = await fetch('/generate-presigned-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, fileType: file.type }),
-      });
-
-      const { url } = await response.json();
-
-      // Téléchargez le fichier vers S3
-      await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
+    // Gestion du drop des fichiers
+    function handleDrop(event) {
+        event.preventDefault();
+        const droppedFiles = event.dataTransfer.files;
+        files = [...files, ...droppedFiles];
     }
 
-    uploading = false;
-    alert('Fichiers uploadés avec succès !');
-  }
+    // Empêcher le comportement par défaut lors du drag
+    function handleDragOver(event) {
+        event.preventDefault();
+    }
 
-  function handleDragOver(event) {
-    event.preventDefault(); // Empêche le comportement par défaut (ouvrir le fichier dans le navigateur)
-  }
+    // Supprimer un fichier de la liste
+    function removeFile(index) {
+        files = files.filter((_, i) => i !== index);
+    }
+
+    // Envoyer les fichiers à l'API
+    async function uploadFiles() {
+        const formData = new FormData();
+        files.forEach(file => formData.append("files", file));
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                dispatch('success', { message: 'Fichiers téléchargés avec succès !' });
+                files = [];
+            } else {
+                dispatch('error', { message: 'Erreur lors de l\'upload des fichiers.' });
+            }
+        } catch (error) {
+            console.error(error);
+            dispatch('error', { message: 'Une erreur est survenue.' });
+        }
+    }
 </script>
 
 <style>
-  .dropzone {
-    border: 2px dashed #ccc;
-    padding: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.3s;
-  }
-  .dropzone:hover {
-    border-color: #000;
-  }
-  .uploading {
-    color: green;
-  }
+    .drop-zone {
+        border: 2px dashed #aaa;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        color: #555;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    .drop-zone:hover {
+        background-color: #f9f9f9;
+    }
+
+    .file-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .file-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 5px 0;
+    }
+
+    .file-list button {
+        margin-left: 10px;
+        color: red;
+        border: none;
+        background: none;
+        cursor: pointer;
+    }
 </style>
 
-<div 
-  class="dropzone" 
-  on:drop={handleDrop} 
-  on:dragover={handleDragOver}
+<div
+    class="drop-zone"
+    on:drop={handleDrop}
+    on:dragover={handleDragOver}
 >
-  {#if uploading}
-    <p class="uploading">Upload en cours...</p>
-  {:else}
-    <p>Glissez et déposez vos fichiers ici ou cliquez pour sélectionner</p>
-  {/if}
+    Glissez-déposez vos fichiers ici ou cliquez pour sélectionner
+    <input
+        type="file"
+        multiple
+        on:change="{(e) => (files = [...files, ...e.target.files])}"
+        hidden
+    />
 </div>
+
+<ul class="file-list">
+    {#each files as file, index}
+        <li>
+            {file.name} ({(file.size / 1024).toFixed(2)} Ko)
+            <button on:click={() => removeFile(index)}>Supprimer</button>
+        </li>
+    {/each}
+</ul>
+
+<button on:click={uploadFiles} disabled={files.length === 0}>
+    Upload
+</button>
+
+Fichier : src/routes/api/upload/+server.js
+
+Voici un gestionnaire d’API minimaliste côté serveur, qui peut être adapté en fonction de la façon dont tu veux gérer les fichiers uploadés.
+
+import fs from 'fs';
+import path from 'path';
+
+/** @type {import('./$types').RequestHandler} */
+export async function POST({ request }) {
+    const formData = await request.formData();
+    const files = formData.getAll('files');
+
+    try {
+        for (const file of files) {
+            const buffer = await file.arrayBuffer();
+            const filepath = path.join('static/uploads', file.name);
+
+            fs.writeFileSync(filepath, Buffer.from(buffer));
+        }
+
+        return new Response(JSON.stringify({ message: 'Fichiers téléchargés avec succès !' }), {
+            status: 200
+        });
+    } catch (error) {
+        console.error(error);
+        return new Response(JSON.stringify({ message: 'Erreur lors du téléchargement.' }), {
+            status: 500
+        });
+    }
+}
+
+Explications :
+
+Composant +page.svelte :
+
+	•	Drag-and-Drop : Ajoute des fichiers via glisser-déposer ou via un input de type fichier.
+	•	Upload : Appelle l’endpoint /api/upload pour envoyer les fichiers.
+	•	Événements personnalisés : Utilise createEventDispatcher pour envoyer des notifications en cas de succès ou d’erreur.
+
+Gestionnaire /api/upload/+server.js :
+
+	•	Récupère les fichiers envoyés via FormData.
+	•	Sauvegarde les fichiers dans le dossier static/uploads (crée-le si nécessaire).
+	•	Gère les erreurs en cas de problème.
+
+Dossier static/uploads :
+
+	•	Tous les fichiers uploadés sont placés ici pour être accessibles depuis le serveur.
+
+Commandes nécessaires :
+
+	1.	Créer le dossier static/uploads :
+
+mkdir static/uploads
+
+
+	2.	Donner les permissions nécessaires au dossier :
+
+chmod -R 755 static/uploads
+
+
+
+Avec ce setup, tu as une solution fonctionnelle adaptée à SvelteKit pour le drag-and-drop et l’upload de fichiers.
