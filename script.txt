@@ -1,119 +1,72 @@
-Pour permettre à un utilisateur de télécharger un fichier directement via son navigateur après avoir cliqué sur un bouton, vous pouvez configurer votre API FastAPI pour renvoyer le fichier en tant que pièce jointe. Cela se fait facilement en utilisant FileResponse, qui déclenche automatiquement un téléchargement dans le navigateur.
 
-Implémentation avec FastAPI
+<script>
+  import { onMount } from "svelte";
 
-Voici une solution complète pour répondre à votre besoin :
+  let files = [];
+  let uploading = false;
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
-import boto3
-import os
-from botocore.exceptions import ClientError
+  async function handleDrop(event) {
+    event.preventDefault();
+    const droppedFiles = [...event.dataTransfer.files]; // Fichiers drag & drop
+    files = droppedFiles; // Liste des fichiers sélectionnés
 
-app = FastAPI()
+    await uploadFiles();
+  }
 
-# Configuration du bucket S3
-s3_resource = boto3.resource('s3')
-bucket_name = "nom-du-bucket"
-bucket = s3_resource.Bucket(bucket_name)
+  async function uploadFiles() {
+    uploading = true;
 
-# Fonction pour télécharger un fichier depuis S3
-def fetch_file_from_bucket(bucket, folder_name, file_name):
-    """
-    Télécharge un fichier depuis S3 vers un chemin temporaire local.
-    
-    :param bucket: Objet bucket S3
-    :param folder_name: Nom du dossier dans le bucket
-    :param file_name: Nom du fichier à télécharger
-    :return: Chemin complet vers le fichier téléchargé
-    """
-    try:
-        # Construire la clé S3
-        s3_key = f"{folder_name}/{file_name}"
-        
-        # Déterminer le chemin local de téléchargement temporaire
-        download_path = os.path.join("/tmp", file_name)
+    for (let file of files) {
+      // Demandez une URL pré-signée à votre backend
+      const response = await fetch('/generate-presigned-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type }),
+      });
 
-        # Télécharger le fichier
-        bucket.download_file(s3_key, download_path)
-        return download_path
+      const { url } = await response.json();
 
-    except ClientError as e:
-        print(f"Erreur AWS : {e}")
-        return None
-    except FileNotFoundError:
-        print("Erreur : Le chemin local de téléchargement est invalide.")
-        return None
+      // Téléchargez le fichier vers S3
+      await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+    }
 
-# Endpoint API pour télécharger un fichier depuis S3
-@app.get("/download/{folder_name}/{file_name}")
-async def download_file(folder_name: str, file_name: str):
-    """
-    Télécharge un fichier depuis S3 et le renvoie en pièce jointe pour le téléchargement dans le navigateur.
-    """
-    file_path = fetch_file_from_bucket(bucket, folder_name, file_name)
-    if file_path and os.path.exists(file_path):
-        # Retourner le fichier avec `FileResponse` pour téléchargement
-        return FileResponse(
-            path=file_path,
-            media_type="application/octet-stream",
-            filename=file_name,  # Nom du fichier visible dans la barre de téléchargement du navigateur
-        )
-    else:
-        raise HTTPException(status_code=404, detail="Fichier introuvable ou téléchargement échoué")
+    uploading = false;
+    alert('Fichiers uploadés avec succès !');
+  }
 
-Fonctionnement
+  function handleDragOver(event) {
+    event.preventDefault(); // Empêche le comportement par défaut (ouvrir le fichier dans le navigateur)
+  }
+</script>
 
-	1.	Téléchargement local temporaire :
-	•	Le fichier est d’abord téléchargé dans un répertoire temporaire local (/tmp).
-	•	Cela permet à votre application de travailler avec un fichier local pour l’envoyer via FileResponse.
-	2.	Téléchargement dans le navigateur :
-	•	FileResponse est configuré pour inclure l’en-tête Content-Disposition: attachment, ce qui force le navigateur à télécharger le fichier plutôt que de l’afficher.
-	•	Le paramètre filename définit le nom du fichier visible dans la barre de téléchargement du navigateur.
+<style>
+  .dropzone {
+    border: 2px dashed #ccc;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s;
+  }
+  .dropzone:hover {
+    border-color: #000;
+  }
+  .uploading {
+    color: green;
+  }
+</style>
 
-Exemple d’intégration Frontend avec HTML et JavaScript
-
-Pour appeler cet endpoint depuis un bouton sur une page web et permettre le téléchargement automatique, vous pouvez utiliser une approche simple en JavaScript.
-
-Exemple HTML avec bouton de téléchargement :
-
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Téléchargement de fichier</title>
-</head>
-<body>
-    <button id="download-btn">Télécharger le fichier</button>
-
-    <script>
-        // Ajouter un événement au clic du bouton
-        document.getElementById("download-btn").addEventListener("click", function () {
-            // Appeler l'API avec fetch
-            const folderName = "mon-dossier";  // Remplacez par le dossier réel
-            const fileName = "mon-fichier.txt";  // Remplacez par le fichier réel
-            const apiURL = `http://localhost:8000/download/${folderName}/${fileName}`;
-
-            // Ouvrir une nouvelle fenêtre pour forcer le téléchargement
-            window.location.href = apiURL;
-        });
-    </script>
-</body>
-</html>
-
-Points importants :
-
-	1.	Lien direct :
-	•	En cliquant sur le bouton, le navigateur envoie une requête GET vers l’URL de l’API FastAPI.
-	•	Comme l’API retourne un FileResponse avec Content-Disposition: attachment, le navigateur déclenche automatiquement le téléchargement.
-	2.	Dynamique :
-	•	Vous pouvez modifier dynamiquement les variables folderName et fileName dans le script pour correspondre à votre application.
-	3.	Pas de stockage permanent :
-	•	Le fichier est téléchargé temporairement dans /tmp et envoyé directement. Vous pouvez nettoyer ces fichiers si nécessaire après un certain temps.
-
-Exemple de requête avec curl (pour tester directement) :
-
-curl -O http://localhost:8000/download/mon-dossier/mon-fichier.txt
-
-Cela télécharge mon-fichier.txt dans le répertoire courant.
-
-Si vous avez besoin d’améliorations, comme des validations supplémentaires, un nettoyage des fichiers temporaires, ou des headers personnalisés, faites-le-moi savoir !
+<div 
+  class="dropzone" 
+  on:drop={handleDrop} 
+  on:dragover={handleDragOver}
+>
+  {#if uploading}
+    <p class="uploading">Upload en cours...</p>
+  {:else}
+    <p>Glissez et déposez vos fichiers ici ou cliquez pour sélectionner</p>
+  {/if}
+</div>
