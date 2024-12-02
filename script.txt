@@ -1,51 +1,92 @@
+Si vos slugs sont dynamiques et ne peuvent pas être prédéfinis (par exemple, un chiffre de 1 à 1 milliard), vous devez adapter votre configuration pour éviter le prerendering complet des pages dynamiques, car générer toutes ces pages est impossible. Voici comment gérer ce scénario correctement dans SvelteKit.
 
-<script>
-  import axios from 'axios';
+Approche 1 : Désactiver le prerendering pour les routes dynamiques
 
-  async function downloadFile(id_folder, s3_key) {
-    try {
-      // Construire l'URL
-      const url = `/folder/${id_folder}/files/${s3_key}`;
+Les pages avec des slugs dynamiques ne doivent pas être prerendered. Configurez SvelteKit pour ne pas prerender ces routes.
 
-      // Faire une requête GET avec Axios
-      const response = await axios.get(url, {
-        responseType: 'blob', // Important : indique qu'on attend un fichier en réponse
-      });
+Dans le fichier [slug].svelte, ajoutez un export const prerender = false :
 
-      // Vérifiez que la réponse est correcte
-      if (response.status !== 200) {
-        throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-      }
+export const prerender = false;
 
-      // Récupérer le fichier (Blob)
-      const blob = new Blob([response.data]);
+export async function load({ params, fetch }) {
+  const slug = params.slug;
 
-      // Créer une URL temporaire pour le fichier
-      const blobUrl = URL.createObjectURL(blob);
+  const res = await fetch(`/api/data/${slug}`); // Remplacez par votre API
+  if (!res.ok) {
+    throw new Error('Data not found');
+  }
 
-      // Récupérer le nom du fichier depuis les headers
-      const contentDisposition = response.headers['content-disposition'];
-      let filename = 'downloaded_file'; // Nom par défaut
-      if (contentDisposition) {
-        const matches = contentDisposition.match(/filename="(.+)"/);
-        if (matches && matches[1]) {
-          filename = matches[1];
-        }
-      }
+  const data = await res.json();
+  return { props: { data } };
+}
 
-      // Créer un lien pour télécharger le fichier
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename; // Nom du fichier
-      document.body.appendChild(link);
-      link.click(); // Simuler un clic pour démarrer le téléchargement
-      document.body.removeChild(link);
+Avec cette configuration :
+	•	Le reste de votre site peut être prerendered (par exemple, la page d’accueil ou d’autres pages statiques).
+	•	Les pages dynamiques seront rendues à la demande (SSR), lorsque l’utilisateur en fait la demande.
 
-      // Libérer l'URL pour éviter des fuites mémoire
-      URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      console.error('Erreur lors du téléchargement:', error);
-      alert('Impossible de télécharger le fichier.');
+Approche 2 : Utiliser un fallback pour les routes non trouvées
+
+Si vous utilisez l’adaptateur static, configurez un fallback pour rediriger les requêtes vers une page unique (par exemple, index.html) et laissez SvelteKit gérer la route.
+
+Exemple de configuration avec @sveltejs/adapter-static dans svelte.config.js :
+
+import adapter from '@sveltejs/adapter-static';
+
+export default {
+  kit: {
+    adapter: adapter({
+      fallback: '200.html', // Utilisé pour les routes dynamiques
+    }),
+    prerender: {
+      entries: [], // Ne pas prerender de routes dynamiques
     }
   }
-</script>
+};
+
+Cela permet aux routes comme /123456 de fonctionner, même si elles ne sont pas prerendered.
+
+Approche 3 : Rendu hybride (prerender + SSR)
+
+Prerendez les pages que vous connaissez (par exemple, /, /about, etc.) et laissez les routes dynamiques être rendues côté serveur.
+
+Voici une configuration pour un rendu hybride :
+	•	Dans svelte.config.js :
+
+kit: {
+  adapter: adapter({
+    fallback: null, // Pas de fallback, SSR pour les routes dynamiques
+  }),
+  prerender: {
+    entries: ['/'], // Spécifiez uniquement les pages statiques connues
+  }
+}
+
+
+	•	Configurez vos routes dynamiques pour être rendues uniquement côté serveur :
+
+export const prerender = false;
+
+Approche 4 : Gestion des erreurs pour des slugs invalides
+
+Si votre API ou base de données retourne une erreur (par exemple, un slug invalide), gérez cette situation proprement :
+
+export async function load({ params, fetch }) {
+  const slug = params.slug;
+
+  const res = await fetch(`/api/data/${slug}`);
+  if (!res.ok) {
+    return {
+      status: 404,
+      error: new Error('Slug not found'),
+    };
+  }
+
+  const data = await res.json();
+  return { props: { data } };
+}
+
+Avec cette approche, les slugs inexistants renverront une page d’erreur proprement au lieu de casser l’application.
+
+Résumé
+
+	1.	**Routes dynamiques (`[slug].svelte
