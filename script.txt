@@ -1,4 +1,137 @@
 
+Voici comment vous pouvez adapter votre projet pour utiliser les fichiers +page.js et +page.svelte dans le cadre de SvelteKit, tout en respectant votre besoin de charger le schéma JSON dans +page.js et envoyer les données au back-end.
+
+1. Organisation des fichiers
+
+Structure de votre dossier src/routes :
+
+src/
+└── routes/
+    └── dac6/
+        ├── +page.js
+        ├── +page.svelte
+        └── schema.json
+
+2. Charger le JSON dans +page.js
+
+Dans +page.js, chargez le fichier schema.json et exposez-le comme donnée pour votre page Svelte.
+
++page.js
+
+import fs from "fs/promises";
+import path from "path";
+
+export async function load() {
+    // Chemin vers le fichier schema.json
+    const schemaPath = path.resolve("src/routes/dac6/schema.json");
+    const schema = JSON.parse(await fs.readFile(schemaPath, "utf-8"));
+
+    return { schema };
+}
+
+3. Créer le formulaire dynamique dans +page.svelte
+
+Dans +page.svelte, utilisez les données chargées depuis +page.js pour générer automatiquement les champs du formulaire et envoyer les données au back-end.
+
++page.svelte
+
+<script>
+    import { onMount } from "svelte";
+    import { page } from "$app/stores";
+    import axios from "axios";
+
+    // Charger le schéma JSON passé par le load de +page.js
+    export let data;
+    let schema = data.schema;
+
+    let formData = {};
+    let xmlResponse = "";
+    let errorMessage = "";
+
+    // Initialiser formData à partir du schéma
+    $: {
+        formData = schema.elements.reduce((acc, field) => {
+            acc[field.name] = "";
+            return acc;
+        }, {});
+    }
+
+    // Soumettre les données au serveur
+    const submitForm = async () => {
+        try {
+            errorMessage = "";
+            xmlResponse = "";
+
+            const response = await axios.post("http://127.0.0.1:8000/generate-xml/", formData);
+            xmlResponse = response.data.xml;
+        } catch (error) {
+            errorMessage = error.response?.data?.detail || "An error occurred";
+        }
+    };
+</script>
+
+<main>
+    <h1>DAC6 Form</h1>
+
+    <form on:submit|preventDefault={submitForm}>
+        {#each schema.elements as field}
+            <label>
+                {field.label}:
+                {#if field.type === "string" || field.type === "date"}
+                    <input
+                        type={field.type}
+                        bind:value={formData[field.name]}
+                        {required: field.required}
+                    />
+                {/if}
+            </label>
+        {/each}
+        <button type="submit">Generate XML</button>
+    </form>
+
+    {#if errorMessage}
+        <p style="color: red;">Error: {errorMessage}</p>
+    {/if}
+
+    {#if xmlResponse}
+        <h2>Generated XML:</h2>
+        <pre>{xmlResponse}</pre>
+    {/if}
+</main>
+
+<style>
+    main {
+        font-family: Arial, sans-serif;
+        padding: 1rem;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    input {
+        margin-left: 1rem;
+    }
+
+    button {
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+    }
+
+    pre {
+        background-color: #f8f8f8;
+        padding: 1rem;
+        border: 1px solid #ccc;
+    }
+</style>
+
+4. Exemple de schema.json
+
+Voici un exemple de fichier schema.json utilisé dans cet exemple.
+
+schema.json
+
 {
   "elements": [
     {
@@ -45,3 +178,22 @@
     }
   ]
 }
+
+5. Fonctionnement
+
+	1.	Chargement du schéma :
+	•	Lors du chargement de la page, SvelteKit lit le fichier schema.json via +page.js et le transmet à +page.svelte.
+	2.	Formulaire Dynamique :
+	•	Les champs du formulaire sont générés dynamiquement à partir de schema.elements.
+	3.	Soumission :
+	•	Lorsqu’un utilisateur soumet le formulaire, les données sont envoyées via axios à l’API FastAPI, qui retourne le XML généré.
+	4.	Affichage du XML :
+	•	Une fois le XML généré, il est affiché dans la page sous forme de <pre>.
+
+6. Avantages de cette approche
+
+	•	Modularité : Le formulaire est complètement décorrélé de son schéma. Modifier le JSON ou l’XSD suffit pour ajouter ou supprimer des champs.
+	•	Optimisation des performances : Le JSON est chargé une seule fois au moment du rendu initial, grâce à SvelteKit.
+	•	Simplicité : La séparation entre +page.js (logique de chargement) et +page.svelte (affichage) améliore la lisibilité et la maintenance.
+
+Si vous souhaitez ajouter d’autres fonctionnalités (comme la validation des champs avant envoi), cette structure est également facile à étendre.
