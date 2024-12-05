@@ -1,51 +1,20 @@
 
-Sub VlookupEntreOnglets()
-    Dim wsSource As Worksheet ' Onglet contenant le tableau source (X)
-    Dim wsLookup As Worksheet ' Onglet contenant la table de recherche (Y)
-    Dim colLabel As Range ' Colonne contenant le label dans l'onglet source
-    Dim tblLookup As Range ' Plage de la table de recherche dans l'onglet Y
-    Dim dernièreLigneSource As Long ' Dernière ligne dans l'onglet X
-    Dim dernièreLigneLookup As Long ' Dernière ligne dans l'onglet Y
-    Dim labelColonne As String ' Nom du label à chercher dans l'onglet Y
-    Dim cellule As Range
-    Dim résultat As Variant
-    
-    ' Définir les onglets
-    Set wsSource = ThisWorkbook.Sheets("X")
-    Set wsLookup = ThisWorkbook.Sheets("Y")
-    
-    ' Définir le label à chercher
-    labelColonne = "NomColonne" ' Remplacez par le nom de votre colonne labellisée
+class XMLObject:
+    def __init__(self, xml_to_load, children: list | None = None):
+        self.name = self._ensure_utf8(xml_to_load.attrib.get('name', None))
+        self.type = self._ensure_utf8(xml_to_load.attrib.get('type', None))
+        self.value = self._ensure_utf8(xml_to_load.attrib.get('value', None))
+        self.description = self._ensure_utf8(xml_to_load.attrib.get('description', None))
+        self.content = self._ensure_utf8_list(children if children is not None else [])
 
-    ' Trouver la colonne correspondant au label dans l'onglet X
-    Set colLabel = wsSource.Rows(1).Find(What:=labelColonne, LookIn:=xlValues, LookAt:=xlWhole)
-    If colLabel Is Nothing Then
-        MsgBox "Le label '" & labelColonne & "' n'a pas été trouvé dans l'onglet X.", vbExclamation
-        Exit Sub
-    End If
+    def _ensure_utf8(self, text):
+        """Forcer un texte en UTF-8."""
+        if text is None:
+            return None
+        if isinstance(text, bytes):
+            return text.decode('utf-8')
+        return str(text)
 
-    ' Trouver la dernière ligne dans l'onglet X
-    dernièreLigneSource = wsSource.Cells(wsSource.Rows.Count, colLabel.Column).End(xlUp).Row
-
-    ' Définir la table de recherche dans l'onglet Y
-    dernièreLigneLookup = wsLookup.Cells(wsLookup.Rows.Count, 1).End(xlUp).Row
-    Set tblLookup = wsLookup.Range("A1:I" & dernièreLigneLookup) ' Ajustez la plage si nécessaire
-
-    ' Parcourir chaque cellule de la colonne labellisée dans l'onglet X
-    For Each cellule In wsSource.Range(colLabel.Offset(1, 0), wsSource.Cells(dernièreLigneSource, colLabel.Column))
-        ' Effectuer le VLOOKUP sur la table de l'onglet Y
-        On Error Resume Next
-        résultat = Application.WorksheetFunction.VLookup(cellule.Value, tblLookup, 9, False)
-        On Error GoTo 0
-
-        ' Insérer le résultat dans une colonne dédiée (par exemple, colonne Z)
-        If IsError(résultat) Then
-            wsSource.Cells(cellule.Row, colLabel.Column + 1).Value = "Non trouvé"
-        Else
-            wsSource.Cells(cellule.Row, colLabel.Column + 1).Value = résultat
-        End If
-    Next cellule
-
-    ' Message de confirmation
-    MsgBox "Les résultats du VLOOKUP ont été ajoutés dans l'onglet X.", vbInformation
-End Sub
+    def _ensure_utf8_list(self, items):
+        """Forcer une liste de textes en UTF-8."""
+        return [self._ensure_utf8(item) for item in items]
