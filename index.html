@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Formulaire depuis XSD</title>
+    <style>
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .field-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Formulaire Dynamique basé sur un XSD</h1>
+    <input type="file" id="uploadXSD" accept=".xsd" />
+    <form id="dynamicForm"></form>
+    <button id="generateXML">Générer XML</button>
+    <pre id="output"></pre>
+
+    <script>
+        document.getElementById("uploadXSD").addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const xsdText = await file.text();
+                parseXSD(xsdText);
+            }
+        });
+
+        function parseXSD(xsdText) {
+            const parser = new DOMParser();
+            const xsdDoc = parser.parseFromString(xsdText, "application/xml");
+
+            const namespace = "http://www.w3.org/2001/XMLSchema";
+            const form = document.getElementById("dynamicForm");
+            form.innerHTML = ""; // Clear existing form
+
+            const rootElements = xsdDoc.getElementsByTagNameNS(namespace, "element");
+
+            Array.from(rootElements).forEach(element => {
+                createFormField(element, form, namespace);
+            });
+        }
+
+        function createFormField(element, form, namespace) {
+            const name = element.getAttribute("name");
+            const type = element.getAttribute("type");
+            const isRequired = element.getAttribute("minOccurs") !== "0";
+            const maxOccurs = element.getAttribute("maxOccurs");
+
+            if (type) {
+                appendField(form, name, type, isRequired, maxOccurs);
+            } else {
+                const complexType = element.getElementsByTagNameNS(namespace, "complexType")[0];
+                if (complexType) {
+                    const sequence = complexType.getElementsByTagNameNS(namespace, "sequence")[0];
+                    if (sequence) {
+                        const children = sequence.getElementsByTagNameNS(namespace, "element");
+                        const fieldset = document.createElement("fieldset");
+                        const legend = document.createElement("legend");
+                        legend.textContent = name;
+                        fieldset.appendChild(legend);
+
+                        Array.from(children).forEach(child => {
+                            createFormField(child, fieldset, namespace);
+                        });
+
+                        form.appendChild(fieldset);
+                    }
+                }
+            }
+        }
+
+        function appendField(form, name, type, isRequired, maxOccurs) {
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("field-wrapper");
+
+            const label = document.createElement("label");
+            label.textContent = name;
+
+            const input = document.createElement("input");
+            input.type = getInputType(type);
+            input.name = name;
+            if (isRequired) input.required = true;
+
+            label.appendChild(input);
+            wrapper.appendChild(label);
+
+            // Si maxOccurs est "unbounded", ajouter un bouton pour dupliquer les champs
+            if (maxOccurs === "unbounded") {
+                const addButton = document.createElement("button");
+                addButton.type = "button";
+                addButton.textContent = "Ajouter un autre " + name;
+                addButton.addEventListener("click", () => {
+                    const newField = wrapper.cloneNode(true);
+                    newField.querySelector("input").value = ""; // Clear input value
+                    form.insertBefore(newField, addButton.parentNode.nextSibling);
+                });
+
+                wrapper.appendChild(addButton);
+            }
+
+            form.appendChild(wrapper);
+        }
+
+        function getInputType(xsdType) {
+            switch (xsdType) {
+                case "xs:string":
+                    return "text";
+                case "xs:integer":
+                case "xs:decimal":
+                    return "number";
+                case "xs:date":
+                    return "date";
+                case "xs:boolean":
+                    return "checkbox";
+                default:
+                    return "text"; // Default type
+            }
+        }
+
+        document.getElementById("generateXML").addEventListener("click", () => {
+            const form = document.getElementById("dynamicForm");
+            const formData = new FormData(form);
+            const xml = generateXML(formData);
+
+            // Afficher dans le pré
+            document.getElementById("output").textContent = xml;
+
+            // Créer un fichier téléchargeable
+            const blob = new Blob([xml], { type: "application/xml" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "output.xml"; // Nom du fichier téléchargé
+            link.click();
+        });
+
+
+        function generateXML(formData) {
+            let xml = "<Root>"; // Replace with root element name if available
+            for (const [key, value] of formData.entries()) {
+                xml += `<${key}>${value}</${key}>`;
+            }
+            xml += "</Root>";
+            return xml;
+        }
+    </script>
+</body>
+</html>
