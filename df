@@ -1,27 +1,194 @@
 
-async function deleteFile(s3_key, fileName) {
-    // Affiche une boîte de confirmation
-    const confirmation = window.confirm(`Êtes-vous sûr de vouloir supprimer le fichier "${fileName}" ?`);
+La transformation d’un schéma XSD comme DAC6 (obligations fiscales internationales de déclaration) en un formulaire utilisable nécessite une approche méthodique. Voici une marche à suivre pour automatiser cette transformation et obtenir un formulaire fonctionnel.
 
-    if (!confirmation) {
-        // Si l'utilisateur annule, on quitte la fonction
-        return;
-    }
+Étape 1 : Comprendre le XSD DAC6
 
-    spinner_enable = true;
-    try {
-        const response = await axiosInstance.delete(`/folder/${folderMetadata.id}/files/${s3_key}`);
+Le schéma XSD DAC6 contient :
+	1.	Éléments complexes (déclarations, transactions, parties, etc.).
+	2.	Attributs obligatoires et optionnels (par exemple, minOccurs, maxOccurs, type).
+	3.	Structures imbriquées (séquences, choix, groupes, etc.).
+	4.	Contraintes de types (xs:string, xs:integer, xs:date, etc.).
 
-        if (response.status === 200) {
-            alert(`Fichier "${fileName}" supprimé avec succès.`);
-        } else {
-            throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-        }
-    } catch (error) {
-        console.error('Error deleting file:', error);
-        alert(`Impossible de supprimer le fichier "${fileName}".`);
-    } finally {
-        spinner_enable = false;
-        window.location.reload();
-    }
+Pour simplifier :
+	•	Chaque élément ou attribut défini dans le XSD doit être traduit en un champ de formulaire.
+	•	Les contraintes de cardinalité (minOccurs, maxOccurs) dictent si un champ est obligatoire ou s’il peut être multiple.
+
+Étape 2 : Extraire le Schéma en une Structure Dynamique
+
+Utilisez une bibliothèque comme xmlschema en Python ou une bibliothèque JavaScript pour extraire la structure. Par exemple :
+
+Exemple avec xmlschema en Python
+
+import xmlschema
+
+xsd_file = "dac6.xsd"
+schema = xmlschema.XMLSchema(xsd_file)
+
+# Extraire les éléments principaux du schéma
+def extract_structure(schema):
+    elements = {}
+    for element in schema.elements:
+        elements[element] = schema.elements[element].to_dict()
+    return elements
+
+structure = extract_structure(schema)
+print(structure)
+
+Cela génère une structure hiérarchique avec :
+	•	Les noms des éléments.
+	•	Les types (string, integer, date).
+	•	Les contraintes (minOccurs, maxOccurs).
+
+Étape 3 : Représenter la Structure en JSON
+
+Représentez le XSD DAC6 en un format JSON pour générer dynamiquement un formulaire. Par exemple :
+
+{
+  "DAC6Report": {
+    "type": "complexType",
+    "fields": [
+      {
+        "name": "MessageRefId",
+        "type": "string",
+        "minOccurs": 1,
+        "maxOccurs": 1
+      },
+      {
+        "name": "DisclosureInformation",
+        "type": "complexType",
+        "minOccurs": 1,
+        "maxOccurs": "unbounded",
+        "fields": [
+          {
+            "name": "DisclosureDescription",
+            "type": "string",
+            "minOccurs": 1,
+            "maxOccurs": 1
+          },
+          {
+            "name": "DisclosedEntities",
+            "type": "complexType",
+            "minOccurs": 1,
+            "maxOccurs": "unbounded",
+            "fields": [
+              {
+                "name": "EntityName",
+                "type": "string",
+                "minOccurs": 1,
+                "maxOccurs": 1
+              },
+              {
+                "name": "EntityTIN",
+                "type": "string",
+                "minOccurs": 0,
+                "maxOccurs": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }
+
+Étape 4 : Générer un Formulaire Dynamique
+
+En utilisant un framework comme Svelte, créez des composants réutilisables qui parcourent la structure JSON pour afficher dynamiquement les champs.
+
+Composant Svelte pour un Élément Simple
+
+<script>
+  export let field; // { name: "MessageRefId", type: "string", minOccurs: 1 }
+  export let value = '';
+</script>
+
+<div>
+  <label for={field.name}>{field.name}</label>
+  <input
+    id={field.name}
+    type={field.type === 'string' ? 'text' : 'number'}
+    bind:value
+    required={field.minOccurs > 0}
+  />
+</div>
+
+Composant Svelte pour un Élément Complexe
+
+<script>
+  export let field; // { name: "DisclosureInformation", fields: [...] }
+  export let values = [];
+  let newInstance = {};
+</script>
+
+<div>
+  <h3>{field.name}</h3>
+  {#each values as instance, index}
+    <fieldset>
+      {#each field.fields as subField}
+        <Field field={subField} bind:value={instance[subField.name]} />
+      {/each}
+      <button on:click={() => values.splice(index, 1)}>Remove</button>
+    </fieldset>
+  {/each}
+  <button on:click={() => values.push({ ...newInstance })}>Add {field.name}</button>
+</div>
+
+Étape 5 : Combiner les Composants
+
+Dans le composant principal, parcourez la structure JSON pour afficher les champs dynamiquement.
+
+<script>
+  import Field from './Field.svelte';
+  import ComplexField from './ComplexField.svelte';
+
+  let dac6Schema = {
+    "DAC6Report": { /* JSON structure décrite ci-dessus */ }
+  };
+  let formData = {};
+</script>
+
+<form on:submit|preventDefault={() => console.log(formData)}>
+  {#each Object.keys(dac6Schema.DAC6Report.fields) as fieldName}
+    {#if dac6Schema.DAC6Report.fields[fieldName].type === 'complexType'}
+      <ComplexField field={dac6Schema.DAC6Report.fields[fieldName]} bind:values={formData[fieldName]} />
+    {:else}
+      <Field field={dac6Schema.DAC6Report.fields[fieldName]} bind:value={formData[fieldName]} />
+    {/if}
+  {/each}
+  <button type="submit">Submit</button>
+</form>
+
+Étape 6 : Générer le XML Conformément au DAC6
+
+Une fois les données saisies, transformez-les en XML conforme.
+
+Exemple de Génération XML
+
+function generateXML(data, schema) {
+  let xml = `<DAC6Report>`;
+  schema.fields.forEach(field => {
+    if (Array.isArray(data[field.name])) {
+      data[field.name].forEach(item => {
+        xml += `<${field.name}>${generateXML(item, field)}</${field.name}>`;
+      });
+    } else if (field.type === 'complexType') {
+      xml += `<${field.name}>${generateXML(data[field.name], field)}</${field.name}>`;
+    } else {
+      xml += `<${field.name}>${data[field.name]}</${field.name}>`;
+    }
+  });
+  xml += `</DAC6Report>`;
+  return xml;
+}
+
+let xmlOutput = generateXML(formData, dac6Schema.DAC6Report);
+console.log(xmlOutput);
+
+Résultat
+
+Avec cette approche :
+	1.	Formulaire Dynamique : Les champs sont générés automatiquement à partir du XSD.
+	2.	Support des Séquences : Les champs répétables (comme DisclosureInformation) sont gérés dynamiquement.
+	3.	Export XML Conforme : Les données collectées sont transformées en XML valide pour le DAC6.
+
+Vous pouvez maintenant adapter cette solution en fonction de la complexité spécifique de votre XSD DAC6.
