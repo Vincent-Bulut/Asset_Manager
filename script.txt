@@ -1,152 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clone and Remove Sections</title>
+    <style>
+        .section {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            position: relative;
+        }
+        .clone-btn, .remove-btn {
+            margin-top: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
 
-Si vous avez 68 classes qui génèrent du code HTML, et que vous souhaitez permettre à certaines sections d’être répétées (clonées dynamiquement) avec du JavaScript, voici une approche flexible et maintenable :
+<div class="section">Section 1</div>
+<div class="section">Section 2</div>
+<div class="section">Section 3</div>
 
-Solution Générale
-	1.	Ajoutez un attribut spécifique pour marquer les sections répétables.
-	2.	Créez une fonction JavaScript générique pour gérer le clonage.
-	3.	Appliquez cette fonction uniquement sur les sections répétables lors de leur génération.
+<script>
+    // Function to initialize buttons on targeted divs
+    function initializeCloneAndRemoveButtons(selector) {
+        // Get all the divs matching the selector
+        const targetDivs = document.querySelectorAll(selector);
 
-Étape 1 : Marquer les sections répétables
-
-Lors de la génération du HTML pour chaque classe, ajoutez un attribut distinct comme data-repeatable="true" aux sections répétables. Par exemple :
-
-<div class="section" data-repeatable="true">
-  <label for="field-1">Champ :</label>
-  <input id="field-1" type="text" name="field[]" class="form-control" />
-  <button class="clone-btn" type="button">Cloner</button>
-</div>
-
-Étape 2 : JavaScript générique pour gérer le clonage
-
-Voici un script générique pour détecter les sections marquées comme répétables et gérer leur clonage. Il met à jour les attributs comme id et name pour éviter les conflits.
-
-Script :
-
-document.addEventListener("DOMContentLoaded", () => {
-  // Ajout d'un événement sur tous les boutons de clonage
-  document.body.addEventListener("click", (event) => {
-    if (event.target && event.target.classList.contains("clone-btn")) {
-      const section = event.target.closest("[data-repeatable='true']");
-      if (section) {
-        cloneSection(section);
-      }
+        targetDivs.forEach(div => {
+            // Add the clone button if it doesn't already exist
+            if (!div.querySelector('.clone-btn')) {
+                const cloneButton = document.createElement('button');
+                cloneButton.textContent = 'Clone';
+                cloneButton.className = 'clone-btn';
+                cloneButton.addEventListener('click', () => cloneSection(div));
+                div.appendChild(cloneButton);
+            }
+        });
     }
-  });
 
-  // Fonction pour cloner une section
-  function cloneSection(section) {
-    // Clone la section avec tous ses enfants
-    const clonedSection = section.cloneNode(true);
+    // Function to clone a section and add a remove button to the cloned section
+    function cloneSection(section) {
+        const clone = section.cloneNode(true);
 
-    // Met à jour les IDs et noms pour éviter les conflits
-    updateAttributes(clonedSection);
+        // Remove any existing clone button in the cloned section
+        const existingCloneButton = clone.querySelector('.clone-btn');
+        if (existingCloneButton) {
+            existingCloneButton.remove();
+        }
 
-    // Insère la section clonée après l'originale
-    section.parentNode.insertBefore(clonedSection, section.nextSibling);
-  }
+        // Add a remove button to the cloned section
+        if (!clone.querySelector('.remove-btn')) {
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remove';
+            removeButton.className = 'remove-btn';
+            removeButton.addEventListener('click', () => clone.remove());
+            clone.appendChild(removeButton);
+        }
 
-  // Met à jour les attributs des éléments clonés (id, name, etc.)
-  function updateAttributes(clonedSection) {
-    const inputs = clonedSection.querySelectorAll("input, select, textarea");
+        // Insert the cloned section after the original section
+        section.parentNode.insertBefore(clone, section.nextSibling);
+    }
 
-    inputs.forEach((input) => {
-      // Met à jour l'ID (ajoute un suffixe ou un compteur unique)
-      if (input.id) {
-        input.id = `${input.id}-${Date.now()}`;
-      }
+    // Initialize the buttons on all divs with the class "section"
+    initializeCloneAndRemoveButtons('.section');
+</script>
 
-      // Met à jour le nom (ajoute un suffixe ou un compteur unique)
-      if (input.name) {
-        input.name = `${input.name}-${Date.now()}`;
-      }
-
-      // Réinitialise les valeurs des champs
-      input.value = "";
-    });
-  }
-});
-
-Étape 3 : Intégration dans votre boucle de génération HTML
-
-Dans votre code de génération HTML pour chaque classe, ajoutez un bouton de clonage et l’attribut data-repeatable uniquement sur les sections qui doivent être répétées. Par exemple :
-
-function generateHtml(classInstance) {
-  const html = `
-    <div class="section ${classInstance.name}" data-repeatable="${classInstance.isRepeatable}">
-      <label for="field-${classInstance.id}">Champ :</label>
-      <input id="field-${classInstance.id}" type="text" name="field[]" class="form-control" />
-      ${
-        classInstance.isRepeatable
-          ? '<button class="clone-btn" type="button">Cloner</button>'
-          : ''
-      }
-    </div>
-  `;
-  return html;
-}
-
-	•	isRepeatable : Détermine si la section est répétable (par exemple, une propriété de vos classes).
-	•	id et name : Dynamique pour chaque section.
-
-Étape 4 : Résultat attendu
-
-Exemple HTML généré
-
-Voici un exemple de structure après avoir généré et cloné dynamiquement une section :
-
-<div class="section" data-repeatable="true">
-  <label for="field-1">Champ :</label>
-  <input id="field-1" type="text" name="field[]" class="form-control" />
-  <button class="clone-btn" type="button">Cloner</button>
-</div>
-<div class="section" data-repeatable="true">
-  <label for="field-1-1671111111111">Champ :</label>
-  <input id="field-1-1671111111111" type="text" name="field-1671111111111[]" class="form-control" />
-  <button class="clone-btn" type="button">Cloner</button>
-</div>
-
-Points Clés
-	1.	Attributs Dynamiques : L’id et le name des champs sont mis à jour avec un suffixe unique pour éviter les conflits.
-	2.	Réinitialisation des Valeurs : Les champs des clones sont réinitialisés (valeurs vides).
-	3.	Événement Global : Le gestionnaire d’événements détecte tous les boutons “Cloner” ajoutés dynamiquement.
-
-Améliorations Possibles
-	1.	Suppression des Clones : Ajoutez un bouton pour supprimer une section clonée :
-
-<button class="remove-btn" type="button">Supprimer</button>
-
-Avec le JavaScript suivant :
-
-document.body.addEventListener("click", (event) => {
-  if (event.target && event.target.classList.contains("remove-btn")) {
-    const section = event.target.closest(".section");
-    if (section) section.remove();
-  }
-});
-
-
-	2.	Animations : Ajoutez des transitions CSS pour rendre le clonage plus fluide :
-
-.section {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-Conclusion
-
-Avec cette approche :
-	1.	Vous pouvez facilement marquer certaines sections comme répétables.
-	2.	Un bouton “Cloner” permet de dupliquer ces sections dynamiquement avec des IDs et name uniques.
-	3.	Le script est générique et peut être appliqué à toutes vos classes sans modifier manuellement leur logique.
-
-Cela permet une gestion maintenable et scalable de vos sections répétables.
+</body>
+</html>
