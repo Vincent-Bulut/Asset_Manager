@@ -4,30 +4,21 @@
     function initializeCloneAndRemoveButtons(selector) {
         const targetDivs = document.querySelectorAll(selector);
 
-        targetDivs.forEach(div => {
-            addButtonsIfNeeded(div); // Ajoute les boutons si manquants
-            attachEventListeners(div); // Attache les événements
+        targetDivs.forEach((div, index) => {
+            addButtonsIfNeeded(div, index === 0); // Ajouter les boutons, mais pas le Trash pour le premier élément
+            attachEventListeners(div, index === 0);
         });
     }
 
     // Fonction pour ajouter les boutons manquants à une section
-    function addButtonsIfNeeded(section) {
-        // Bouton pour cloner
+    function addButtonsIfNeeded(section, isFirst) {
+        // Bouton pour cloner (ajouter)
         if (!section.querySelector('.clone-btn')) {
             const cloneButton = document.createElement('button');
             cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // "+" icon
             cloneButton.className = 'clone-btn';
             cloneButton.addEventListener('click', () => cloneSection(section));
             section.prepend(cloneButton);
-        }
-
-        // Bouton pour supprimer
-        if (!section.querySelector('.remove-btn')) {
-            const removeButton = document.createElement('button');
-            removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // Trash icon
-            removeButton.className = 'remove-btn';
-            removeButton.addEventListener('click', () => section.remove());
-            section.prepend(removeButton);
         }
 
         // Bouton pour toggle (expand/collapse)
@@ -38,31 +29,42 @@
             toggleButton.addEventListener('click', () => toggleSection(section, toggleButton));
             section.prepend(toggleButton);
         }
+
+        // Bouton pour supprimer (Trash) - ne l'ajoute que si ce n'est pas le premier élément
+        if (!isFirst && !section.querySelector('.remove-btn')) {
+            const removeButton = document.createElement('button');
+            removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // Trash icon
+            removeButton.className = 'remove-btn';
+            removeButton.addEventListener('click', () => section.remove());
+            section.prepend(removeButton);
+        }
     }
 
     // Fonction pour attacher les événements aux boutons d'une section
-    function attachEventListeners(section) {
+    function attachEventListeners(section, isFirst) {
         const cloneButton = section.querySelector('.clone-btn');
-        const removeButton = section.querySelector('.remove-btn');
         const toggleButton = section.querySelector('.toggle-btn');
+        const removeButton = section.querySelector('.remove-btn');
 
         // Re-attacher les événements pour éviter les doublons
         if (cloneButton) {
             cloneButton.onclick = () => cloneSection(section);
         }
-        if (removeButton) {
-            removeButton.onclick = () => section.remove();
-        }
         if (toggleButton) {
             toggleButton.onclick = () => toggleSection(section, toggleButton);
+        }
+        if (removeButton && !isFirst) {
+            removeButton.onclick = () => section.remove();
         }
     }
 
     // Fonction pour cloner une section
     function cloneSection(section) {
         const clone = section.cloneNode(true); // Clone complet de la section
-        addButtonsIfNeeded(clone); // Ajoute les boutons manquants
-        attachEventListeners(clone); // Attache les événements au clone
+
+        // Ajouter les boutons pour le clone (y compris le bouton Trash)
+        addButtonsIfNeeded(clone, false); // false indique que ce n'est pas le premier élément
+        attachEventListeners(clone, false);
 
         // Insérer le clone après la section originale
         section.parentNode.insertBefore(clone, section.nextSibling);
