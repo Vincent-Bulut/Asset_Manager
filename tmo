@@ -1,23 +1,110 @@
 
-import xmlschema
+Pour ajouter des icônes professionnelles pour les boutons “cloner” (+) et “supprimer” (-), et les positionner en haut de chaque section, vous pouvez utiliser :
+	1.	Font Awesome (bibliothèque d’icônes open-source).
+	2.	Un positionnement avec CSS pour aligner les boutons en haut.
 
-def extract_structure(schema):
-    elements = {}
-    for name, element in schema.elements.items():
-        # Extraire les informations clés de l'élément
-        elements[name] = {
-            "name": name,
-            "type": str(element.type),
-            "minOccurs": element.min_occurs,
-            "maxOccurs": element.max_occurs,
-            "attributes": {attr.name: str(attr.type) for attr in element.attributes.values()},
-            "children": [child.name for child in element.type.content if child.name]
+Étapes pour intégrer les icônes et ajuster le positionnement
+
+1. Inclure Font Awesome
+
+Ajoutez cette ligne dans le <head> de votre fichier HTML pour inclure la bibliothèque Font Awesome :
+
+<head>
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+</head>
+
+2. Mettre à jour le JavaScript pour les icônes
+
+Modifiez votre code pour utiliser des icônes au lieu du texte “Clone” et “Remove” :
+
+function initializeCloneAndRemoveButtons(selector) {
+    const targetDivs = document.querySelectorAll(selector);
+
+    targetDivs.forEach((div) => {
+        // Ajouter le bouton Clone si non existant
+        if (!div.querySelector('.clone-btn')) {
+            const cloneButton = document.createElement('button');
+            cloneButton.className = 'clone-btn';
+            cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // Icône +
+            cloneButton.addEventListener('click', () => cloneSection(div));
+            div.prepend(cloneButton); // Place le bouton en haut
         }
-    return elements
+    });
+}
 
-if __name__ == "__main__":
-    xsd_file = "./path/to/Dac6XML_FR_V_4.04.xsd"  # Chemin vers votre fichier XSD
-    schema = xmlschema.XMLSchema(xsd_file)
+function cloneSection(section) {
+    const clone = section.cloneNode(true);
 
-    structure = extract_structure(schema)
-    print(structure)
+    // Supprimer l'ancien bouton Clone dans la copie
+    const existingCloneButton = clone.querySelector('.clone-btn');
+    if (existingCloneButton) {
+        existingCloneButton.remove();
+    }
+
+    // Ajouter un bouton Remove dans la copie
+    if (!clone.querySelector('.remove-btn')) {
+        const removeButton = document.createElement('button');
+        removeButton.className = 'remove-btn';
+        removeButton.innerHTML = '<i class="fas fa-minus"></i>'; // Icône -
+        removeButton.addEventListener('click', () => clone.remove());
+        clone.prepend(removeButton); // Place le bouton en haut
+    }
+
+    // Insérer la section clonée après l'originale
+    section.parentNode.insertBefore(clone, section.nextSibling);
+}
+
+3. Ajouter du CSS pour aligner les boutons en haut
+
+Voici un style simple pour placer les boutons en haut des sections et les rendre plus élégants :
+
+button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    margin-right: 5px;
+}
+
+button i {
+    color: #007bff; /* Couleur de l'icône */
+}
+
+button i:hover {
+    color: #0056b3; /* Couleur au survol */
+}
+
+.section {
+    position: relative;
+    padding: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+}
+
+.clone-btn,
+.remove-btn {
+    position: absolute;
+    top: 5px;
+}
+
+.clone-btn {
+    left: 5px;
+}
+
+.remove-btn {
+    left: 40px;
+}
+
+Résultat attendu :
+	1.	Le bouton Clone (icône +) et Remove (icône -) apparaîtront en haut des sections.
+	2.	Les boutons seront élégants grâce aux icônes Font Awesome.
+	3.	Le positionnement sera propre grâce au CSS.
+
+Aperçu des icônes :
+	•	<i class="fas fa-plus"></i> : Icône pour ajouter (bouton +).
+	•	<i class="fas fa-minus"></i> : Icône pour supprimer (bouton -).
+
+Si vous avez d’autres ajustements à faire, n’hésitez pas à demander !
