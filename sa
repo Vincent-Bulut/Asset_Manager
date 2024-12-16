@@ -1,142 +1,90 @@
 
-Voici le code modifié pour ajouter des boutons ”+” et ”-” permettant de dépiler (masquer) et empiler (afficher) les sections. Je vais inclure ces boutons en haut de chaque section avec la logique JavaScript pour gérer l’affichage/masquage.
-
-Code Modifié
-
 <script>
-    // Function to initialize buttons on targeted divs
+    // Fonction pour initialiser les boutons sur toutes les sections avec la classe 'repeatable'
     function initializeCloneAndRemoveButtons(selector) {
         const targetDivs = document.querySelectorAll(selector);
 
-        targetDivs.forEach((div) => {
-            // Add the clone button if it doesn't already exist
-            if (!div.querySelector('.clone-btn')) {
-                const cloneButton = document.createElement('button');
-                cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // "+" icon
-                cloneButton.className = 'clone-btn';
-                cloneButton.addEventListener('click', () => cloneSection(div));
-                div.prepend(cloneButton);
-            }
-
-            // Add the toggle (expand/collapse) button
-            if (!div.querySelector('.toggle-btn')) {
-                const toggleButton = document.createElement('button');
-                toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // "-" icon for collapse
-                toggleButton.className = 'toggle-btn';
-                toggleButton.addEventListener('click', () => toggleSection(div, toggleButton));
-                div.prepend(toggleButton);
-            }
+        targetDivs.forEach(div => {
+            addButtonsIfNeeded(div); // Ajoute les boutons si manquants
+            attachEventListeners(div); // Attache les événements
         });
     }
 
-    // Function to clone a section and add a remove button to the cloned section
-    function cloneSection(section) {
-        const clone = section.cloneNode(true);
-
-        // Remove any existing clone button in the cloned section
-        const existingCloneButton = clone.querySelector('.clone-btn');
-        if (existingCloneButton) {
-            existingCloneButton.remove();
+    // Fonction pour ajouter les boutons manquants à une section
+    function addButtonsIfNeeded(section) {
+        // Bouton pour cloner
+        if (!section.querySelector('.clone-btn')) {
+            const cloneButton = document.createElement('button');
+            cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // "+" icon
+            cloneButton.className = 'clone-btn';
+            cloneButton.addEventListener('click', () => cloneSection(section));
+            section.prepend(cloneButton);
         }
 
-        // Add a remove button to the cloned section
-        if (!clone.querySelector('.remove-btn')) {
+        // Bouton pour supprimer
+        if (!section.querySelector('.remove-btn')) {
             const removeButton = document.createElement('button');
-            removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // "Trash" icon
+            removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // Trash icon
             removeButton.className = 'remove-btn';
-            removeButton.addEventListener('click', () => clone.remove());
-            clone.prepend(removeButton);
+            removeButton.addEventListener('click', () => section.remove());
+            section.prepend(removeButton);
         }
 
-        // Add a toggle button for the cloned section
-        if (!clone.querySelector('.toggle-btn')) {
+        // Bouton pour toggle (expand/collapse)
+        if (!section.querySelector('.toggle-btn')) {
             const toggleButton = document.createElement('button');
-            toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // "-" icon for collapse
+            toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // "-" icon
             toggleButton.className = 'toggle-btn';
-            toggleButton.addEventListener('click', () => toggleSection(clone, toggleButton));
-            clone.prepend(toggleButton);
+            toggleButton.addEventListener('click', () => toggleSection(section, toggleButton));
+            section.prepend(toggleButton);
         }
+    }
 
-        // Insert the cloned section after the original section
+    // Fonction pour attacher les événements aux boutons d'une section
+    function attachEventListeners(section) {
+        const cloneButton = section.querySelector('.clone-btn');
+        const removeButton = section.querySelector('.remove-btn');
+        const toggleButton = section.querySelector('.toggle-btn');
+
+        // Re-attacher les événements pour éviter les doublons
+        if (cloneButton) {
+            cloneButton.onclick = () => cloneSection(section);
+        }
+        if (removeButton) {
+            removeButton.onclick = () => section.remove();
+        }
+        if (toggleButton) {
+            toggleButton.onclick = () => toggleSection(section, toggleButton);
+        }
+    }
+
+    // Fonction pour cloner une section
+    function cloneSection(section) {
+        const clone = section.cloneNode(true); // Clone complet de la section
+        addButtonsIfNeeded(clone); // Ajoute les boutons manquants
+        attachEventListeners(clone); // Attache les événements au clone
+
+        // Insérer le clone après la section originale
         section.parentNode.insertBefore(clone, section.nextSibling);
     }
 
-    // Function to toggle (collapse/expand) the section
+    // Fonction pour basculer l'affichage d'une section (expand/collapse)
     function toggleSection(section, toggleButton) {
-        const content = Array.from(section.children).slice(2); // Skip buttons
-        content.forEach((child) => {
+        const content = Array.from(section.children).slice(3); // Ignorer les premiers enfants (boutons)
+
+        content.forEach(child => {
             if (child.style.display === 'none') {
-                child.style.display = '';
-                toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // Change to collapse icon
+                child.style.display = ''; // Ré-afficher le contenu
+                toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // Changer l'icône pour "-"
             } else {
-                child.style.display = 'none';
-                toggleButton.innerHTML = '<i class="fas fa-plus"></i>'; // Change to expand icon
+                child.style.display = 'none'; // Masquer le contenu
+                toggleButton.innerHTML = '<i class="fas fa-plus"></i>'; // Changer l'icône pour "+"
             }
         });
     }
 
-    // Initialize the buttons on all divs with the class "repeatable"
-    initializeCloneAndRemoveButtons('.repeatable');
+    // Initialisation des boutons au chargement de la page
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeCloneAndRemoveButtons('.repeatable');
+    });
 </script>
-
-Ajout d’icônes Font Awesome
-
-Ajoutez cette ligne dans le <head> pour utiliser les icônes Font Awesome (pour les boutons +, - et poubelle) :
-
-<head>
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-</head>
-
-Explications des Fonctionnalités Ajoutées
-	1.	Bouton de bascule (afficher/masquer) :
-	•	Le bouton “-” (icône de réduction) masque les contenus en dehors des boutons.
-	•	Une fois masqué, l’icône devient “+” pour afficher les contenus.
-	2.	Fonction toggleSection :
-	•	Elle parcourt les enfants de la section, en ignorant les boutons, pour afficher ou masquer les contenus.
-	3.	Bouton de suppression :
-	•	Ajouté aux sections clonées uniquement, avec une icône “poubelle” pour supprimer la section.
-
-CSS Suggestion
-
-Ajoutez du CSS pour améliorer le positionnement et le style des boutons :
-
-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2em;
-    margin-right: 5px;
-}
-
-button i {
-    color: #007bff; /* Couleur des icônes */
-}
-
-button i:hover {
-    color: #0056b3; /* Couleur au survol */
-}
-
-.repeatable {
-    position: relative;
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-.clone-btn,
-.remove-btn,
-.toggle-btn {
-    display: inline-block;
-    margin-right: 5px;
-    vertical-align: middle;
-}
-
-Résultat Attendu
-	1.	Chaque section affiche un bouton + pour cloner, - pour basculer l’affichage et, pour les copies, un bouton poubelle pour supprimer.
-	2.	Le bouton “-” masque le contenu de la section et devient “+” pour l’afficher à nouveau.
-	3.	Les boutons sont positionnés en haut de chaque section.
-
-Si quelque chose ne fonctionne pas comme prévu ou si vous souhaitez encore des ajustements, n’hésitez pas à me le dire !
