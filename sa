@@ -1,134 +1,142 @@
 
-Pour envoyer les données d’un formulaire à votre API FastAPI depuis le front-end en utilisant Axios, voici un guide étape par étape.
+Voici le code modifié pour ajouter des boutons ”+” et ”-” permettant de dépiler (masquer) et empiler (afficher) les sections. Je vais inclure ces boutons en haut de chaque section avec la logique JavaScript pour gérer l’affichage/masquage.
 
-1. Configurer le back-end avec FastAPI
-
-Supposons que vous avez une API FastAPI avec une route pour recevoir les données du formulaire :
-
-from fastapi import FastAPI, Form
-from pydantic import BaseModel
-
-app = FastAPI()
-
-# Option 1: Utilisation d'un modèle Pydantic
-class FormData(BaseModel):
-    folder_name: str
-    description: str
-    category: str
-
-@app.post("/submit-form")
-async def submit_form(data: FormData):
-    return {"message": "Form submitted successfully!", "data": data}
-
-# Option 2: Utilisation de paramètres Form
-@app.post("/submit-form-raw")
-async def submit_form_raw(
-    folder_name: str = Form(...),
-    description: str = Form(...),
-    category: str = Form(...)
-):
-    return {"message": "Form submitted successfully!", "folder_name": folder_name}
-
-2. Front-end : Envoyer le formulaire avec Axios
-
-Dans votre composant Svelte :
-
-HTML :
-
-Voici un formulaire que vous avez déjà construit avec Svelte :
+Code Modifié
 
 <script>
-  import axios from 'axios';
+    // Function to initialize buttons on targeted divs
+    function initializeCloneAndRemoveButtons(selector) {
+        const targetDivs = document.querySelectorAll(selector);
 
-  let folderName = '';
-  let description = '';
-  let category = '';
+        targetDivs.forEach((div) => {
+            // Add the clone button if it doesn't already exist
+            if (!div.querySelector('.clone-btn')) {
+                const cloneButton = document.createElement('button');
+                cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // "+" icon
+                cloneButton.className = 'clone-btn';
+                cloneButton.addEventListener('click', () => cloneSection(div));
+                div.prepend(cloneButton);
+            }
 
-  async function handleSubmit() {
-    try {
-      const response = await axios.post('http://localhost:8000/submit-form', {
-        folder_name: folderName,
-        description: description,
-        category: category
-      });
-      console.log('Success:', response.data);
-    } catch (error) {
-      console.error('Error submitting form:', error);
+            // Add the toggle (expand/collapse) button
+            if (!div.querySelector('.toggle-btn')) {
+                const toggleButton = document.createElement('button');
+                toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // "-" icon for collapse
+                toggleButton.className = 'toggle-btn';
+                toggleButton.addEventListener('click', () => toggleSection(div, toggleButton));
+                div.prepend(toggleButton);
+            }
+        });
     }
-  }
+
+    // Function to clone a section and add a remove button to the cloned section
+    function cloneSection(section) {
+        const clone = section.cloneNode(true);
+
+        // Remove any existing clone button in the cloned section
+        const existingCloneButton = clone.querySelector('.clone-btn');
+        if (existingCloneButton) {
+            existingCloneButton.remove();
+        }
+
+        // Add a remove button to the cloned section
+        if (!clone.querySelector('.remove-btn')) {
+            const removeButton = document.createElement('button');
+            removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // "Trash" icon
+            removeButton.className = 'remove-btn';
+            removeButton.addEventListener('click', () => clone.remove());
+            clone.prepend(removeButton);
+        }
+
+        // Add a toggle button for the cloned section
+        if (!clone.querySelector('.toggle-btn')) {
+            const toggleButton = document.createElement('button');
+            toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // "-" icon for collapse
+            toggleButton.className = 'toggle-btn';
+            toggleButton.addEventListener('click', () => toggleSection(clone, toggleButton));
+            clone.prepend(toggleButton);
+        }
+
+        // Insert the cloned section after the original section
+        section.parentNode.insertBefore(clone, section.nextSibling);
+    }
+
+    // Function to toggle (collapse/expand) the section
+    function toggleSection(section, toggleButton) {
+        const content = Array.from(section.children).slice(2); // Skip buttons
+        content.forEach((child) => {
+            if (child.style.display === 'none') {
+                child.style.display = '';
+                toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // Change to collapse icon
+            } else {
+                child.style.display = 'none';
+                toggleButton.innerHTML = '<i class="fas fa-plus"></i>'; // Change to expand icon
+            }
+        });
+    }
+
+    // Initialize the buttons on all divs with the class "repeatable"
+    initializeCloneAndRemoveButtons('.repeatable');
 </script>
 
-<form on:submit|preventDefault={handleSubmit}>
-  <label for="folderName">Folder Name:</label>
-  <input id="folderName" bind:value={folderName} type="text" required />
+Ajout d’icônes Font Awesome
 
-  <label for="description">Description:</label>
-  <textarea id="description" bind:value={description}></textarea>
+Ajoutez cette ligne dans le <head> pour utiliser les icônes Font Awesome (pour les boutons +, - et poubelle) :
 
-  <label for="category">Category:</label>
-  <select id="category" bind:value={category}>
-    <option value="">Select</option>
-    <option value="work">Work</option>
-    <option value="personal">Personal</option>
-  </select>
+<head>
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+</head>
 
-  <button type="submit">Submit</button>
-</form>
+Explications des Fonctionnalités Ajoutées
+	1.	Bouton de bascule (afficher/masquer) :
+	•	Le bouton “-” (icône de réduction) masque les contenus en dehors des boutons.
+	•	Une fois masqué, l’icône devient “+” pour afficher les contenus.
+	2.	Fonction toggleSection :
+	•	Elle parcourt les enfants de la section, en ignorant les boutons, pour afficher ou masquer les contenus.
+	3.	Bouton de suppression :
+	•	Ajouté aux sections clonées uniquement, avec une icône “poubelle” pour supprimer la section.
 
-3. Explication
+CSS Suggestion
 
-Axios POST Request :
+Ajoutez du CSS pour améliorer le positionnement et le style des boutons :
 
-await axios.post('http://localhost:8000/submit-form', {
-  folder_name: folderName,
-  description: description,
-  category: category
-});
-
-	•	URL : http://localhost:8000/submit-form est l’endpoint exposé par votre API.
-	•	Payload : Les données du formulaire sont envoyées sous forme d’un objet JSON.
-Cela correspond à la structure définie dans le modèle Pydantic.
-
-4. Alternatives : Envoi de données de type application/x-www-form-urlencoded
-
-Si votre API attend des données dans un format form-data ou application/x-www-form-urlencoded (option avec Form dans FastAPI), modifiez la requête comme suit :
-
-import axios from 'axios';
-import qs from 'qs'; // Pour encoder les données si besoin
-
-async function handleSubmit() {
-  try {
-    const response = await axios.post('http://localhost:8000/submit-form-raw', 
-      qs.stringify({
-        folder_name: folderName,
-        description: description,
-        category: category
-      }), 
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      }
-    );
-    console.log('Success:', response.data);
-  } catch (error) {
-    console.error('Error submitting form:', error);
-  }
+button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    margin-right: 5px;
 }
 
-5. Tester et vérifier
+button i {
+    color: #007bff; /* Couleur des icônes */
+}
 
-	•	Démarrez votre serveur FastAPI :
+button i:hover {
+    color: #0056b3; /* Couleur au survol */
+}
 
-uvicorn main:app --reload
+.repeatable {
+    position: relative;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+}
 
+.clone-btn,
+.remove-btn,
+.toggle-btn {
+    display: inline-block;
+    margin-right: 5px;
+    vertical-align: middle;
+}
 
-	•	Ouvrez votre formulaire dans le navigateur et soumettez-le. Vous devriez voir la réponse dans la console du navigateur ou de l’API.
+Résultat Attendu
+	1.	Chaque section affiche un bouton + pour cloner, - pour basculer l’affichage et, pour les copies, un bouton poubelle pour supprimer.
+	2.	Le bouton “-” masque le contenu de la section et devient “+” pour l’afficher à nouveau.
+	3.	Les boutons sont positionnés en haut de chaque section.
 
-6. Gestion des erreurs
-
-Vous pouvez ajouter des vérifications côté API et gérer les erreurs côté client en utilisant un try/catch pour capturer les problèmes (par exemple, validation des champs).
-
-Résumé :
-
-	•	Utilisez Axios pour envoyer des requêtes POST à votre API FastAPI.
-	•	Définissez l’endpoint et les formats de données correctement en fonction de ce que FastAPI attend.
-	•	Adaptez l’envoi des données (JSON ou form-urlencoded) selon vos besoins.
+Si quelque chose ne fonctionne pas comme prévu ou si vous souhaitez encore des ajustements, n’hésitez pas à me le dire !
