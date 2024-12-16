@@ -4,15 +4,13 @@
     function initializeCloneAndRemoveButtons(selector) {
         const targetDivs = document.querySelectorAll(selector);
 
-        targetDivs.forEach((div, index) => {
-            // Marquer le premier élément comme original
-            if (index === 0) div.dataset.isOriginal = "true";
-            addButtonsIfNeeded(div);
+        targetDivs.forEach(div => {
+            addButtonsIfNeeded(div, true); // Passer 'true' pour indiquer que c'est un élément original
         });
     }
 
     // Fonction pour ajouter les boutons nécessaires à une section
-    function addButtonsIfNeeded(section) {
+    function addButtonsIfNeeded(section, isOriginal = false) {
         // Ajouter le bouton Clone (toujours présent)
         if (!section.querySelector('.clone-btn')) {
             const cloneButton = document.createElement('button');
@@ -31,8 +29,8 @@
             section.prepend(toggleButton);
         }
 
-        // Ajouter le bouton Trash UNIQUEMENT pour les clones
-        if (section.dataset.isOriginal !== "true" && !section.querySelector('.remove-btn')) {
+        // Ajouter le bouton Trash UNIQUEMENT pour les éléments clonés
+        if (!isOriginal && !section.querySelector('.remove-btn')) {
             const removeButton = document.createElement('button');
             removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // Trash icon
             removeButton.className = 'remove-btn';
@@ -45,12 +43,11 @@
     function cloneSection(section) {
         const clone = section.cloneNode(true); // Clone complet de la section
 
-        // Marquer le clone comme non original
-        clone.dataset.isOriginal = "false";
-
-        // Nettoyer les anciens boutons et ajouter de nouveaux
+        // Supprimer les anciens boutons pour éviter les conflits
         clone.querySelectorAll('.clone-btn, .toggle-btn, .remove-btn').forEach(button => button.remove());
-        addButtonsIfNeeded(clone);
+
+        // Ajouter les boutons nécessaires au clone (avec bouton Trash activé)
+        addButtonsIfNeeded(clone, false); // 'false' indique que c'est un clone
 
         // Insérer le clone après la section originale
         section.parentNode.insertBefore(clone, section.nextSibling);
