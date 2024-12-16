@@ -4,14 +4,16 @@
     function initializeCloneAndRemoveButtons(selector) {
         const targetDivs = document.querySelectorAll(selector);
 
-        targetDivs.forEach(div => {
+        targetDivs.forEach((div, index) => {
+            // Marquer le premier élément comme original
+            if (index === 0) div.dataset.isOriginal = "true";
             addButtonsIfNeeded(div);
         });
     }
 
     // Fonction pour ajouter les boutons nécessaires à une section
     function addButtonsIfNeeded(section) {
-        // Ajouter le bouton Clone
+        // Ajouter le bouton Clone (toujours présent)
         if (!section.querySelector('.clone-btn')) {
             const cloneButton = document.createElement('button');
             cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // "+" icon
@@ -29,8 +31,8 @@
             section.prepend(toggleButton);
         }
 
-        // Ajouter le bouton Trash pour les clones uniquement
-        if (!section.dataset.isOriginal && !section.querySelector('.remove-btn')) {
+        // Ajouter le bouton Trash UNIQUEMENT pour les clones
+        if (section.dataset.isOriginal !== "true" && !section.querySelector('.remove-btn')) {
             const removeButton = document.createElement('button');
             removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // Trash icon
             removeButton.className = 'remove-btn';
@@ -43,8 +45,8 @@
     function cloneSection(section) {
         const clone = section.cloneNode(true); // Clone complet de la section
 
-        // Ajouter un attribut pour identifier que c'est un clone
-        clone.dataset.isOriginal = 'false';
+        // Marquer le clone comme non original
+        clone.dataset.isOriginal = "false";
 
         // Nettoyer les anciens boutons et ajouter de nouveaux
         clone.querySelectorAll('.clone-btn, .toggle-btn, .remove-btn').forEach(button => button.remove());
