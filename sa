@@ -4,15 +4,14 @@
     function initializeCloneAndRemoveButtons(selector) {
         const targetDivs = document.querySelectorAll(selector);
 
-        targetDivs.forEach((div, index) => {
-            addButtonsIfNeeded(div, index === 0); // Ajouter les boutons, mais pas le Trash pour le premier élément
-            attachEventListeners(div, index === 0);
+        targetDivs.forEach(div => {
+            addButtonsIfNeeded(div);
         });
     }
 
-    // Fonction pour ajouter les boutons manquants à une section
-    function addButtonsIfNeeded(section, isFirst) {
-        // Bouton pour cloner (ajouter)
+    // Fonction pour ajouter les boutons nécessaires à une section
+    function addButtonsIfNeeded(section) {
+        // Ajouter le bouton Clone
         if (!section.querySelector('.clone-btn')) {
             const cloneButton = document.createElement('button');
             cloneButton.innerHTML = '<i class="fas fa-plus"></i>'; // "+" icon
@@ -21,7 +20,7 @@
             section.prepend(cloneButton);
         }
 
-        // Bouton pour toggle (expand/collapse)
+        // Ajouter le bouton Toggle (collapse/expand)
         if (!section.querySelector('.toggle-btn')) {
             const toggleButton = document.createElement('button');
             toggleButton.innerHTML = '<i class="fas fa-minus"></i>'; // "-" icon
@@ -30,8 +29,8 @@
             section.prepend(toggleButton);
         }
 
-        // Bouton pour supprimer (Trash) - ne l'ajoute que si ce n'est pas le premier élément
-        if (!isFirst && !section.querySelector('.remove-btn')) {
+        // Ajouter le bouton Trash pour les clones uniquement
+        if (!section.dataset.isOriginal && !section.querySelector('.remove-btn')) {
             const removeButton = document.createElement('button');
             removeButton.innerHTML = '<i class="fas fa-trash"></i>'; // Trash icon
             removeButton.className = 'remove-btn';
@@ -40,39 +39,24 @@
         }
     }
 
-    // Fonction pour attacher les événements aux boutons d'une section
-    function attachEventListeners(section, isFirst) {
-        const cloneButton = section.querySelector('.clone-btn');
-        const toggleButton = section.querySelector('.toggle-btn');
-        const removeButton = section.querySelector('.remove-btn');
-
-        // Re-attacher les événements pour éviter les doublons
-        if (cloneButton) {
-            cloneButton.onclick = () => cloneSection(section);
-        }
-        if (toggleButton) {
-            toggleButton.onclick = () => toggleSection(section, toggleButton);
-        }
-        if (removeButton && !isFirst) {
-            removeButton.onclick = () => section.remove();
-        }
-    }
-
     // Fonction pour cloner une section
     function cloneSection(section) {
         const clone = section.cloneNode(true); // Clone complet de la section
 
-        // Ajouter les boutons pour le clone (y compris le bouton Trash)
-        addButtonsIfNeeded(clone, false); // false indique que ce n'est pas le premier élément
-        attachEventListeners(clone, false);
+        // Ajouter un attribut pour identifier que c'est un clone
+        clone.dataset.isOriginal = 'false';
+
+        // Nettoyer les anciens boutons et ajouter de nouveaux
+        clone.querySelectorAll('.clone-btn, .toggle-btn, .remove-btn').forEach(button => button.remove());
+        addButtonsIfNeeded(clone);
 
         // Insérer le clone après la section originale
         section.parentNode.insertBefore(clone, section.nextSibling);
     }
 
-    // Fonction pour basculer l'affichage d'une section (expand/collapse)
+    // Fonction pour basculer l'affichage d'une section (collapse/expand)
     function toggleSection(section, toggleButton) {
-        const content = Array.from(section.children).slice(3); // Ignorer les premiers enfants (boutons)
+        const content = Array.from(section.children).slice(2); // Ignorer les deux premiers enfants (boutons)
 
         content.forEach(child => {
             if (child.style.display === 'none') {
@@ -85,7 +69,7 @@
         });
     }
 
-    // Initialisation des boutons au chargement de la page
+    // Initialiser les boutons au chargement de la page
     document.addEventListener('DOMContentLoaded', () => {
         initializeCloneAndRemoveButtons('.repeatable');
     });
