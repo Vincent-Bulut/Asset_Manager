@@ -1,72 +1,64 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clone and Remove Sections</title>
-    <style>
-        .section {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin: 10px 0;
-            position: relative;
-        }
-        .clone-btn, .remove-btn {
-            margin-top: 5px;
-            display: block;
-        }
-    </style>
+    <title>Générateur XML Dynamique</title>
 </head>
 <body>
+    <h1>Génération XML Dynamique</h1>
 
-<div class="section">Section 1</div>
-<div class="section">Section 2</div>
-<div class="section">Section 3</div>
+    <!-- Exemple de structure -->
+    <div id="content">
+        <p>Nom</p>
+        <input type="text" value="Dupont"><br><br>
 
-<script>
-    // Function to initialize buttons on targeted divs
-    function initializeCloneAndRemoveButtons(selector) {
-        // Get all the divs matching the selector
-        const targetDivs = document.querySelectorAll(selector);
+        <p>Prénom</p>
+        <input type="text" value="Jean"><br><br>
 
-        targetDivs.forEach(div => {
-            // Add the clone button if it doesn't already exist
-            if (!div.querySelector('.clone-btn')) {
-                const cloneButton = document.createElement('button');
-                cloneButton.textContent = 'Clone';
-                cloneButton.className = 'clone-btn';
-                cloneButton.addEventListener('click', () => cloneSection(div));
-                div.appendChild(cloneButton);
-            }
-        });
-    }
+        <p>Email</p>
+        <select>
+            <option value="email1@example.com" selected>email1@example.com</option>
+            <option value="email2@example.com">email2@example.com</option>
+        </select><br><br>
 
-    // Function to clone a section and add a remove button to the cloned section
-    function cloneSection(section) {
-        const clone = section.cloneNode(true);
+        <p>Âge</p>
+        <input type="number" value="30"><br><br>
 
-        // Remove any existing clone button in the cloned section
-        const existingCloneButton = clone.querySelector('.clone-btn');
-        if (existingCloneButton) {
-            existingCloneButton.remove();
+        <p>Pays</p>
+        <input type="text" value="France"><br><br>
+    </div>
+
+    <button onclick="genererXML()">Générer XML</button>
+
+    <!-- Affichage XML -->
+    <h2>Sortie XML :</h2>
+    <pre id="outputXML"></pre>
+
+    <script>
+        function genererXML() {
+            const content = document.getElementById("content");
+            const elements = content.querySelectorAll("p"); // Sélectionne toutes les balises <p>
+
+            let xmlOutput = `<données>\n`;
+
+            // Parcourir chaque <p> pour récupérer son texte et l'élément suivant (input, select, etc.)
+            elements.forEach(p => {
+                const tagName = p.textContent.trim(); // Le nom de la balise XML (texte dans <p>)
+                const nextElement = p.nextElementSibling; // L'élément suivant <p> (input ou select)
+
+                if (nextElement && (nextElement.tagName === "INPUT" || nextElement.tagName === "SELECT")) {
+                    const value = nextElement.value; // La valeur saisie ou sélectionnée
+                    xmlOutput += `    <${tagName}>${value}</${tagName}>\n`;
+                }
+            });
+
+            xmlOutput += `</données>`;
+
+            // Affichage dans la zone de sortie
+            document.getElementById("outputXML").textContent = xmlOutput;
         }
-
-        // Add a remove button to the cloned section
-        if (!clone.querySelector('.remove-btn')) {
-            const removeButton = document.createElement('button');
-            removeButton.textContent = 'Remove';
-            removeButton.className = 'remove-btn';
-            removeButton.addEventListener('click', () => clone.remove());
-            clone.appendChild(removeButton);
-        }
-
-        // Insert the cloned section after the original section
-        section.parentNode.insertBefore(clone, section.nextSibling);
-    }
-
-    // Initialize the buttons on all divs with the class "section"
-    initializeCloneAndRemoveButtons('.section');
-</script>
-
+    </script>
 </body>
 </html>
