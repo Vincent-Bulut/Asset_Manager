@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Génération XML Récursive</title>
+    <title>Générateur XML Imbriqué</title>
 </head>
 <body>
-    <h1>Génération XML Dynamique (Structure Profonde)</h1>
+    <h1>Génération XML à partir des balises &lt;p&gt;</h1>
 
-    <!-- Exemple avec une structure imbriquée -->
+    <!-- Exemple : structure imbriquée avec des p -->
     <div id="content">
         <p>Utilisateur
             <p>Nom
@@ -25,12 +25,19 @@
                     </select>
                 </p>
             </p>
+            <p>Adresse
+                <p>Rue
+                    <p><input type="text" value="123 Rue Exemple"></p>
+                </p>
+                <p>Code Postal
+                    <p><input type="number" value="75000"></p>
+                </p>
+            </p>
         </p>
     </div>
 
     <button onclick="genererXML()">Générer XML</button>
 
-    <!-- Zone d'affichage du XML -->
     <h2>Sortie XML :</h2>
     <pre id="outputXML"></pre>
 
@@ -39,38 +46,32 @@
             const content = document.getElementById("content");
             let xmlOutput = `<données>\n`;
 
-            // Fonction récursive pour traiter les <p> imbriqués
-            function traiterElement(parent) {
-                const children = parent.children;
+            // Fonction récursive pour traiter uniquement les balises <p>
+            function traiterP(parent, indent = "    ") {
+                const children = Array.from(parent.children);
 
-                for (let i = 0; i < children.length; i++) {
-                    const child = children[i];
-
+                children.forEach(child => {
                     if (child.tagName === "P") {
-                        // Le texte de la balise <p> devient le nom de la balise XML
-                        const tagName = child.firstChild.textContent.trim();
+                        const tagName = child.firstChild?.textContent?.trim(); // Texte du <p> comme nom de balise
+                        const input = child.querySelector("input, select"); // Chercher input ou select imbriqué
 
-                        // Vérifier s'il y a un input/select imbriqué
-                        const input = child.querySelector("input, select");
-                        if (input) {
-                            const value = input.value;
-                            xmlOutput += `    <${tagName}>${value}</${tagName}>\n`;
-                        } else {
-                            // Si pas d'input, traiter récursivement les enfants
-                            xmlOutput += `    <${tagName}>\n`;
-                            traiterElement(child);
-                            xmlOutput += `    </${tagName}>\n`;
+                        if (input && tagName) {
+                            // Si un input ou select est trouvé, ajouter au XML
+                            xmlOutput += `${indent}<${tagName}>${input.value}</${tagName}>\n`;
+                        } else if (tagName) {
+                            // Si aucun input/select direct, ouvrir une balise et traiter récursivement
+                            xmlOutput += `${indent}<${tagName}>\n`;
+                            traiterP(child, indent + "    "); // Récursion
+                            xmlOutput += `${indent}</${tagName}>\n`;
                         }
                     }
-                }
+                });
             }
 
-            // Démarre la récursion à partir de la div principale
-            traiterElement(content);
+            // Démarre la récursion depuis la div principale
+            traiterP(content);
 
             xmlOutput += `</données>`;
-
-            // Affiche le XML généré
             document.getElementById("outputXML").textContent = xmlOutput;
         }
     </script>
