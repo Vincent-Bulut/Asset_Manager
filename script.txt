@@ -1,54 +1,15 @@
 
-class Stack {
-    constructor() {
-        this.items = []; // Utilisation d'un tableau pour stocker les éléments
-    }
+const stack = []; // Création de la pile avec un tableau
 
-    // Ajouter un élément à la pile
-    push(element) {
-        this.items.push(element);
-    }
-
-    // Retirer le dernier élément de la pile
-    pop() {
-        if (this.isEmpty()) {
-            return "Underflow"; // Gestion du cas où la pile est vide
-        }
-        return this.items.pop();
-    }
-
-    // Regarder le dernier élément sans le retirer
-    peek() {
-        if (this.isEmpty()) {
-            return null;
-        }
-        return this.items[this.items.length - 1];
-    }
-
-    // Vérifier si la pile est vide
-    isEmpty() {
-        return this.items.length === 0;
-    }
-
-    // Retourner la taille de la pile
-    size() {
-        return this.items.length;
-    }
-
-    // Afficher la pile
-    printStack() {
-        console.log(this.items.join(" "));
-    }
-}
-
-// Exemple d'utilisation
-const stack = new Stack();
+// Empiler des éléments
 stack.push(10);
 stack.push(20);
 stack.push(30);
 
-console.log("Top of the stack: ", stack.peek()); // 30
-stack.printStack(); // 10 20 30
+// Récupérer les éléments successivement (Dépilement)
+console.log("1er élément retiré :", stack.pop()); // 30
+console.log("2ème élément retiré :", stack.pop()); // 20
+console.log("3ème élément retiré :", stack.pop()); // 10
 
-console.log("Popped: ", stack.pop()); // 30
-stack.printStack(); // 10 20
+// Gestion de la pile vide
+console.log("Pile vide :", stack.pop()); // undefined
