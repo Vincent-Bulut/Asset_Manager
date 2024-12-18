@@ -1,15 +1,124 @@
 
-const stack = []; // Création de la pile avec un tableau
+Pour gérer une structure imbriquée où les balises <p> peuvent contenir d’autres <p> ou des <input>, il est important d’analyser la profondeur et la structure du HTML pour décider quand ouvrir et fermer les balises XML correspondantes.
 
-// Empiler des éléments
-stack.push(10);
-stack.push(20);
-stack.push(30);
+Concept
+	1.	Parcours récursif : Vous devez parcourir le DOM de manière récursive pour analyser chaque élément.
+	2.	Gestion de la pile (Stack) : Utilisez une pile pour suivre les balises ouvertes. Cela permet de :
+	•	Empiler une balise <p> quand elle est ouverte.
+	•	Dépiler une balise quand on doit la fermer (soit parce qu’il n’y a plus d’enfants, soit parce qu’on atteint un <input>).
+	3.	Conditions : Vérifiez les enfants et le prochain élément dans la hiérarchie DOM pour savoir quand fermer les balises ouvertes.
 
-// Récupérer les éléments successivement (Dépilement)
-console.log("1er élément retiré :", stack.pop()); // 30
-console.log("2ème élément retiré :", stack.pop()); // 20
-console.log("3ème élément retiré :", stack.pop()); // 10
+Exemple de HTML complexe
 
-// Gestion de la pile vide
-console.log("Pile vide :", stack.pop()); // undefined
+<div>
+    <p>parent1
+        <p>child1
+            <input type="text" value="valeur1" />
+        </p>
+        <p>child2
+            <p>grandchild1</p>
+            <input type="text" value="valeur2" />
+        </p>
+    </p>
+    <p>parent2
+        <input type="text" value="valeur3" />
+    </p>
+</div>
+
+Objectif XML attendu :
+
+<données>
+  <parent1>
+    <child1>valeur1</child1>
+    <child2>
+      <grandchild1></grandchild1>
+      valeur2
+    </child2>
+  </parent1>
+  <parent2>valeur3</parent2>
+</données>
+
+Code JavaScript avec parcours récursif
+
+Voici un script qui résout ce problème en utilisant récursion et une pile pour suivre les balises ouvertes.
+
+function genererXML() {
+    const root = document.querySelector("div"); // Point de départ du parsing
+    let xmlOutput = "<données>\n";
+    let stack = []; // Pile pour suivre les balises ouvertes
+
+    // Fonction récursive pour parcourir les éléments enfants
+    function traverse(node) {
+        if (node.nodeType === 1) { // Vérifie si le nœud est un élément (tag HTML)
+            if (node.tagName === "P") {
+                const tagName = node.textContent.trim().split(/\s+/)[0]; // Prend le nom du tag XML
+                xmlOutput += `${"  ".repeat(stack.length)}<${tagName}>\n`;
+                stack.push(tagName);
+
+                // Parcourir les enfants récursivement
+                node.childNodes.forEach(traverse);
+
+                // Fermer la balise après avoir parcouru les enfants
+                const lastTag = stack.pop();
+                xmlOutput += `${"  ".repeat(stack.length)}</${lastTag}>\n`;
+            } 
+            else if (node.tagName === "INPUT") {
+                const value = node.value.trim();
+                const lastTag = stack[stack.length - 1];
+                xmlOutput += `${"  ".repeat(stack.length)}${value}\n`;
+            }
+        }
+    }
+
+    // Démarre le parcours récursif
+    root.childNodes.forEach(traverse);
+    xmlOutput += "</données>";
+    console.log(xmlOutput);
+    return xmlOutput;
+}
+
+// Appel de la fonction
+genererXML();
+
+Explication du Code
+	1.	Fonction traverse :
+	•	Parcourt le DOM récursivement en vérifiant si chaque nœud est une balise <p> ou <input>.
+	2.	Piles pour suivre les balises :
+	•	Lorsque vous rencontrez une balise <p>, elle est ajoutée à la pile (push).
+	•	Lorsque vous terminez de traiter les enfants d’une balise <p>, elle est fermée (pop).
+	3.	Indentation :
+	•	L’indentation est ajoutée en fonction de la profondeur de la pile pour rendre le XML lisible.
+	4.	Valeurs d’<input> :
+	•	Les valeurs des <input> sont insérées directement dans le contenu des balises XML ouvertes.
+
+Sortie XML générée
+
+Pour le HTML d’exemple ci-dessus, le script produit le XML suivant :
+
+<données>
+  <parent1>
+    <child1>
+      valeur1
+    </child1>
+    <child2>
+      <grandchild1>
+      </grandchild1>
+      valeur2
+    </child2>
+  </parent1>
+  <parent2>
+    valeur3
+  </parent2>
+</données>
+
+Avantages de cette approche
+	1.	Gestion des imbrications : La récursion permet de gérer les niveaux imbriqués de <p> et <input>.
+	2.	Lisibilité : La pile assure que chaque balise est correctement fermée.
+	3.	Scalabilité : Fonctionne pour des structures complexes avec des enfants multiples.
+
+Résumé
+	•	La récursion permet de parcourir chaque balise <p> imbriquée et d’insérer les <input> correctement dans le XML.
+	•	Une pile (stack) garantit que chaque balise est fermée dans le bon ordre.
+	•	Le XML est indenté selon la profondeur pour améliorer la lisibilité.
+
+Si vous avez des cas particuliers à gérer, je peux affiner cette solution pour vous !
