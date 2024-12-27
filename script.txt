@@ -1,124 +1,54 @@
 
-Pour gérer une structure imbriquée où les balises <p> peuvent contenir d’autres <p> ou des <input>, il est important d’analyser la profondeur et la structure du HTML pour décider quand ouvrir et fermer les balises XML correspondantes.
+Bien sûr, voici une version mise à jour du script avec des chemins absolus pour chaque étape, afin que vous puissiez placer le fichier start.sh sur votre bureau. Vous devrez ajuster les chemins selon la structure de vos dossiers.
 
-Concept
-	1.	Parcours récursif : Vous devez parcourir le DOM de manière récursive pour analyser chaque élément.
-	2.	Gestion de la pile (Stack) : Utilisez une pile pour suivre les balises ouvertes. Cela permet de :
-	•	Empiler une balise <p> quand elle est ouverte.
-	•	Dépiler une balise quand on doit la fermer (soit parce qu’il n’y a plus d’enfants, soit parce qu’on atteint un <input>).
-	3.	Conditions : Vérifiez les enfants et le prochain élément dans la hiérarchie DOM pour savoir quand fermer les balises ouvertes.
+Exemple de script start.sh avec chemins absolus
 
-Exemple de HTML complexe
+#!/bin/bash
 
-<div>
-    <p>parent1
-        <p>child1
-            <input type="text" value="valeur1" />
-        </p>
-        <p>child2
-            <p>grandchild1</p>
-            <input type="text" value="valeur2" />
-        </p>
-    </p>
-    <p>parent2
-        <input type="text" value="valeur3" />
-    </p>
-</div>
+# Sortir immédiatement si une commande échoue
+set -e
 
-Objectif XML attendu :
+# Chemins absolus vers vos dossiers et fichiers
+DOCKER_COMPOSE_DIR="/chemin/vers/votre/folder/contenant/docker-compose"
+VENV_DIR="/chemin/vers/votre/env/virtuel"
+API_SCRIPT="/chemin/vers/votre/api/script.py"
+FRONTEND_DIR="/chemin/vers/votre/projet/frontend"
 
-<données>
-  <parent1>
-    <child1>valeur1</child1>
-    <child2>
-      <grandchild1></grandchild1>
-      valeur2
-    </child2>
-  </parent1>
-  <parent2>valeur3</parent2>
-</données>
+echo "🚀 Lancement de Docker Compose..."
+cd "$DOCKER_COMPOSE_DIR"
+docker-compose up -d
 
-Code JavaScript avec parcours récursif
+echo "🌐 Activation de l'environnement virtuel..."
+source "$VENV_DIR/bin/activate"
 
-Voici un script qui résout ce problème en utilisant récursion et une pile pour suivre les balises ouvertes.
+echo "📡 Démarrage de l'API..."
+python "$API_SCRIPT" &
 
-function genererXML() {
-    const root = document.querySelector("div"); // Point de départ du parsing
-    let xmlOutput = "<données>\n";
-    let stack = []; // Pile pour suivre les balises ouvertes
+echo "📦 Lancement de npm run dev..."
+cd "$FRONTEND_DIR"
+npm run dev
 
-    // Fonction récursive pour parcourir les éléments enfants
-    function traverse(node) {
-        if (node.nodeType === 1) { // Vérifie si le nœud est un élément (tag HTML)
-            if (node.tagName === "P") {
-                const tagName = node.textContent.trim().split(/\s+/)[0]; // Prend le nom du tag XML
-                xmlOutput += `${"  ".repeat(stack.length)}<${tagName}>\n`;
-                stack.push(tagName);
+# Fin du script
 
-                // Parcourir les enfants récursivement
-                node.childNodes.forEach(traverse);
+Étapes de configuration
+	1.	Remplacez les chemins :
+	•	DOCKER_COMPOSE_DIR : Le dossier où se trouve votre fichier docker-compose.yml.
+	•	VENV_DIR : Le dossier de votre environnement virtuel Python.
+	•	API_SCRIPT : Le chemin complet vers votre fichier Python qui démarre l’API.
+	•	FRONTEND_DIR : Le dossier contenant votre projet frontend avec npm.
+	2.	Rendre exécutable :
+	•	Si le script est sur votre bureau, utilisez la commande suivante pour lui donner les permissions d’exécution :
 
-                // Fermer la balise après avoir parcouru les enfants
-                const lastTag = stack.pop();
-                xmlOutput += `${"  ".repeat(stack.length)}</${lastTag}>\n`;
-            } 
-            else if (node.tagName === "INPUT") {
-                const value = node.value.trim();
-                const lastTag = stack[stack.length - 1];
-                xmlOutput += `${"  ".repeat(stack.length)}${value}\n`;
-            }
-        }
-    }
+chmod +x ~/Bureau/start.sh
 
-    // Démarre le parcours récursif
-    root.childNodes.forEach(traverse);
-    xmlOutput += "</données>";
-    console.log(xmlOutput);
-    return xmlOutput;
-}
 
-// Appel de la fonction
-genererXML();
+	3.	Exécution :
+	•	Lancez le script depuis votre bureau avec :
 
-Explication du Code
-	1.	Fonction traverse :
-	•	Parcourt le DOM récursivement en vérifiant si chaque nœud est une balise <p> ou <input>.
-	2.	Piles pour suivre les balises :
-	•	Lorsque vous rencontrez une balise <p>, elle est ajoutée à la pile (push).
-	•	Lorsque vous terminez de traiter les enfants d’une balise <p>, elle est fermée (pop).
-	3.	Indentation :
-	•	L’indentation est ajoutée en fonction de la profondeur de la pile pour rendre le XML lisible.
-	4.	Valeurs d’<input> :
-	•	Les valeurs des <input> sont insérées directement dans le contenu des balises XML ouvertes.
+~/Bureau/start.sh
 
-Sortie XML générée
 
-Pour le HTML d’exemple ci-dessus, le script produit le XML suivant :
 
-<données>
-  <parent1>
-    <child1>
-      valeur1
-    </child1>
-    <child2>
-      <grandchild1>
-      </grandchild1>
-      valeur2
-    </child2>
-  </parent1>
-  <parent2>
-    valeur3
-  </parent2>
-</données>
+Résultat attendu
 
-Avantages de cette approche
-	1.	Gestion des imbrications : La récursion permet de gérer les niveaux imbriqués de <p> et <input>.
-	2.	Lisibilité : La pile assure que chaque balise est correctement fermée.
-	3.	Scalabilité : Fonctionne pour des structures complexes avec des enfants multiples.
-
-Résumé
-	•	La récursion permet de parcourir chaque balise <p> imbriquée et d’insérer les <input> correctement dans le XML.
-	•	Une pile (stack) garantit que chaque balise est fermée dans le bon ordre.
-	•	Le XML est indenté selon la profondeur pour améliorer la lisibilité.
-
-Si vous avez des cas particuliers à gérer, je peux affiner cette solution pour vous !
+Le script s’exécutera dans les dossiers spécifiques, même si le script lui-même se trouve ailleurs (comme sur votre bureau). Si vous avez des questions supplémentaires ou des ajustements spécifiques, n’hésitez pas !
