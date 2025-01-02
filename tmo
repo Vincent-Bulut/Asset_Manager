@@ -1,19 +1,22 @@
 
 <script>
-    let email = '';
-
-    function handleSubmit(event) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(email)) {
-            alert('Veuillez entrer une adresse e-mail valide.');
-            event.preventDefault(); // Empêche l'envoi du formulaire
+    function handleUserAction() {
+        if (isCreationMode()) {
+            if (userProfile === "delegated") {
+                delegatedCreateUser();
+            } else {
+                createUser();
+            }
+        } else {
+            if (userProfile === "delegated") {
+                delegatedUpdateUser();
+            } else {
+                updateUser();
+            }
         }
     }
 </script>
 
-<form on:submit|preventDefault={handleSubmit}>
-    <label for="email">Email :</label>
-    <input type="text" id="email" bind:value={email} />
-    <button type="submit">Envoyer</button>
-</form>
+<button class="btn" style="..." on:click={handleUserAction}>
+    {isCreationMode() ? "Create User" : "Update User"}
+</button>
