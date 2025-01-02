@@ -1,79 +1,44 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur XML Imbriqué</title>
-</head>
-<body>
-    <h1>Génération XML à partir des balises &lt;p&gt;</h1>
 
-    <!-- Exemple : structure imbriquée avec des p -->
-    <div id="content">
-        <p>Utilisateur
-            <p>Nom
-                <p><input type="text" value="Dupont"></p>
-            </p>
-            <p>Prénom
-                <p><input type="text" value="Jean"></p>
-            </p>
-            <p>Email
-                <p>
-                    <select>
-                        <option value="email1@example.com" selected>email1@example.com</option>
-                        <option value="email2@example.com">email2@example.com</option>
-                    </select>
-                </p>
-            </p>
-            <p>Adresse
-                <p>Rue
-                    <p><input type="text" value="123 Rue Exemple"></p>
-                </p>
-                <p>Code Postal
-                    <p><input type="number" value="75000"></p>
-                </p>
-            </p>
-        </p>
-    </div>
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
-    <button onclick="genererXML()">Générer XML</button>
+def post_delegated(self, req: RequestDelegatedUser):
+    try:
+        # Vérification si l'utilisateur existe déjà
+        existing_user = self.session.query(Users).filter(Users.ut == req.ut).first()
+        if not existing_user:
+            # Création d'un nouvel utilisateur si non existant
+            user_data = UserModel(**req.dict())
+            new_user = Users(**user_data.dict())
+            self.session.add(new_user)
+        else:
+            print(f"Utilisateur avec ut={req.ut} existe déjà.")
 
-    <h2>Sortie XML :</h2>
-    <pre id="outputXML"></pre>
+        # Vérification si l'assistant existe déjà
+        existing_assistant = self.session.query(Assistants).filter(Assistants.ut == req.ut).first()
+        if not existing_assistant:
+            # Création d'un nouvel assistant si non existant
+            new_assistant = Assistants(ut=req.ut)
+            self.session.add(new_assistant)
+        else:
+            print(f"Assistant avec ut={req.ut} existe déjà.")
 
-    <script>
-        function genererXML() {
-            const content = document.getElementById("content");
-            let xmlOutput = `<données>\n`;
+        # Ajout de la relation BmAssistant (vérification nécessaire si elle ne doit pas être dupliquée)
+        existing_bm_assistant = self.session.query(BmAssistants).filter(
+            BmAssistants.ut_assistant == req.ut,
+            BmAssistants.ut_bm == req.ut_bm
+        ).first()
+        if not existing_bm_assistant:
+            new_bm_assistant = BmAssistants(ut_assistant=req.ut, ut_bm=req.ut_bm)
+            self.session.add(new_bm_assistant)
+        else:
+            print(f"La relation entre assistant={req.ut} et bm={req.ut_bm} existe déjà.")
 
-            // Fonction récursive pour traiter uniquement les balises <p>
-            function traiterP(parent, indent = "    ") {
-                const children = Array.from(parent.children);
+        # Commit des changements
+        self.session.commit()
 
-                children.forEach(child => {
-                    if (child.tagName === "P") {
-                        const tagName = child.firstChild?.textContent?.trim(); // Texte du <p> comme nom de balise
-                        const input = child.querySelector("input, select"); // Chercher input ou select imbriqué
-
-                        if (input && tagName) {
-                            // Si un input ou select est trouvé, ajouter au XML
-                            xmlOutput += `${indent}<${tagName}>${input.value}</${tagName}>\n`;
-                        } else if (tagName) {
-                            // Si aucun input/select direct, ouvrir une balise et traiter récursivement
-                            xmlOutput += `${indent}<${tagName}>\n`;
-                            traiterP(child, indent + "    "); // Récursion
-                            xmlOutput += `${indent}</${tagName}>\n`;
-                        }
-                    }
-                });
-            }
-
-            // Démarre la récursion depuis la div principale
-            traiterP(content);
-
-            xmlOutput += `</données>`;
-            document.getElementById("outputXML").textContent = xmlOutput;
-        }
-    </script>
-</body>
-</html>
+    except IntegrityError as e:
+        self.session.rollback()
+        print(f"Erreur d'intégrité : {e}")
+    except SQLAlchemyError as e:
+        self.session.rollback()
+        print(f"Erreur lors de la création : {e}")
