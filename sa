@@ -1,44 +1,123 @@
 
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+Oui, il est tout à fait possible de récupérer la sortie (le XML généré) du JavaScript encapsulé dans votre iframe pour l’utiliser en entrée d’une API que vous appelez depuis votre page Svelte. Voici comment procéder :
 
-def post_delegated(self, req: RequestDelegatedUser):
-    try:
-        # Vérification si l'utilisateur existe déjà
-        existing_user = self.session.query(Users).filter(Users.ut == req.ut).first()
-        if not existing_user:
-            # Création d'un nouvel utilisateur si non existant
-            user_data = UserModel(**req.dict())
-            new_user = Users(**user_data.dict())
-            self.session.add(new_user)
-        else:
-            print(f"Utilisateur avec ut={req.ut} existe déjà.")
+Étapes pour implémenter cela
+	1.	Communication entre l’iframe et la page Svelte :
+Vous pouvez utiliser la méthode window.postMessage pour communiquer entre l’iframe et la page Svelte. L’iframe enverra le XML généré à la page parent.
+	2.	Appeler l’API avec les données reçues :
+Une fois que vous recevez le XML dans la page Svelte, vous pouvez effectuer un appel à l’API (avec fetch ou une autre bibliothèque comme axios).
 
-        # Vérification si l'assistant existe déjà
-        existing_assistant = self.session.query(Assistants).filter(Assistants.ut == req.ut).first()
-        if not existing_assistant:
-            # Création d'un nouvel assistant si non existant
-            new_assistant = Assistants(ut=req.ut)
-            self.session.add(new_assistant)
-        else:
-            print(f"Assistant avec ut={req.ut} existe déjà.")
+Exemple d’implémentation
 
-        # Ajout de la relation BmAssistant (vérification nécessaire si elle ne doit pas être dupliquée)
-        existing_bm_assistant = self.session.query(BmAssistants).filter(
-            BmAssistants.ut_assistant == req.ut,
-            BmAssistants.ut_bm == req.ut_bm
-        ).first()
-        if not existing_bm_assistant:
-            new_bm_assistant = BmAssistants(ut_assistant=req.ut, ut_bm=req.ut_bm)
-            self.session.add(new_bm_assistant)
-        else:
-            print(f"La relation entre assistant={req.ut} et bm={req.ut_bm} existe déjà.")
+1. Ajouter une fonction pour envoyer le XML depuis l’iframe
 
-        # Commit des changements
-        self.session.commit()
+Dans votre HTML intégré dans l’iframe, modifiez le script qui génère le XML pour qu’il envoie le résultat à la page parent. Ajoutez un window.parent.postMessage après avoir généré le XML :
 
-    except IntegrityError as e:
-        self.session.rollback()
-        print(f"Erreur d'intégrité : {e}")
-    except SQLAlchemyError as e:
-        self.session.rollback()
-        print(f"Erreur lors de la création : {e}")
+// Exemple : Fonction qui génère le XML dans l'iframe
+function genererXML() {
+  const doc = document.implementation.createDocument("urn:fr:gouv:finances:dac6:v4.04", "dac6:DAC6Dispositif", null);
+  const serializer = new XMLSerializer();
+  const xmlString = `<?xml version="1.0" encoding="UTF-8"?>\n` + serializer.serializeToString(doc);
+
+  // Affiche dans la console (pour les tests existants)
+  console.log(xmlString);
+
+  // Envoie le XML à la page parent via postMessage
+  window.parent.postMessage({ type: 'xmlGenerated', data: xmlString }, "*");
+}
+
+2. Écouter le message dans la page Svelte
+
+Dans votre composant Svelte (+page.svelte), ajoutez un écouteur pour recevoir les messages envoyés par l’iframe.
+
+<script>
+  import { onMount } from "svelte";
+
+  let apiResponse = ""; // Pour afficher la réponse de l'API (optionnel)
+
+  // Fonction pour envoyer le XML à l'API
+  async function envoyerXMLVersAPI(xml) {
+    try {
+      const response = await fetch("https://example.com/api/endpoint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/xml",
+        },
+        body: xml,
+      });
+
+      if (response.ok) {
+        apiResponse = await response.text(); // Ou `json()` si la réponse est en JSON
+        console.log("Réponse API :", apiResponse);
+      } else {
+        console.error("Erreur API :", response.status);
+      }
+    } catch (error) {
+      console.error("Erreur réseau :", error);
+    }
+  }
+
+  // Ajouter un listener pour les messages de l'iframe
+  onMount(() => {
+    window.addEventListener("message", (event) => {
+      // Vérifier le type de message et la source si nécessaire
+      if (event.data.type === "xmlGenerated") {
+        console.log("XML reçu :", event.data.data);
+
+        // Appeler l'API avec le XML reçu
+        envoyerXMLVersAPI(event.data.data);
+      }
+    });
+
+    return () => {
+      // Nettoyage du listener
+      window.removeEventListener("message", (event) => {});
+    };
+  });
+</script>
+
+<div>
+  <!-- Intégrer l'iframe -->
+  <iframe
+    src="/form.html"
+    style="width: 100%; height: 500px; border: none;"
+    title="Formulaire intégré"
+  ></iframe>
+
+  <!-- Afficher la réponse de l'API (optionnel) -->
+  {#if apiResponse}
+    <p>Réponse de l'API : {apiResponse}</p>
+  {/if}
+</div>
+
+Fonctionnement détaillé
+	1.	Dans l’iframe :
+	•	Le script génère le XML et utilise window.parent.postMessage pour envoyer les données XML à la page parent.
+	•	Le message contient un objet { type: 'xmlGenerated', data: xmlString } pour identifier le contenu.
+	2.	Dans la page Svelte :
+	•	La méthode window.addEventListener("message", callback) écoute les messages provenant de l’iframe.
+	•	Si le message reçu correspond au type attendu (xmlGenerated), le contenu XML est extrait et envoyé à l’API via fetch.
+	3.	Appel à l’API :
+	•	Le XML est envoyé en POST à l’API via un appel fetch avec un header Content-Type: application/xml.
+	•	La réponse de l’API est affichée ou utilisée comme nécessaire.
+
+Points importants
+	•	Sécurité :
+Si possible, spécifiez l’origine de l’iframe dans postMessage (remplacez "*" par l’URL exacte de votre page Svelte).
+
+window.parent.postMessage({ type: 'xmlGenerated', data: xmlString }, "https://votre-page-svelte.com");
+
+Et dans Svelte, vérifiez l’origine du message :
+
+if (event.origin === "https://votre-iframe.com") { ... }
+
+
+	•	API REST :
+Assurez-vous que l’API accepte les requêtes avec le type de contenu application/xml.
+
+Résultat attendu
+	1.	L’utilisateur remplit et soumet le formulaire dans l’iframe.
+	2.	Le script dans l’iframe génère le XML et l’envoie à la page Svelte.
+	3.	La page Svelte reçoit le XML, l’injecte dans une requête API, et affiche la réponse de l’API.
+
+Ceci vous permettra de connecter efficacement l’iframe et votre API via la page Svelte.
