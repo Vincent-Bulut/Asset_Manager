@@ -1,54 +1,33 @@
 
-Bien sûr, voici une version mise à jour du script avec des chemins absolus pour chaque étape, afin que vous puissiez placer le fichier start.sh sur votre bureau. Vous devrez ajuster les chemins selon la structure de vos dossiers.
+<script>
+  import { base } from "$app/paths";
+  let source = `${base}/form.html`;
+</script>
 
-Exemple de script start.sh avec chemins absolus
+<style>
+  /* Assurez-vous que le conteneur et l'iframe occupent 100% de l'écran */
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
 
-#!/bin/bash
+  .iframe-container {
+    width: 100%;
+    height: 100vh; /* Vue complète sur la hauteur */
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 
-# Sortir immédiatement si une commande échoue
-set -e
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+</style>
 
-# Chemins absolus vers vos dossiers et fichiers
-DOCKER_COMPOSE_DIR="/chemin/vers/votre/folder/contenant/docker-compose"
-VENV_DIR="/chemin/vers/votre/env/virtuel"
-API_SCRIPT="/chemin/vers/votre/api/script.py"
-FRONTEND_DIR="/chemin/vers/votre/projet/frontend"
-
-echo "🚀 Lancement de Docker Compose..."
-cd "$DOCKER_COMPOSE_DIR"
-docker-compose up -d
-
-echo "🌐 Activation de l'environnement virtuel..."
-source "$VENV_DIR/bin/activate"
-
-echo "📡 Démarrage de l'API..."
-python "$API_SCRIPT" &
-
-echo "📦 Lancement de npm run dev..."
-cd "$FRONTEND_DIR"
-npm run dev
-
-# Fin du script
-
-Étapes de configuration
-	1.	Remplacez les chemins :
-	•	DOCKER_COMPOSE_DIR : Le dossier où se trouve votre fichier docker-compose.yml.
-	•	VENV_DIR : Le dossier de votre environnement virtuel Python.
-	•	API_SCRIPT : Le chemin complet vers votre fichier Python qui démarre l’API.
-	•	FRONTEND_DIR : Le dossier contenant votre projet frontend avec npm.
-	2.	Rendre exécutable :
-	•	Si le script est sur votre bureau, utilisez la commande suivante pour lui donner les permissions d’exécution :
-
-chmod +x ~/Bureau/start.sh
-
-
-	3.	Exécution :
-	•	Lancez le script depuis votre bureau avec :
-
-~/Bureau/start.sh
-
-
-
-Résultat attendu
-
-Le script s’exécutera dans les dossiers spécifiques, même si le script lui-même se trouve ailleurs (comme sur votre bureau). Si vous avez des questions supplémentaires ou des ajustements spécifiques, n’hésitez pas !
+<div class="iframe-container">
+  <iframe src={source} title="Integrated form"></iframe>
+</div>
