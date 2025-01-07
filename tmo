@@ -1,22 +1,20 @@
 
-<script>
-    function handleUserAction() {
-        if (isCreationMode()) {
-            if (userProfile === "delegated") {
-                delegatedCreateUser();
-            } else {
-                createUser();
-            }
-        } else {
-            if (userProfile === "delegated") {
-                delegatedUpdateUser();
-            } else {
-                updateUser();
-            }
-        }
-    }
-</script>
+const response = await axios.post("/export/zip-and-encrypt", null, {
+    params: { dac6_xml: "<xml><data>Exemple</data></xml>" },
+    responseType: "blob"
+});
 
-<button class="btn" style="..." on:click={handleUserAction}>
-    {isCreationMode() ? "Create User" : "Update User"}
-</button>
+// Télécharger le fichier avec le nom exact reçu
+const disposition = response.headers["content-disposition"];
+const fileName = disposition ? disposition.split("filename=")[1].replace(/"/g, "") : "fichier_par_defaut.gpg";
+
+const blob = new Blob([response.data], { type: "application/octet-stream" });
+const downloadUrl = URL.createObjectURL(blob);
+
+const link = document.createElement("a");
+link.href = downloadUrl;
+link.download = fileName;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+URL.revokeObjectURL(downloadUrl);
