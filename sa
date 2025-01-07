@@ -1,16 +1,37 @@
 
-import gnupg
+import axios from 'axios';
 
-# Initialiser GPG
-gpg = gnupg.GPG(gnupghome="/chemin/vers/votre/.gnupg")
+async function envoyerXMLVersAPI(xml) {
+    try {
+        // Envoyer la requête POST et récupérer la réponse en tant que blob
+        const response = await axios.post(
+            "/export/zip-and-encrypt/",
+            null, // Si pas de body, laissez null ou ajoutez des paramètres
+            {
+                params: { dac6_xml: xml }, // Paramètres dans l'URL
+                responseType: "blob"      // Indique qu'on attend un fichier binaire
+            }
+        );
 
-# Ouvrir le fichier .gpg à déchiffrer
-with open("fichier.gpg", "rb") as encrypted_file:
-    decrypted_data = gpg.decrypt_file(encrypted_file)
+        // Créer un Blob à partir de la réponse
+        const blob = new Blob([response.data], { type: "application/octet-stream" });
 
-# Vérifier si le déchiffrement a réussi
-if decrypted_data.ok:
-    print("Déchiffrement réussi !")
-    print(decrypted_data.data.decode("utf-8"))  # Afficher les données déchiffrées
-else:
-    print(f"Erreur : {decrypted_data.status}")
+        // Générer une URL temporaire pour le Blob
+        const downloadUrl = URL.createObjectURL(blob);
+
+        // Créer un lien de téléchargement dynamique
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = "fichier_chiffre.gpg"; // Nom du fichier à télécharger
+        document.body.appendChild(link);
+        link.click(); // Simuler un clic pour démarrer le téléchargement
+        document.body.removeChild(link); // Nettoyer après le téléchargement
+
+        // Libérer l'URL temporaire
+        URL.revokeObjectURL(downloadUrl);
+
+        console.log("Téléchargement réussi !");
+    } catch (error) {
+        console.error("Erreur lors de l'appel API :", error.response ? error.response.data : error.message);
+    }
+}
