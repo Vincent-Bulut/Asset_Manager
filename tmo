@@ -1,20 +1,96 @@
 
-const response = await axios.post("/export/zip-and-encrypt", null, {
-    params: { dac6_xml: "<xml><data>Exemple</data></xml>" },
-    responseType: "blob"
-});
+Le problème peut venir de plusieurs raisons si l’en-tête Content-Disposition n’apparaît pas dans la réponse. Voici les étapes pour diagnostiquer et résoudre ce problème :
 
-// Télécharger le fichier avec le nom exact reçu
-const disposition = response.headers["content-disposition"];
-const fileName = disposition ? disposition.split("filename=")[1].replace(/"/g, "") : "fichier_par_defaut.gpg";
+1. Vérifiez le code de votre API
 
-const blob = new Blob([response.data], { type: "application/octet-stream" });
-const downloadUrl = URL.createObjectURL(blob);
+Exemple correct de FileResponse avec Content-Disposition :
 
-const link = document.createElement("a");
-link.href = downloadUrl;
-link.download = fileName;
-document.body.appendChild(link);
-link.click();
-document.body.removeChild(link);
-URL.revokeObjectURL(downloadUrl);
+Assurez-vous que le header est bien ajouté dans votre FileResponse :
+
+from fastapi.responses import FileResponse
+
+response = FileResponse(
+    temp_file_path,
+    headers={
+        "Content-Disposition": f'attachment; filename="{filename}"'
+    },
+    media_type="application/octet-stream"
+)
+return response
+
+Points à vérifier dans votre code :
+	•	headers correctement défini :
+Assurez-vous que vous avez ajouté l’en-tête Content-Disposition avec le bon format.
+	•	Exemple attendu dans headers :
+
+headers = {
+    "Content-Disposition": 'attachment; filename="DAC6_304187701_DEP_20230101T120000.gpg"'
+}
+
+
+	•	filename dynamique :
+Vérifiez que la variable filename est correctement générée et contient un nom valide.
+
+2. Vérifiez que FastAPI retourne bien le header
+
+Ajoutez un log pour vérifier si FastAPI retourne bien l’en-tête Content-Disposition dans la réponse.
+
+Modifiez temporairement votre fonction pour afficher les headers avant de retourner la réponse :
+
+print("Headers envoyés :", response.headers)
+return response
+
+L’en-tête Content-Disposition devrait apparaître dans les logs.
+
+3. Vérifiez si le header est bloqué ou filtré
+
+Certains serveurs proxy, middleware ou navigateurs peuvent filtrer certains en-têtes, notamment Content-Disposition. Voici comment diagnostiquer :
+
+a) Tester directement avec cURL :
+
+Utilisez cURL pour tester si l’API retourne l’en-tête :
+
+curl -v -X POST "http://localhost:8000/export/zip-and-encrypt?dac6_xml=<xml><data>Exemple</data></xml>"
+
+Dans la réponse (Response Headers), vous devriez voir :
+
+Content-Disposition: attachment; filename="DAC6_304187701_DEP_20230101T120000.gpg"
+
+b) Vérifiez les logs du serveur FastAPI :
+
+Confirmez que FastAPI inclut bien l’en-tête dans la réponse, en comparant ce qui est logué avec les résultats obtenus via cURL ou Postman.
+
+4. Problème de CORS ou filtre de navigateur
+
+Si votre front-end utilise un navigateur pour consommer l’API, certains en-têtes comme Content-Disposition peuvent ne pas être visibles par défaut, même s’ils sont présents.
+
+a) Configurer CORS dans FastAPI :
+
+Ajoutez des paramètres CORS pour permettre l’accès aux en-têtes dans FastAPI :
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Remplacez par l'URL de votre front-end si nécessaire
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],  # Autorisez tous les en-têtes
+)
+
+b) Access-Control-Expose-Headers :
+
+Ajoutez Content-Disposition dans les en-têtes exposés par l’API pour que le navigateur puisse y accéder :
+
+headers = {
+    "Content-Disposition": f'attachment; filename="{filename}"',
+    "Access-Control-Expose-Headers": "Content-Disposition"  # Exposer le header au client
+}
+response = FileResponse(temp_file_path, headers=headers, media_type="application/octet-stream")
+
+5. Points à tester
+	1.	Vérifiez avec un outil comme cURL ou Postman si l’en-tête Content-Disposition est bien présent.
+	2.	Activez Access-Control-Expose-Headers dans votre API pour que le navigateur puisse y accéder.
+	3.	Ajoutez des logs pour confirmer que le header est généré correctement côté FastAPI.
+
+Avec ces étapes, vous devriez être en mesure d’identifier pourquoi Content-Disposition n’apparaît pas et corriger le problème. Si l’erreur persiste, partagez les résultats des tests cURL ou Postman pour une analyse approfondie.
