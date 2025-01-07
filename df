@@ -1,17 +1,70 @@
 
-from sqlalchemy import union
+L’erreur que vous rencontrez semble être liée au fait que FileResponse n’accepte pas directement un objet BytesIO comme chemin de fichier. L’erreur indique que la méthode attend un type str, bytes, ou un chemin os.PathLike, mais pas un objet BytesIO.
 
-# Requête 1
-query1 = self.session.query(Users.id, Users.name).filter(Users.is_active == True)
+Voici comment gérer cette situation et corriger le problème :
 
-# Requête 2
-query2 = self.session.query(Traders.id, Traders.name).filter(Traders.is_verified == True)
+Solution : Utiliser un fichier temporaire
 
-# Union des deux requêtes
-combined_query = query1.union(query2)
+Pour utiliser FileResponse dans FastAPI, vous devez fournir un chemin de fichier valide. Vous pouvez écrire le contenu de BytesIO dans un fichier temporaire sur le disque, puis fournir le chemin de ce fichier à FileResponse.
 
-# Exécution de la requête
-results = combined_query.all()
+Voici comment adapter votre code :
 
-for result in results:
-    print(result)
+import io
+import tempfile
+from fastapi.responses import FileResponse
+
+# Extraire les données chiffrées
+encrypted_data_bytes = encrypted_data.data
+
+# Vérifier si les données chiffrées ne sont pas vides
+if not encrypted_data_bytes:
+    raise ValueError("Le contenu chiffré est vide.")
+
+# Créer un fichier temporaire pour stocker les données chiffrées
+with tempfile.NamedTemporaryFile(delete=False, suffix=".gpg") as temp_file:
+    temp_file.write(encrypted_data_bytes)
+    temp_file_path = temp_file.name  # Chemin du fichier temporaire
+
+# Retourner le fichier temporaire avec FileResponse
+return FileResponse(
+    temp_file_path,
+    filename="fichier_chiffre.gpg",
+    media_type="application/octet-stream"
+)
+
+Explication des étapes
+	1.	Création d’un fichier temporaire :
+	•	tempfile.NamedTemporaryFile permet de créer un fichier temporaire. Le paramètre delete=False garantit que le fichier reste disponible après la fermeture du contexte.
+	2.	Écriture des données chiffrées :
+	•	Le contenu binaire (encrypted_data_bytes) est écrit dans le fichier temporaire.
+	3.	Retour de FileResponse :
+	•	Le chemin du fichier temporaire (temp_file_path) est passé à FileResponse, qui le sert correctement au client.
+	4.	Nettoyage du fichier temporaire :
+	•	Vous pouvez implémenter un mécanisme pour supprimer le fichier temporaire une fois qu’il est téléchargé par le client.
+
+Option : Suppression automatique du fichier temporaire
+
+Pour nettoyer automatiquement le fichier temporaire après son utilisation, vous pouvez utiliser un middleware ou une tâche asynchrone. Sinon, voici une version simplifiée pour la suppression après téléchargement :
+
+from fastapi.responses import FileResponse
+import os
+
+# Retourner FileResponse avec suppression du fichier temporaire après utilisation
+response = FileResponse(
+    temp_file_path,
+    filename="fichier_chiffre.gpg",
+    media_type="application/octet-stream"
+)
+
+# Ajoutez un callback pour supprimer le fichier après réponse
+@response.background
+def cleanup_temp_file():
+    os.unlink(temp_file_path)
+
+return response
+
+Pourquoi cette erreur survient-elle ?
+
+FileResponse dans FastAPI est conçu pour gérer des fichiers à partir de chemins valides, et non pour lire directement des objets en mémoire comme BytesIO. La solution consiste donc à utiliser un fichier temporaire comme intermédiaire.
+
+Avec cette correction, votre fichier .gpg chiffré sera correctement servi au client sans provoquer cette erreur.
