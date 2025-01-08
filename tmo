@@ -1,46 +1,34 @@
 
-function genererHTML() {
-    console.log("test genererHTML");
-
-    // Récupérer l'élément formulaire
-    const form = document.getElementById("dac6-form");
-
-    // Vérification si le formulaire existe
-    if (!form) {
-        console.error("Le formulaire 'dac6-form' est introuvable !");
-        return;
-    }
-
-    // Cloner le formulaire pour ne pas modifier l'original
-    const clonedForm = form.cloneNode(true);
-
-    // Parcourir les champs du formulaire pour mettre à jour leurs valeurs
-    const inputs = clonedForm.querySelectorAll("input, textarea, select");
-    inputs.forEach((input) => {
-        if (input.tagName === "TEXTAREA") {
-            // Met à jour le contenu entre les balises pour <textarea>
-            input.textContent = input.value;
-        } else if (input.tagName === "SELECT") {
-            // Parcourir les options pour définir `selected`
-            const options = input.querySelectorAll("option");
-            options.forEach((option) => {
-                if (option.value === input.value) {
-                    option.setAttribute("selected", "selected");
-                } else {
-                    option.removeAttribute("selected");
-                }
-            });
+function getFormHTML() {
+  // Sélectionne le formulaire
+  const form = document.getElementById('myForm');
+  
+  // Parcourt les champs du formulaire pour mettre à jour leurs valeurs dans le DOM
+  const inputs = form.querySelectorAll('input, select, textarea');
+  inputs.forEach(input => {
+    if (input.tagName === 'SELECT') {
+      // Gère les listes déroulantes
+      const options = input.options;
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].selected) {
+          options[i].setAttribute('selected', 'selected');
         } else {
-            // Met à jour l'attribut "value" pour <input>
-            input.setAttribute("value", input.value);
+          options[i].removeAttribute('selected');
         }
-    });
+      }
+    } else if (input.type === 'checkbox' || input.type === 'radio') {
+      // Gère les cases à cocher et boutons radio
+      if (input.checked) input.setAttribute('checked', 'checked');
+      else input.removeAttribute('checked');
+    } else {
+      // Gère les champs texte, email, etc.
+      input.setAttribute('value', input.value);
+    }
+  });
 
-    // Récupérer le HTML final du formulaire avec outerHTML
-    const htmlContent = clonedForm.outerHTML;
+  // Récupère le HTML du formulaire
+  const formHTML = form.outerHTML;
 
-    console.log("HTML du formulaire :", htmlContent);
-
-    // Envoyer le HTML au parent (iframe)
-    window.parent.postMessage({ type: "htmlGenerated", html: htmlContent }, "*");
+  // Affiche le résultat
+  document.getElementById('output').textContent = formHTML;
 }
