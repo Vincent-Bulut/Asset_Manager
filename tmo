@@ -5,14 +5,35 @@ function genererHTML() {
     // Récupérer l'élément formulaire
     const form = document.getElementById("dac6-form");
 
-    // Vérifier si le formulaire existe
+    // Vérification si le formulaire existe
     if (!form) {
         console.error("Le formulaire 'dac6-form' est introuvable !");
         return;
     }
 
-    // Récupérer tout le HTML du formulaire avec les valeurs saisies
-    const htmlContent = form.outerHTML;
+    // Clone le formulaire pour ne pas modifier l'original
+    const clonedForm = form.cloneNode(true);
+
+    // Parcourir les champs du formulaire pour mettre à jour leurs valeurs
+    const inputs = clonedForm.querySelectorAll("input, textarea, select");
+    inputs.forEach((input) => {
+        if (input.tagName === "TEXTAREA") {
+            // Met à jour le contenu entre les balises pour <textarea>
+            input.textContent = input.value;
+        } else if (input.tagName === "SELECT") {
+            // Met à jour l'option sélectionnée pour <select>
+            const selectedOption = input.querySelector("option:checked");
+            if (selectedOption) {
+                selectedOption.setAttribute("selected", "selected");
+            }
+        } else {
+            // Met à jour l'attribut "value" pour <input>
+            input.setAttribute("value", input.value);
+        }
+    });
+
+    // Récupérer le HTML final du formulaire avec outerHTML
+    const htmlContent = clonedForm.outerHTML;
 
     console.log("HTML du formulaire :", htmlContent);
 
