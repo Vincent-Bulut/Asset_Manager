@@ -11,7 +11,7 @@ function genererHTML() {
         return;
     }
 
-    // Clone le formulaire pour ne pas modifier l'original
+    // Cloner le formulaire pour ne pas modifier l'original
     const clonedForm = form.cloneNode(true);
 
     // Parcourir les champs du formulaire pour mettre à jour leurs valeurs
@@ -21,11 +21,15 @@ function genererHTML() {
             // Met à jour le contenu entre les balises pour <textarea>
             input.textContent = input.value;
         } else if (input.tagName === "SELECT") {
-            // Met à jour l'option sélectionnée pour <select>
-            const selectedOption = input.querySelector("option:checked");
-            if (selectedOption) {
-                selectedOption.setAttribute("selected", "selected");
-            }
+            // Parcourir les options pour définir `selected`
+            const options = input.querySelectorAll("option");
+            options.forEach((option) => {
+                if (option.value === input.value) {
+                    option.setAttribute("selected", "selected");
+                } else {
+                    option.removeAttribute("selected");
+                }
+            });
         } else {
             // Met à jour l'attribut "value" pour <input>
             input.setAttribute("value", input.value);
