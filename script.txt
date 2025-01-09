@@ -1,33 +1,74 @@
 
+Pour récupérer et stocker le contenu rempli d’une iframe dans une variable en Svelte, vous pouvez utiliser JavaScript pour accéder au document interne de l’iframe via son contentDocument ou contentWindow.document.
+
+Voici un exemple complet :
+
+Code Complet
+
 <script>
-  import { base } from "$app/paths";
-  let source = `${base}/form.html`;
+  import { onMount } from 'svelte';
+
+  let iframeRef; // Référence à l'iframe
+  let iframeContent = ''; // Variable pour stocker le contenu HTML de l'iframe
+
+  // Fonction pour récupérer le contenu de l'iframe
+  const getIframeContent = () => {
+    if (iframeRef && iframeRef.contentDocument) {
+      // Accéder au document de l'iframe
+      const doc = iframeRef.contentDocument;
+      iframeContent = doc.documentElement.outerHTML; // Stocker tout le contenu de l'iframe
+      console.log('Contenu de l\'iframe récupéré:', iframeContent);
+    } else {
+      console.error('Impossible d\'accéder au contenu de l\'iframe.');
+    }
+  };
 </script>
 
-<style>
-  /* Assurez-vous que le conteneur et l'iframe occupent 100% de l'écran */
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-  }
+<template>
+  <div>
+    <!-- Iframe -->
+    <iframe
+      bind:this={iframeRef}
+      src="/path-to-your-html-file.html"
+      style="width: 100%; height: 500px; border: 1px solid #ccc;"
+    ></iframe>
 
-  .iframe-container {
-    width: 100%;
-    height: 100vh; /* Vue complète sur la hauteur */
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+    <!-- Bouton pour récupérer le contenu -->
+    <button on:click={getIframeContent}>Récupérer le contenu rempli</button>
 
-  iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-  }
-</style>
+    <!-- Afficher le contenu récupéré -->
+    {#if iframeContent}
+      <h3>Contenu de l'iframe :</h3>
+      <pre>{iframeContent}</pre>
+    {/if}
+  </div>
+</template>
 
-<div class="iframe-container">
-  <iframe src={source} title="Integrated form"></iframe>
-</div>
+Explications
+	1.	Référence à l’iframe :
+	•	bind:this={iframeRef} attache une référence à l’iframe pour y accéder via le DOM.
+	2.	Accès au contenu de l’iframe :
+	•	iframeRef.contentDocument donne accès au contenu interne de l’iframe.
+	•	doc.documentElement.outerHTML récupère tout le HTML de l’iframe (incluant les modifications dynamiques).
+	3.	Stocker dans une variable :
+	•	Le contenu de l’iframe est stocké dans la variable iframeContent.
+	•	Cette variable peut être utilisée ailleurs dans votre application.
+	4.	Bouton de récupération :
+	•	Lorsque l’utilisateur clique sur le bouton, la fonction getIframeContent est appelée, ce qui récupère et stocke le contenu de l’iframe.
+	5.	Affichage :
+	•	Le contenu HTML récupéré est affiché dans une balise <pre> pour une meilleure lisibilité.
+
+Points à Noter
+	1.	Politique de sécurité CORS :
+	•	Si le fichier HTML chargé dans l’iframe provient d’un domaine différent, vous risquez de rencontrer des problèmes de sécurité (CORS).
+	•	Pour éviter cela, assurez-vous que le fichier est hébergé sur le même domaine ou utilisez les en-têtes CORS appropriés.
+	2.	Contenu dynamique :
+	•	Si le contenu de l’iframe est modifié dynamiquement par du JavaScript, vous récupérerez également ces modifications avec documentElement.outerHTML.
+	3.	Tests :
+	•	Assurez-vous que le chemin vers le fichier HTML (src) est correct et que le contenu est accessible.
+
+Exemple d’Usage
+	•	Placez un fichier HTML dans le dossier static/ (par exemple, static/test.html) avec du contenu et des modifications dynamiques.
+	•	Utilisez ce code pour charger le fichier, interagir avec l’iframe et récupérer son contenu mis à jour.
+
+Dites-moi si vous avez des problèmes ou besoin d’un ajustement !
