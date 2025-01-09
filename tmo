@@ -1,34 +1,89 @@
 
-function getFormHTML() {
-  // Sélectionne le formulaire
-  const form = document.getElementById('myForm');
-  
-  // Parcourt les champs du formulaire pour mettre à jour leurs valeurs dans le DOM
-  const inputs = form.querySelectorAll('input, select, textarea');
-  inputs.forEach(input => {
-    if (input.tagName === 'SELECT') {
-      // Gère les listes déroulantes
-      const options = input.options;
-      for (let i = 0; i < options.length; i++) {
-        if (options[i].selected) {
-          options[i].setAttribute('selected', 'selected');
-        } else {
-          options[i].removeAttribute('selected');
-        }
-      }
-    } else if (input.type === 'checkbox' || input.type === 'radio') {
-      // Gère les cases à cocher et boutons radio
-      if (input.checked) input.setAttribute('checked', 'checked');
-      else input.removeAttribute('checked');
-    } else {
-      // Gère les champs texte, email, etc.
-      input.setAttribute('value', input.value);
-    }
-  });
+To retrieve the HTML code of a webpage along with its content, including form elements, you can use Python’s requests library in combination with BeautifulSoup from bs4. Here’s how you can do it:
 
-  // Récupère le HTML du formulaire
-  const formHTML = form.outerHTML;
+Code to Extract HTML with Content
 
-  // Affiche le résultat
-  document.getElementById('output').textContent = formHTML;
-}
+This example fetches the full HTML of a page, including any forms and their associated content:
+
+import requests
+
+# URL of the website
+url = "https://example.com/form-page"
+
+# Send a GET request to fetch the raw HTML content
+response = requests.get(url)
+
+# Check if the request was successful
+if response.status_code == 200:
+    # Save the HTML content in a file (optional)
+    with open("page_content.html", "w", encoding="utf-8") as file:
+        file.write(response.text)
+
+    print("HTML content successfully fetched and saved.")
+else:
+    print(f"Failed to fetch HTML content. Status code: {response.status_code}")
+
+# The HTML content is stored in `response.text`
+html_content = response.text
+
+Output
+	•	The response.text contains the complete HTML source of the webpage.
+	•	Optionally, the code above writes the HTML to a file named page_content.html so you can inspect it.
+
+If You Need to Parse Specific Content (Forms)
+
+To extract and print only the form elements (or other specific content):
+
+from bs4 import BeautifulSoup
+
+# Parse the HTML content
+soup = BeautifulSoup(html_content, "html.parser")
+
+# Extract all forms
+forms = soup.find_all("form")
+for form in forms:
+    print("Form:")
+    print(form.prettify())  # Print the formatted HTML of the form
+
+# Optionally, save all forms to a file
+with open("forms.html", "w", encoding="utf-8") as file:
+    for form in forms:
+        file.write(form.prettify())
+        file.write("\n\n")
+
+HTML Saved in forms.html
+
+The extracted forms will be saved in a file, so you can inspect or analyze them later.
+
+Dynamic Content
+
+If the form or content is dynamically loaded via JavaScript, you’ll need a tool like Selenium:
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+# Set up the browser driver
+driver = webdriver.Chrome()
+
+# Open the website
+driver.get("https://example.com/form-page")
+
+# Get the page source after JavaScript execution
+html_content = driver.page_source
+
+# Save the HTML content in a file
+with open("dynamic_page_content.html", "w", encoding="utf-8") as file:
+    file.write(html_content)
+
+print("Dynamic HTML content fetched and saved.")
+
+# Close the browser
+driver.quit()
+
+Key Notes
+	1.	Static Content: Use requests and BeautifulSoup.
+	2.	Dynamic Content: Use Selenium for JavaScript-based forms or content.
+	3.	Saved HTML: The HTML code (with content) will be stored in page_content.html or another specified file.
+	4.	Respect Website Rules: Make sure you’re not violating the website’s terms of service.
+
+Let me know if you’d like further clarification or examples!
