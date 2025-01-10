@@ -1,89 +1,52 @@
 
-To retrieve the HTML code of a webpage along with its content, including form elements, you can use Python’s requests library in combination with BeautifulSoup from bs4. Here’s how you can do it:
+<script>
+  let iframeRef; // Référence à l'iframe
+  let iframeContent = ''; // Contenu du formulaire mis à jour
 
-Code to Extract HTML with Content
+  // Fonction pour récupérer le contenu du formulaire dans l'iframe
+  const getIframeContent = () => {
+    if (iframeRef && iframeRef.contentDocument) {
+      const iframeDoc = iframeRef.contentDocument; // Accéder au document de l'iframe
+      
+      // Parcourir tous les champs du formulaire et mettre à jour leurs valeurs
+      const inputs = iframeDoc.querySelectorAll('input, textarea, select');
+      inputs.forEach(input => {
+        if (input.type === 'checkbox' || input.type === 'radio') {
+          if (input.checked) {
+            input.setAttribute('checked', 'true');
+          } else {
+            input.removeAttribute('checked');
+          }
+        } else {
+          input.setAttribute('value', input.value);
+        }
+      });
 
-This example fetches the full HTML of a page, including any forms and their associated content:
+      // Récupérer tout le HTML (formulaire avec données remplies)
+      iframeContent = iframeDoc.documentElement.outerHTML;
+      console.log('Contenu mis à jour de l\'iframe:', iframeContent);
+    } else {
+      console.error('Impossible d\'accéder au contenu de l\'iframe.');
+    }
+  };
+</script>
 
-import requests
+<template>
+  <div>
+    <!-- Iframe contenant le formulaire -->
+    <iframe
+      bind:this={iframeRef}
+      src="/path-to-your-html-file.html"
+      style="width: 100%; height: 500px; border: 1px solid #ccc;"
+    ></iframe>
 
-# URL of the website
-url = "https://example.com/form-page"
+    <!-- Bouton pour récupérer le contenu rempli -->
+    <button on:click={getIframeContent}>Récupérer le contenu du formulaire rempli</button>
 
-# Send a GET request to fetch the raw HTML content
-response = requests.get(url)
-
-# Check if the request was successful
-if response.status_code == 200:
-    # Save the HTML content in a file (optional)
-    with open("page_content.html", "w", encoding="utf-8") as file:
-        file.write(response.text)
-
-    print("HTML content successfully fetched and saved.")
-else:
-    print(f"Failed to fetch HTML content. Status code: {response.status_code}")
-
-# The HTML content is stored in `response.text`
-html_content = response.text
-
-Output
-	•	The response.text contains the complete HTML source of the webpage.
-	•	Optionally, the code above writes the HTML to a file named page_content.html so you can inspect it.
-
-If You Need to Parse Specific Content (Forms)
-
-To extract and print only the form elements (or other specific content):
-
-from bs4 import BeautifulSoup
-
-# Parse the HTML content
-soup = BeautifulSoup(html_content, "html.parser")
-
-# Extract all forms
-forms = soup.find_all("form")
-for form in forms:
-    print("Form:")
-    print(form.prettify())  # Print the formatted HTML of the form
-
-# Optionally, save all forms to a file
-with open("forms.html", "w", encoding="utf-8") as file:
-    for form in forms:
-        file.write(form.prettify())
-        file.write("\n\n")
-
-HTML Saved in forms.html
-
-The extracted forms will be saved in a file, so you can inspect or analyze them later.
-
-Dynamic Content
-
-If the form or content is dynamically loaded via JavaScript, you’ll need a tool like Selenium:
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-
-# Set up the browser driver
-driver = webdriver.Chrome()
-
-# Open the website
-driver.get("https://example.com/form-page")
-
-# Get the page source after JavaScript execution
-html_content = driver.page_source
-
-# Save the HTML content in a file
-with open("dynamic_page_content.html", "w", encoding="utf-8") as file:
-    file.write(html_content)
-
-print("Dynamic HTML content fetched and saved.")
-
-# Close the browser
-driver.quit()
-
-Key Notes
-	1.	Static Content: Use requests and BeautifulSoup.
-	2.	Dynamic Content: Use Selenium for JavaScript-based forms or content.
-	3.	Saved HTML: The HTML code (with content) will be stored in page_content.html or another specified file.
-	4.	Respect Website Rules: Make sure you’re not violating the website’s terms of service.
-
-Let me know if you’d like further clarification or examples!
+    <!-- Afficher le contenu récupéré -->
+    {#if iframeContent}
+      <h3>Contenu de l'iframe :</h3>
+      <pre>{iframeContent}</pre>
+    {/if}
+  </div>
+</template>
