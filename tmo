@@ -1,57 +1,139 @@
 
-<script>
-  import { onMount } from 'svelte';
+La répétition des options dans les listes déroulantes (<select>) peut être causée par plusieurs raisons dans votre code. Voici quelques pistes et leurs solutions :
 
-  let iframeRef; // Référence à l'iframe
-  let iframeContent = ''; // Contenu récupéré via l'API
-  let sourceApiUrl = '/api/get-html/13'; // URL de l'API GET pour récupérer le contenu HTML
+1. Problème dans la Réinitialisation du Contenu de l’Iframe
 
-  // Fonction pour récupérer le contenu HTML via une API
-  const fetchHtmlFromApi = async () => {
-    try {
-      const response = await fetch(sourceApiUrl);
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération du contenu HTML');
+Lorsque vous réinjectez du contenu HTML dans l’iframe, il se peut que les anciennes options ne soient pas nettoyées, et les nouvelles options soient ajoutées en double.
+
+Solution :
+
+Avant d’ajouter de nouvelles options ou de réinjecter du contenu, assurez-vous que l’iframe est réinitialisée. Modifiez injectContentIntoIframe :
+
+const injectContentIntoIframe = (content) => {
+  if (iframeRef && iframeRef.contentDocument) {
+    const iframeDoc = iframeRef.contentDocument;
+
+    // Réinitialisez complètement le contenu de l'iframe avant d'écrire
+    iframeDoc.open();
+    iframeDoc.write(""); // Vide l'iframe
+    iframeDoc.close();
+
+    // Injectez le nouveau contenu
+    iframeDoc.open();
+    iframeDoc.write(content);
+    iframeDoc.close();
+  } else {
+    console.error("Impossible d'accéder au document de l'iframe");
+  }
+};
+
+2. Manipulation Incorrecte des Options dans <select>
+
+Dans la fonction où vous manipulez les options des <select>, les options existantes pourraient ne pas être supprimées avant d’ajouter de nouvelles options.
+
+Solution :
+
+Assurez-vous que vous supprimez toutes les options existantes avant de manipuler ou d’ajouter de nouvelles options :
+
+const updateSelectOptions = (input) => {
+  if (input.tagName === "SELECT") {
+    const options = input.querySelectorAll("option");
+    options.forEach(option => option.remove()); // Supprime toutes les anciennes options
+
+    // Ajoutez ici les nouvelles options si nécessaire
+    const newOption = document.createElement("option");
+    newOption.value = "nouvelleValeur";
+    newOption.text = "Nouvelle Option";
+    input.appendChild(newOption);
+  }
+};
+
+3. Appel Répété à getIframeContent ou injectContentIntoIframe
+
+Si getIframeContent ou injectContentIntoIframe est appelé plusieurs fois sans contrôle, cela peut entraîner des manipulations répétées.
+
+Solution :
+
+Ajoutez un contrôle pour éviter les appels répétitifs :
+
+let isContentInjected = false;
+
+const injectContentIntoIframe = (content) => {
+  if (isContentInjected) return; // Empêche une nouvelle injection si déjà effectué
+
+  if (iframeRef && iframeRef.contentDocument) {
+    const iframeDoc = iframeRef.contentDocument;
+    iframeDoc.open();
+    iframeDoc.write(content);
+    iframeDoc.close();
+
+    isContentInjected = true; // Marque comme injecté
+  }
+};
+
+4. Contenu HTML Initial avec des Doublons
+
+Si votre contenu HTML contient déjà des doublons dans les listes déroulantes (provenant de l’API ou d’un fichier), ils seront rendus tels quels dans l’iframe.
+
+Solution :
+
+Vérifiez que le contenu HTML injecté est propre et sans doublons avant de l’injecter :
+
+const cleanHtmlContent = (content) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, "text/html");
+
+  doc.querySelectorAll("select").forEach(select => {
+    const options = select.querySelectorAll("option");
+    const seenValues = new Set();
+
+    options.forEach(option => {
+      if (seenValues.has(option.value)) {
+        option.remove(); // Supprime les doublons
+      } else {
+        seenValues.add(option.value);
       }
+    });
+  });
 
-      iframeContent = await response.text(); // Récupérer le HTML en tant que texte
-      injectContentIntoIframe(iframeContent); // Injecter dans l'iframe
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
-  };
+  return doc.documentElement.outerHTML;
+};
 
-  // Fonction pour injecter le contenu dans l'iframe
-  const injectContentIntoIframe = (content) => {
-    if (iframeRef && iframeRef.contentDocument) {
-      const iframeDoc = iframeRef.contentDocument;
-      iframeDoc.open(); // Ouvrir le document de l'iframe
-      iframeDoc.write(content); // Écrire le contenu HTML
-      iframeDoc.close(); // Fermer le document
-    } else {
-      console.error('Impossible d\'accéder au document de l\'iframe');
-    }
-  };
+5. L’Iframe Récupère le Contenu en Cache
 
-  // Appeler l'API au montage du composant
-  onMount(fetchHtmlFromApi);
-</script>
+Si vous ne réinitialisez pas l’iframe correctement, ou si l’API retourne plusieurs fois le même contenu non nettoyé, les listes déroulantes accumuleront les doublons.
 
-<template>
-  <div class="iframe-container">
-    <iframe
-      bind:this={iframeRef}
-      title="Integrated form"
-      style="width: 100%; height: 500px; border: 1px solid #ccc;"
-    ></iframe>
+Solution :
 
-    <!-- Bouton pour recharger manuellement le contenu -->
-    <button on:click={fetchHtmlFromApi}>Recharger le contenu via l'API</button>
+Ajoutez un timestamp ou un paramètre unique pour éviter de récupérer un contenu mis en cache :
 
-    <!-- Affichage du contenu récupéré (optionnel) -->
-    {#if iframeContent}
-      <h3>Contenu récupéré :</h3>
-      <pre>{iframeContent}</pre>
-    {/if}
-  </div>
-</template>
+const fetchHtmlFromApi = async () => {
+  try {
+    const response = await fetch(`/folder/16/html-content?_=${Date.now()}`);
+    const htmlData = await response.text();
+
+    injectContentIntoIframe(htmlData);
+  } catch (error) {
+    console.error("Erreur lors de l'appel à fetchHtmlFromApi :", error);
+  }
+};
+
+6. Vérifiez le Contenu Directement dans le DOM
+
+Pour déboguer, ajoutez un log pour vérifier si les doublons proviennent de la source ou sont générés par le JavaScript :
+
+const debugSelectOptions = () => {
+  const selects = iframeRef.contentDocument.querySelectorAll("select");
+  selects.forEach((select, index) => {
+    console.log(`Liste déroulante ${index + 1} :`, select.innerHTML);
+  });
+};
+
+Résumé des Solutions
+	1.	Nettoyez le contenu de l’iframe avant chaque injection.
+	2.	Supprimez les options existantes dans les <select> avant d’en ajouter de nouvelles.
+	3.	Vérifiez que les appels répétitifs aux fonctions d’injection sont contrôlés.
+	4.	Assurez-vous que l’API ou la source HTML n’a pas de doublons.
+	5.	Ajoutez un débogage pour inspecter directement le contenu des listes déroulantes.
+
+Avec ces ajustements, vous devriez résoudre les problèmes de répétitions dans vos listes déroulantes. Dites-moi si vous avez besoin d’aide supplémentaire !
