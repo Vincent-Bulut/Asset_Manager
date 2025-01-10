@@ -1,73 +1,57 @@
 
 <script>
-  let iframeRef;
-  let iframeContent = ''; // Contenu HTML pré-rempli
-  let updatedContent = ''; // Contenu modifié
+  import { onMount } from 'svelte';
 
-  // Fonction pour charger le contenu HTML pré-rempli dans l'iframe
-  const loadIframeContent = () => {
-    if (iframeRef && iframeRef.contentDocument) {
-      const iframeDoc = iframeRef.contentDocument;
-      iframeDoc.open();
-      iframeDoc.write(iframeContent); // Charger le contenu HTML dans l'iframe
-      iframeDoc.close();
+  let iframeRef; // Référence à l'iframe
+  let iframeContent = ''; // Contenu récupéré via l'API
+  let sourceApiUrl = '/api/get-html/13'; // URL de l'API GET pour récupérer le contenu HTML
+
+  // Fonction pour récupérer le contenu HTML via une API
+  const fetchHtmlFromApi = async () => {
+    try {
+      const response = await fetch(sourceApiUrl);
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération du contenu HTML');
+      }
+
+      iframeContent = await response.text(); // Récupérer le HTML en tant que texte
+      injectContentIntoIframe(iframeContent); // Injecter dans l'iframe
+    } catch (error) {
+      console.error('Erreur:', error);
     }
   };
 
-  // Fonction pour récupérer le contenu modifié de l'iframe
-  const getModifiedContent = () => {
+  // Fonction pour injecter le contenu dans l'iframe
+  const injectContentIntoIframe = (content) => {
     if (iframeRef && iframeRef.contentDocument) {
       const iframeDoc = iframeRef.contentDocument;
-
-      // Mettre à jour les valeurs dynamiques avant de récupérer le HTML
-      const inputs = iframeDoc.querySelectorAll('input, textarea, select');
-      inputs.forEach(input => {
-        if (input.tagName === 'SELECT') {
-          // Gérer les <select>
-          const options = input.querySelectorAll('option');
-          options.forEach(option => {
-            if (option.value === input.value) {
-              option.setAttribute('selected', 'true');
-            } else {
-              option.removeAttribute('selected');
-            }
-          });
-        } else if (input.type === 'checkbox' || input.type === 'radio') {
-          // Gérer les cases à cocher et boutons radio
-          if (input.checked) {
-            input.setAttribute('checked', 'true');
-          } else {
-            input.removeAttribute('checked');
-          }
-        } else {
-          // Gérer les autres types d'inputs
-          input.setAttribute('value', input.value);
-        }
-      });
-
-      // Récupérer tout le contenu HTML
-      updatedContent = iframeDoc.documentElement.outerHTML;
-      console.log('Contenu modifié récupéré :', updatedContent);
+      iframeDoc.open(); // Ouvrir le document de l'iframe
+      iframeDoc.write(content); // Écrire le contenu HTML
+      iframeDoc.close(); // Fermer le document
+    } else {
+      console.error('Impossible d\'accéder au document de l\'iframe');
     }
   };
+
+  // Appeler l'API au montage du composant
+  onMount(fetchHtmlFromApi);
 </script>
 
 <template>
-  <div>
-    <!-- Iframe pour afficher et modifier le contenu -->
+  <div class="iframe-container">
     <iframe
       bind:this={iframeRef}
+      title="Integrated form"
       style="width: 100%; height: 500px; border: 1px solid #ccc;"
     ></iframe>
 
-    <!-- Boutons pour interagir -->
-    <button on:click={loadIframeContent}>Charger le contenu pré-rempli</button>
-    <button on:click={getModifiedContent}>Récupérer le contenu modifié</button>
+    <!-- Bouton pour recharger manuellement le contenu -->
+    <button on:click={fetchHtmlFromApi}>Recharger le contenu via l'API</button>
 
-    <!-- Affichage du contenu modifié -->
-    {#if updatedContent}
-      <h3>Contenu Modifié :</h3>
-      <pre>{updatedContent}</pre>
+    <!-- Affichage du contenu récupéré (optionnel) -->
+    {#if iframeContent}
+      <h3>Contenu récupéré :</h3>
+      <pre>{iframeContent}</pre>
     {/if}
   </div>
 </template>
