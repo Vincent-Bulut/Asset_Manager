@@ -1,39 +1,73 @@
 
-const getIframeContent = () => {
-  if (iframeRef && iframeRef.contentDocument) {
-    const iframeDoc = iframeRef.contentDocument; // Accéder au document de l'iframe
+<script>
+  let iframeRef;
+  let iframeContent = ''; // Contenu HTML pré-rempli
+  let updatedContent = ''; // Contenu modifié
 
-    // Parcourir tous les champs du formulaire
-    const inputs = iframeDoc.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-      if (input.tagName === 'SELECT') {
-        // Gérer les <select>
-        const options = input.querySelectorAll('option');
-        options.forEach(option => {
-          if (option.value === input.value) {
-            // Marquer l'option sélectionnée
-            option.setAttribute('selected', 'true');
+  // Fonction pour charger le contenu HTML pré-rempli dans l'iframe
+  const loadIframeContent = () => {
+    if (iframeRef && iframeRef.contentDocument) {
+      const iframeDoc = iframeRef.contentDocument;
+      iframeDoc.open();
+      iframeDoc.write(iframeContent); // Charger le contenu HTML dans l'iframe
+      iframeDoc.close();
+    }
+  };
+
+  // Fonction pour récupérer le contenu modifié de l'iframe
+  const getModifiedContent = () => {
+    if (iframeRef && iframeRef.contentDocument) {
+      const iframeDoc = iframeRef.contentDocument;
+
+      // Mettre à jour les valeurs dynamiques avant de récupérer le HTML
+      const inputs = iframeDoc.querySelectorAll('input, textarea, select');
+      inputs.forEach(input => {
+        if (input.tagName === 'SELECT') {
+          // Gérer les <select>
+          const options = input.querySelectorAll('option');
+          options.forEach(option => {
+            if (option.value === input.value) {
+              option.setAttribute('selected', 'true');
+            } else {
+              option.removeAttribute('selected');
+            }
+          });
+        } else if (input.type === 'checkbox' || input.type === 'radio') {
+          // Gérer les cases à cocher et boutons radio
+          if (input.checked) {
+            input.setAttribute('checked', 'true');
           } else {
-            option.removeAttribute('selected');
+            input.removeAttribute('checked');
           }
-        });
-      } else if (input.type === 'checkbox' || input.type === 'radio') {
-        // Gérer les cases à cocher et boutons radio
-        if (input.checked) {
-          input.setAttribute('checked', 'true');
         } else {
-          input.removeAttribute('checked');
+          // Gérer les autres types d'inputs
+          input.setAttribute('value', input.value);
         }
-      } else {
-        // Gérer les autres types d'inputs
-        input.setAttribute('value', input.value);
-      }
-    });
+      });
 
-    // Récupérer tout le HTML (formulaire avec données mises à jour)
-    iframeContent = iframeDoc.documentElement.outerHTML;
-    console.log('Contenu mis à jour de l\'iframe:', iframeContent);
-  } else {
-    console.error('Impossible d\'accéder au contenu de l\'iframe.');
-  }
-};
+      // Récupérer tout le contenu HTML
+      updatedContent = iframeDoc.documentElement.outerHTML;
+      console.log('Contenu modifié récupéré :', updatedContent);
+    }
+  };
+</script>
+
+<template>
+  <div>
+    <!-- Iframe pour afficher et modifier le contenu -->
+    <iframe
+      bind:this={iframeRef}
+      style="width: 100%; height: 500px; border: 1px solid #ccc;"
+    ></iframe>
+
+    <!-- Boutons pour interagir -->
+    <button on:click={loadIframeContent}>Charger le contenu pré-rempli</button>
+    <button on:click={getModifiedContent}>Récupérer le contenu modifié</button>
+
+    <!-- Affichage du contenu modifié -->
+    {#if updatedContent}
+      <h3>Contenu Modifié :</h3>
+      <pre>{updatedContent}</pre>
+    {/if}
+  </div>
+</template>
