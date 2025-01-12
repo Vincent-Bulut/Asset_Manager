@@ -299,6 +299,79 @@ class Portfolio:
         plt.ylabel('Expected Return')
         plt.show()
 
+    def getMostDecorrelAsset(self, stock: str, date_from: str = '1995-1-1', date_to: str = date.today()) -> list:
+        data = pd.DataFrame()
+        yf.pdr_override()
+
+        for code in self.assets.keys():
+            data[code] = pd.DataFrame(pdr.get_data_yahoo(code,
+                                                         start=date_from,
+                                                         end=date_to,
+                                                         progress=False))['Adj Close']
+
+        returns = ((data / data.shift(1)) - 1) * 100
+        corr_matrix = returns.corr()
+
+        dico = {}
+        for ind in corr_matrix.index:
+            if ind != stock:
+                continue
+
+            for c in corr_matrix.columns:
+                # Ignorer l'actif actuel et toute corrélation négative
+                if c == stock or corr_matrix[c][ind] < 0:
+                    continue
+                dico[c] = corr_matrix[c][ind]
+
+            if len(dico) == 0:
+                return []
+            else:
+                tmpList = []
+                mostDecorrelAsset = min(dico, key=dico.get)  # On prend ici la MIN pour obtenir la moins corrélée
+                tmpList.append(mostDecorrelAsset)
+                tmpList.append(dico[mostDecorrelAsset])
+                mostDecorrelAsset = tmpList
+
+                return mostDecorrelAsset
+
+    def getMostIndependentAsset(self, stock: str, date_from: str = '1995-1-1', date_to: str = date.today()) -> list:
+        data = pd.DataFrame()
+        yf.pdr_override()
+
+        for code in self.assets.keys():
+            data[code] = pd.DataFrame(pdr.get_data_yahoo(code,
+                                                         start=date_from,
+                                                         end=date_to,
+                                                         progress=False))['Adj Close']
+
+        returns = ((data / data.shift(1)) - 1) * 100
+        corr_matrix = returns.corr()
+
+        dico = {}
+        for ind in corr_matrix.index:
+            if ind != stock:
+                continue
+
+            for c in corr_matrix.columns:
+                # Ignorer l'actif actuel
+                if c == stock:
+                    continue
+                # Stocker les corrélations absolues pour trouver celle la plus proche de 0
+                dico[c] = abs(corr_matrix[c][ind])
+
+            if len(dico) == 0:
+                return []
+            else:
+                tmpList = []
+                # Trouver l'actif ayant la corrélation ABSOLUE la plus proche de zéro
+                mostIndependentAsset = min(dico, key=dico.get)
+                tmpList.append(mostIndependentAsset)
+                tmpList.append(
+                    corr_matrix[mostIndependentAsset][ind])  # Récupérer la vraie corrélation (positive ou négative)
+                mostIndependentAsset = tmpList
+
+                return mostIndependentAsset
+
     def info(self, dt_from: str, dt_to: str = date.today()) -> None:
         products = [x.name for x in self.assets.values()]
         print(f"Managed Portfolio : {self.name}\n")
