@@ -1,14 +1,93 @@
 
+Voici comment vous pouvez implémenter l’envoi d’un JSON depuis le frontend à votre API FastAPI et stocker sa valeur au format binaire dans une colonne jsData de votre table folder avec SQLAlchemy.
+
+Étapes :
+
+1. Frontend : Envoi du JSON
+
+Le frontend doit envoyer un JSON via une requête HTTP POST à votre API FastAPI.
+
+// Exemple de code frontend
+const sendJsonToApi = async (jsonData) => {
+    const response = await fetch("http://your-api-endpoint/folder", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(jsonData)
+    });
+
+    if (response.ok) {
+        console.log("JSON envoyé avec succès !");
+    } else {
+        console.error("Erreur lors de l'envoi du JSON");
+    }
+};
+
+// Exemple de JSON à envoyer
+const jsonData = {
+    key1: "value1",
+    key2: "value2"
+};
+sendJsonToApi(jsonData);
+
+2. FastAPI : Route pour recevoir le JSON
+
+Voici comment définir la route dans votre application FastAPI pour recevoir le JSON.
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from database import SessionLocal
+from models import Folder
+import json
 
-def check_bm_assistant_exists(session: Session, ut_assistant: str, ut_bm: str) -> bool:
-    """
-    Vérifie si une ligne existe dans la table BmAssistants pour les valeurs données de ut_assistant et ut_bm.
+app = FastAPI()
 
-    :param session: Instance de la session SQLAlchemy.
-    :param ut_assistant: Code de l'assistant à vérifier.
-    :param ut_bm: Code du business manager à vérifier.
-    :return: True si une ligne existe, sinon False.
-    """
-    exists = session.query(BmAssistants).filter_by(ut_assistant=ut_assistant, ut_bm=ut_bm).first()
-    return exists is not None
+# Définir le modèle Pydantic pour la validation du JSON
+class JsonData(BaseModel):
+    key1: str
+    key2: str
+
+# Fonction pour obtenir une session de la base de données
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.post("/folder")
+async def save_json_to_db(data: JsonData, db: Session = next(get_db())):
+    try:
+        # Convertir le JSON en chaîne binaire
+        binary_data = json.dumps(data.dict()).encode("utf-8")
+        
+        # Créer une nouvelle instance du modèle Folder
+        folder = Folder(jsData=binary_data)
+        
+        # Ajouter et valider
+        db.add(folder)
+        db.commit()
+        db.refresh(folder)
+        
+        return {"message": "JSON stocké avec succès", "id": folder.id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+3. Modèle SQLAlchemy pour la table folder
+
+Créez ou modifiez le modèle SQLAlchemy correspondant à la table folder avec une colonne binaire jsData.
+
+from sqlalchemy import Column, Integer, LargeBinary
+from database import Base
+
+class Folder(Base):
+    __tablename__ = "folder"
+
+    id = Column(Integer, primary_key=True, index=True)
+    jsData = Column(LargeBinary, nullable=False)
+
+4. Initialisation de la base de données
+
+Assurez-vous que la base de données est correctement configurée avec SQLAlchemy.
