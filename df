@@ -1,93 +1,105 @@
 
-Voici comment vous pouvez implémenter l’envoi d’un JSON depuis le frontend à votre API FastAPI et stocker sa valeur au format binaire dans une colonne jsData de votre table folder avec SQLAlchemy.
+Voici un exemple d’implémentation pour créer une route API avec FastAPI prenant deux arguments et une utilisation de cette API avec Axios dans un frontend JavaScript (React par exemple).
 
-Étapes :
+Backend avec FastAPI
 
-1. Frontend : Envoi du JSON
+Installez FastAPI et Uvicorn si ce n’est pas encore fait :
 
-Le frontend doit envoyer un JSON via une requête HTTP POST à votre API FastAPI.
+pip install fastapi uvicorn
 
-// Exemple de code frontend
-const sendJsonToApi = async (jsonData) => {
-    const response = await fetch("http://your-api-endpoint/folder", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(jsonData)
-    });
+Créez un fichier main.py :
 
-    if (response.ok) {
-        console.log("JSON envoyé avec succès !");
-    } else {
-        console.error("Erreur lors de l'envoi du JSON");
-    }
-};
-
-// Exemple de JSON à envoyer
-const jsonData = {
-    key1: "value1",
-    key2: "value2"
-};
-sendJsonToApi(jsonData);
-
-2. FastAPI : Route pour recevoir le JSON
-
-Voici comment définir la route dans votre application FastAPI pour recevoir le JSON.
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Folder
-import json
 
+# Initialisation de l'application FastAPI
 app = FastAPI()
 
-# Définir le modèle Pydantic pour la validation du JSON
-class JsonData(BaseModel):
-    key1: str
-    key2: str
+# Définition du modèle de données
+class InputModel(BaseModel):
+    arg1: str
+    arg2: int
 
-# Fonction pour obtenir une session de la base de données
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+@app.post("/process")
+async def process_data(data: InputModel):
+    # Exemple de traitement
+    response = {
+        "message": f"Argument 1 est '{data.arg1}' et Argument 2 multiplié par 2 est '{data.arg2 * 2}'"
+    }
+    return response
 
-@app.post("/folder")
-async def save_json_to_db(data: JsonData, db: Session = next(get_db())):
-    try:
-        # Convertir le JSON en chaîne binaire
-        binary_data = json.dumps(data.dict()).encode("utf-8")
-        
-        # Créer une nouvelle instance du modèle Folder
-        folder = Folder(jsData=binary_data)
-        
-        # Ajouter et valider
-        db.add(folder)
-        db.commit()
-        db.refresh(folder)
-        
-        return {"message": "JSON stocké avec succès", "id": folder.id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+Lancez le serveur avec :
 
-3. Modèle SQLAlchemy pour la table folder
+uvicorn main:app --reload
 
-Créez ou modifiez le modèle SQLAlchemy correspondant à la table folder avec une colonne binaire jsData.
+Le serveur sera disponible sur http://127.0.0.1:8000.
 
-from sqlalchemy import Column, Integer, LargeBinary
-from database import Base
+Frontend avec Axios (React)
 
-class Folder(Base):
-    __tablename__ = "folder"
+Installez Axios si ce n’est pas encore fait :
 
-    id = Column(Integer, primary_key=True, index=True)
-    jsData = Column(LargeBinary, nullable=False)
+npm install axios
 
-4. Initialisation de la base de données
+Exemple de code React dans un fichier App.js :
 
-Assurez-vous que la base de données est correctement configurée avec SQLAlchemy.
+import React, { useState } from "react";
+import axios from "axios";
+
+function App() {
+  const [arg1, setArg1] = useState("");
+  const [arg2, setArg2] = useState(0);
+  const [response, setResponse] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post("http://127.0.0.1:8000/process", {
+        arg1: arg1,
+        arg2: parseInt(arg2),
+      });
+      setResponse(res.data.message);
+    } catch (error) {
+      console.error("Erreur:", error);
+    }
+  };
+
+  return (
+    <div>
+      <h1>API FastAPI avec Axios</h1>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>Argument 1 :</label>
+          <input
+            type="text"
+            value={arg1}
+            onChange={(e) => setArg1(e.target.value)}
+          />
+        </div>
+        <div>
+          <label>Argument 2 :</label>
+          <input
+            type="number"
+            value={arg2}
+            onChange={(e) => setArg2(e.target.value)}
+          />
+        </div>
+        <button type="submit">Envoyer</button>
+      </form>
+      {response && <p>Réponse du serveur : {response}</p>}
+    </div>
+  );
+}
+
+export default App;
+
+Explications
+	1.	Backend :
+	•	La route /process accepte une requête POST contenant un objet JSON avec deux clés : arg1 (string) et arg2 (integer).
+	•	Les données sont validées avec le modèle Pydantic InputModel.
+	•	Une réponse JSON est retournée après traitement.
+	2.	Frontend :
+	•	Axios est utilisé pour envoyer une requête POST au backend.
+	•	Les données saisies par l’utilisateur dans le formulaire sont envoyées sous forme de JSON.
+	•	La réponse de l’API est affichée dans l’interface utilisateur.
+
+Lancez le backend et exécutez le frontend pour tester la communication entre les deux.
