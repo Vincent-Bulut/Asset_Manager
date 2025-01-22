@@ -1,105 +1,42 @@
 
-Voici un exemple d’implémentation pour créer une route API avec FastAPI prenant deux arguments et une utilisation de cette API avec Axios dans un frontend JavaScript (React par exemple).
+from datetime import date
 
-Backend avec FastAPI
+# Obtenir la date actuelle sous forme de chaîne
+today = date.today().strftime('%Y-%m-%d')
 
-Installez FastAPI et Uvicorn si ce n’est pas encore fait :
-
-pip install fastapi uvicorn
-
-Créez un fichier main.py :
-
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-# Initialisation de l'application FastAPI
-app = FastAPI()
-
-# Définition du modèle de données
-class InputModel(BaseModel):
-    arg1: str
-    arg2: int
-
-@app.post("/process")
-async def process_data(data: InputModel):
-    # Exemple de traitement
-    response = {
-        "message": f"Argument 1 est '{data.arg1}' et Argument 2 multiplié par 2 est '{data.arg2 * 2}'"
-    }
-    return response
-
-Lancez le serveur avec :
-
-uvicorn main:app --reload
-
-Le serveur sera disponible sur http://127.0.0.1:8000.
-
-Frontend avec Axios (React)
-
-Installez Axios si ce n’est pas encore fait :
-
-npm install axios
-
-Exemple de code React dans un fichier App.js :
-
-import React, { useState } from "react";
-import axios from "axios";
-
-function App() {
-  const [arg1, setArg1] = useState("");
-  const [arg2, setArg2] = useState(0);
-  const [response, setResponse] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post("http://127.0.0.1:8000/process", {
-        arg1: arg1,
-        arg2: parseInt(arg2),
-      });
-      setResponse(res.data.message);
-    } catch (error) {
-      console.error("Erreur:", error);
-    }
-  };
-
-  return (
-    <div>
-      <h1>API FastAPI avec Axios</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Argument 1 :</label>
-          <input
-            type="text"
-            value={arg1}
-            onChange={(e) => setArg1(e.target.value)}
-          />
-        </div>
-        <div>
-          <label>Argument 2 :</label>
-          <input
-            type="number"
-            value={arg2}
-            onChange={(e) => setArg2(e.target.value)}
-          />
-        </div>
-        <button type="submit">Envoyer</button>
-      </form>
-      {response && <p>Réponse du serveur : {response}</p>}
-    </div>
-  );
-}
-
-export default App;
-
-Explications
-	1.	Backend :
-	•	La route /process accepte une requête POST contenant un objet JSON avec deux clés : arg1 (string) et arg2 (integer).
-	•	Les données sont validées avec le modèle Pydantic InputModel.
-	•	Une réponse JSON est retournée après traitement.
-	2.	Frontend :
-	•	Axios est utilisé pour envoyer une requête POST au backend.
-	•	Les données saisies par l’utilisateur dans le formulaire sont envoyées sous forme de JSON.
-	•	La réponse de l’API est affichée dans l’interface utilisateur.
-
-Lancez le backend et exécutez le frontend pour tester la communication entre les deux.
+# Requête avec filtre sur les traders "en vie"
+result = (self.session.query(
+    BusinessManager,
+    Traders,
+    Users,
+    Entity,
+    TraderAllocation,
+    Structure
+)
+.join(
+    Traders, Traders.ut_bm == BusinessManager.ut
+)
+.join(
+    Users, Users.ut == BusinessManager.ut
+)
+.join(
+    Entity, Entity.entity_code == Traders.entity_code
+)
+.join(
+    TraderAllocation, TraderAllocation.id_trd == Traders.id_trader
+)
+.join(
+    Structure, Structure.id_structure == TraderAllocation.id_struct
+)
+.filter(
+    BusinessManager.ut == business_manager_ut,
+    Traders.ut.in_(
+        self.session.query(Users.ut)
+        .join(Traders, Traders.ut == Users.ut)
+        .filter(
+            Users.disabled == False,
+            (Traders.end_date == None) | (Traders.end_date > today)  # Filtrer les traders actifs
+        )
+    )
+)
+.all())
