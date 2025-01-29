@@ -1,42 +1,87 @@
 
-from datetime import date
+Non, si votre API FastAPI n’exige pas de headers (comme un Authorization token ou des headers personnalisés), alors vous n’avez pas besoin d’en ajouter dans votre requête Airflow.
 
-# Obtenir la date actuelle sous forme de chaîne
-today = date.today().strftime('%Y-%m-%d')
+1. API FastAPI sans headers
 
-# Requête avec filtre sur les traders "en vie"
-result = (self.session.query(
-    BusinessManager,
-    Traders,
-    Users,
-    Entity,
-    TraderAllocation,
-    Structure
+Si votre endpoint FastAPI fonctionne sans headers et utilise uniquement des path parameters, il ressemblera à ceci :
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.put("/api/resource/{resource_id}/{new_name}")
+def update_resource(resource_id: int, new_name: str):
+    return {"message": f"Resource {resource_id} updated to {new_name}"}
+
+✔️ Aucune gestion de headers ici.
+
+2. Airflow - Appeler l’API avec SimpleHttpOperator
+
+Si vous appelez cette API avec Airflow, un SimpleHttpOperator suffit :
+
+from airflow import DAG
+from airflow.providers.http.operators.http import SimpleHttpOperator
+from airflow.utils.dates import days_ago
+
+dag = DAG(
+    'put_api_fastapi_no_headers',
+    schedule_interval='@daily',
+    start_date=days_ago(1),
+    catchup=False
 )
-.join(
-    Traders, Traders.ut_bm == BusinessManager.ut
+
+update_task = SimpleHttpOperator(
+    task_id='update_resource',
+    http_conn_id='my_fastapi_connection',  # Connexion HTTP dans Airflow
+    endpoint='/api/resource/123/NewName',  # Path parameters dans l'URL
+    method='PUT',
+    dag=dag
 )
-.join(
-    Users, Users.ut == BusinessManager.ut
+
+update_task
+
+✔️ Aucun header défini, car l’API ne les demande pas.
+
+3. Airflow - Avec PythonOperator pour des valeurs dynamiques
+
+Si vous avez besoin de gérer dynamiquement resource_id et new_name, utilisez PythonOperator :
+
+import requests
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.utils.dates import days_ago
+
+def update_resource(resource_id, new_name):
+    url = f"http://localhost:8000/api/resource/{resource_id}/{new_name}"  # Path parameters
+    response = requests.put(url)  # Aucune gestion de headers
+
+    if response.status_code == 200:
+        print("Réponse API :", response.json())
+    else:
+        raise Exception(f"Erreur {response.status_code} : {response.text}")
+
+dag = DAG(
+    'put_api_fastapi_no_headers_pythonop',
+    schedule_interval='@daily',
+    start_date=days_ago(1),
+    catchup=False
 )
-.join(
-    Entity, Entity.entity_code == Traders.entity_code
+
+update_task = PythonOperator(
+    task_id='update_resource_task',
+    python_callable=update_resource,
+    op_kwargs={'resource_id': 123, 'new_name': 'UpdatedName'},  # Paramètres dynamiques
+    dag=dag
 )
-.join(
-    TraderAllocation, TraderAllocation.id_trd == Traders.id_trader
-)
-.join(
-    Structure, Structure.id_structure == TraderAllocation.id_struct
-)
-.filter(
-    BusinessManager.ut == business_manager_ut,
-    Traders.ut.in_(
-        self.session.query(Users.ut)
-        .join(Traders, Traders.ut == Users.ut)
-        .filter(
-            Users.disabled == False,
-            (Traders.end_date == None) | (Traders.end_date > today)  # Filtrer les traders actifs
-        )
-    )
-)
-.all())
+
+update_task
+
+✔️ Pas de headers, car l’API ne les exige pas.
+
+Conclusion
+
+✅ Si votre API FastAPI ne nécessite pas de headers, alors vous n’avez pas besoin d’en envoyer dans Airflow.
+	•	SimpleHttpOperator fonctionne très bien si les valeurs sont fixes.
+	•	PythonOperator est préférable si resource_id et new_name sont dynamiques.
+
+Besoin d’un ajustement ?
