@@ -1,37 +1,64 @@
 
-import axios from 'axios';
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+import requests
 
-async function envoyerXMLVersAPI(xml) {
-    try {
-        // Envoyer la requête POST et récupérer la réponse en tant que blob
-        const response = await axios.post(
-            "/export/zip-and-encrypt/",
-            null, // Si pas de body, laissez null ou ajoutez des paramètres
-            {
-                params: { dac6_xml: xml }, // Paramètres dans l'URL
-                responseType: "blob"      // Indique qu'on attend un fichier binaire
-            }
-        );
+# Définition des paramètres de l'API
+API_URL = "https://api.example.com/destinataires"
 
-        // Créer un Blob à partir de la réponse
-        const blob = new Blob([response.data], { type: "application/octet-stream" });
+# Fonction pour récupérer la liste des destinataires depuis l'API
+def get_recipients(**kwargs):
+    response = requests.get(API_URL)
+    if response.status_code == 200:
+        recipients = response.json()  # Supposons que l'API renvoie un JSON sous forme de liste
+        kwargs['ti'].xcom_push(key='recipients', value=recipients)  # Stocker la liste dans XCom
+    else:
+        raise Exception("Erreur lors de la récupération des destinataires")
 
-        // Générer une URL temporaire pour le Blob
-        const downloadUrl = URL.createObjectURL(blob);
+# Fonction personnalisée exploitant la liste des destinataires
+def process_recipients(**kwargs):
+    ti = kwargs['ti']
+    recipients = ti.xcom_pull(task_ids='get_recipients', key='recipients')
 
-        // Créer un lien de téléchargement dynamique
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = "fichier_chiffre.gpg"; // Nom du fichier à télécharger
-        document.body.appendChild(link);
-        link.click(); // Simuler un clic pour démarrer le téléchargement
-        document.body.removeChild(link); // Nettoyer après le téléchargement
+    if not recipients:
+        raise ValueError("Liste des destinataires vide ou non récupérée")
 
-        // Libérer l'URL temporaire
-        URL.revokeObjectURL(downloadUrl);
+    # Exécuter un traitement personnalisé sur chaque destinataire
+    for recipient in recipients:
+        print(f"Traitement pour {recipient}")  # Remplacez cette ligne par votre logique métier
 
-        console.log("Téléchargement réussi !");
-    } catch (error) {
-        console.error("Erreur lors de l'appel API :", error.response ? error.response.data : error.message);
-    }
+# Définition du DAG
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2024, 1, 1),
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
 }
+
+dag = DAG(
+    'api_to_python_script',
+    default_args=default_args,
+    description='DAG récupérant une liste de destinataires via API et exécutant un script Python',
+    schedule_interval=timedelta(days=1),
+)
+
+# Tâche 1 : Récupération des destinataires via API GET
+get_recipients_task = PythonOperator(
+    task_id='get_recipients',
+    python_callable=get_recipients,
+    provide_context=True,
+    dag=dag,
+)
+
+# Tâche 2 : Exécuter le script personnalisé avec la liste récupérée
+process_recipients_task = PythonOperator(
+    task_id='process_recipients',
+    python_callable=process_recipients,
+    provide_context=True,
+    dag=dag,
+)
+
+# Définition de la séquence d'exécution
+get_recipients_task >> process_recipients_task
