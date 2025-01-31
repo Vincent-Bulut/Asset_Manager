@@ -1,79 +1,30 @@
 
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DAC6 Formulaire</title>
-  <style>
-    /* Styles globaux pour votre formulaire */
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f9f9f9;
-    }
+from airflow import DAG
+from airflow.providers.http.operators.http import SimpleHttpOperator
+from airflow.utils.dates import days_ago
+import json
 
-    fieldset {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 5px;
-    }
+# Définition du DAG
+dag = DAG(
+    'dynamic_date_fastapi_call',
+    default_args={'owner': 'airflow'},
+    schedule_interval=None,  # Exécution manuelle
+    start_date=days_ago(1),
+    catchup=False
+)
 
-    legend {
-      font-weight: bold;
-      font-size: 1.2em;
-      color: #333;
-    }
+# Task pour appeler l'API avec la date du jour comme path parameter
+call_api_task = SimpleHttpOperator(
+    task_id='call_api_post',
+    http_conn_id='my_api_connection',  # Connexion HTTP
+    endpoint='/process/{{ ds }}',  # Injection de la date via Jinja
+    method='POST',
+    data=json.dumps({"key": "value"}),  # Payload JSON
+    headers={"Content-Type": "application/json"},
+    response_filter=lambda response: response.json(),  # Transformation de la réponse
+    log_response=True,
+    dag=dag
+)
 
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      box-sizing: border-box;
-    }
-
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-  </style>
-</head>
-<body>
-  <form id="dac6-form">
-    <fieldset id="DAC6Dispositif_container">
-      <legend>DAC6Dispositif</legend>
-      <fieldset id="DAC6Dispositif[Entete]_container">
-        <legend>Entete</legend>
-        <label>Les informations relatives à l'état membre qui envoi le message :</label>
-        <fieldset id="DAC6Dispositif[Entete][Emetteur]_container">
-          <legend>Emetteur</legend>
-          <fieldset id="DAC6Dispositif[Entete][Emetteur][Nom]_container">
-            <legend>Nom</legend>
-            <label>La taille min =1 et max (maxLength=10) de la chaîne de caractères</label>
-            <input type="text" name="DAC6Dispositif[Entete][Emetteur][Nom]">
-          </fieldset>
-          <!-- Autres champs similaires -->
-        </fieldset>
-      </fieldset>
-    </fieldset>
-  </form>
-</body>
-</html>
+# Lancer la tâche
+call_api_task
