@@ -1,87 +1,133 @@
 
-Non, si votre API FastAPI n’exige pas de headers (comme un Authorization token ou des headers personnalisés), alors vous n’avez pas besoin d’en ajouter dans votre requête Airflow.
+Yes! You can use https in your API host variable while using HttpOperator. However, HttpOperator requires an http_conn_id, but you can override it dynamically by setting the full API host with https inside an Airflow Variable.
 
-1. API FastAPI sans headers
+✅ Solution: Using HttpOperator with HTTPS API (Without Predefined Connection)
 
-Si votre endpoint FastAPI fonctionne sans headers et utilise uniquement des path parameters, il ressemblera à ceci :
+You will override the http_conn_id by dynamically passing the full https host URL in Airflow Variables.
 
-from fastapi import FastAPI
+1️⃣ Store API Host and Certificate in Airflow Variables
 
-app = FastAPI()
+Go to Airflow UI → Admin > Variables → Create a new variable:
+	•	Key: API_HOST
+	•	Value: https://uda.wac.dev.emea.cid
+	•	Key: CERT_PATH
+	•	Value: /home/airflow/airflow/dags/xxx.pem
 
-@app.put("/api/resource/{resource_id}/{new_name}")
-def update_resource(resource_id: int, new_name: str):
-    return {"message": f"Resource {resource_id} updated to {new_name}"}
+2️⃣ Define a Dummy HTTP Connection in Airflow
 
-✔️ Aucune gestion de headers ici.
+Since HttpOperator requires an http_conn_id, create a fake connection:
+	1.	Go to Airflow UI → Admin > Connections
+	2.	Create a new connection:
+	•	Conn ID: dummy_http
+	•	Conn Type: HTTP
+	•	Host: http://dummy_host (This will be overridden dynamically)
 
-2. Airflow - Appeler l’API avec SimpleHttpOperator
-
-Si vous appelez cette API avec Airflow, un SimpleHttpOperator suffit :
+3️⃣ Use HttpOperator with HTTPS (Override Host Dynamically)
 
 from airflow import DAG
-from airflow.providers.http.operators.http import SimpleHttpOperator
+from airflow.providers.http.operators.http import HttpOperator
+from airflow.models import Variable
 from airflow.utils.dates import days_ago
+import json
+
+# Get Airflow Variables
+API_HOST = Variable.get("API_HOST")  # Example: "https://uda.wac.dev.emea.cid"
+CERT_PATH = Variable.get("CERT_PATH")  # Example: "/home/airflow/airflow/dags/xxx.pem"
 
 dag = DAG(
-    'put_api_fastapi_no_headers',
-    schedule_interval='@daily',
+    'http_call_with_https',
+    default_args={'owner': 'airflow'},
+    schedule_interval=None,
     start_date=days_ago(1),
     catchup=False
 )
 
-update_task = SimpleHttpOperator(
-    task_id='update_resource',
-    http_conn_id='my_fastapi_connection',  # Connexion HTTP dans Airflow
-    endpoint='/api/resource/123/NewName',  # Path parameters dans l'URL
-    method='PUT',
+call_api_task = HttpOperator(
+    task_id='call_api',
+    http_conn_id="dummy_http",  # A fake HTTP connection (host will be overridden)
+    endpoint='/api/data',  # API endpoint suffix
+    method='GET',
+    headers={"Content-Type": "application/json"},
+    extra_options={
+        "verify": CERT_PATH,  # Pass the .pem certificate for SSL verification
+        "host": API_HOST  # Override the host dynamically with HTTPS
+    },
+    log_response=True,
     dag=dag
 )
 
-update_task
+call_api_task
 
-✔️ Aucun header défini, car l’API ne les demande pas.
+📌 Explanation
+	•	http_conn_id="dummy_http" → Required but overridden dynamically.
+	•	Full https URL injected dynamically → extra_options={"host": API_HOST}
+	•	SSL Support → .pem certificate for verification via extra_options={"verify": CERT_PATH}
+	•	Endpoint uses only the suffix (/api/data), since API_HOST provides the full https domain.
 
-3. Airflow - Avec PythonOperator pour des valeurs dynamiques
+🔥 Alternative: Use PythonOperator with requests
 
-Si vous avez besoin de gérer dynamiquement resource_id et new_name, utilisez PythonOperator :
+If HttpOperator does not support HTTPS properly, use requests inside PythonOperator instead.
 
 import requests
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.models import Variable
 from airflow.utils.dates import days_ago
 
-def update_resource(resource_id, new_name):
-    url = f"http://localhost:8000/api/resource/{resource_id}/{new_name}"  # Path parameters
-    response = requests.put(url)  # Aucune gestion de headers
+# Get Airflow Variables
+API_HOST = Variable.get("API_HOST")  # Full HTTPS URL
+CERT_PATH = Variable.get("CERT_PATH")  # .pem SSL Certificate
 
-    if response.status_code == 200:
-        print("Réponse API :", response.json())
-    else:
-        raise Exception(f"Erreur {response.status_code} : {response.text}")
+def call_api():
+    """Call API with SSL certificate and HTTPS"""
+    
+    url = f"{API_HOST}/api/data"
+    
+    headers = {"Content-Type": "application/json"}
+    
+    response = requests.get(url, headers=headers, verify=CERT_PATH)
+    
+    print(f"Response: {response.text}")
 
 dag = DAG(
-    'put_api_fastapi_no_headers_pythonop',
-    schedule_interval='@daily',
+    'http_call_with_requests_https',
+    default_args={'owner': 'airflow'},
+    schedule_interval=None,
     start_date=days_ago(1),
     catchup=False
 )
 
-update_task = PythonOperator(
-    task_id='update_resource_task',
-    python_callable=update_resource,
-    op_kwargs={'resource_id': 123, 'new_name': 'UpdatedName'},  # Paramètres dynamiques
+call_api_task = PythonOperator(
+    task_id='call_api',
+    python_callable=call_api,
     dag=dag
 )
 
-update_task
+call_api_task
 
-✔️ Pas de headers, car l’API ne les exige pas.
+📌 Summary: Best Approaches
 
-Conclusion
+Approach	Supports HTTPS?	How?	Example
+HttpOperator with extra_options	✅ Yes	Overrides host dynamically	extra_options={"host": Variable.get("API_HOST")}
+PythonOperator with requests	✅ Yes	Uses requests.get(url, verify=cert)	requests.get(https://..., verify=Variable.get("CERT_PATH"))
 
-✅ Si votre API FastAPI ne nécessite pas de headers, alors vous n’avez pas besoin d’en envoyer dans Airflow.
-	•	SimpleHttpOperator fonctionne très bien si les valeurs sont fixes.
-	•	PythonOperator est préférable si resource_id et new_name sont dynamiques.
+🚀 Next Steps
+	1.	Check if Airflow Variables are correct:
 
-Besoin d’un ajustement ?
+airflow variables get API_HOST
+airflow variables get CERT_PATH
+
+
+	2.	Ensure the fake dummy_http connection exists:
+
+airflow connections list | grep dummy_http
+
+
+	3.	Test HTTPS API manually with curl:
+
+curl --cacert $(airflow variables get CERT_PATH) $(airflow variables get API_HOST)/api/data
+
+	•	✅ If it works → Airflow should work too.
+	•	❌ If error → Check SSL certificates.
+
+Now HttpOperator supports HTTPS API calls with SSL certificates dynamically! 🚀 Let me know if you need further adjustments.
