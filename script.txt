@@ -1,74 +1,31 @@
+from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
+import os
 
-Pour récupérer et stocker le contenu rempli d’une iframe dans une variable en Svelte, vous pouvez utiliser JavaScript pour accéder au document interne de l’iframe via son contentDocument ou contentWindow.document.
+app = FastAPI()
 
-Voici un exemple complet :
+# Définition de la clé API attendue (idéalement stockée dans une variable d’environnement)
+API_KEY = os.getenv("API_KEY", "your-secret-key")
+API_KEY_NAME = "X-API-Key"
 
-Code Complet
+# Déclaration du header de la clé API
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=True)
 
-<script>
-  import { onMount } from 'svelte';
+# Dépendance pour vérifier la clé API
+def verify_api_key(api_key: str = Security(api_key_header)):
+    if api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Accès interdit : Clé API invalide")
+    return api_key
 
-  let iframeRef; // Référence à l'iframe
-  let iframeContent = ''; // Variable pour stocker le contenu HTML de l'iframe
+# 🔥 Appliquer la dépendance globalement à TOUTES les routes 🔥
+app = FastAPI(dependencies=[Depends(verify_api_key)])
 
-  // Fonction pour récupérer le contenu de l'iframe
-  const getIframeContent = () => {
-    if (iframeRef && iframeRef.contentDocument) {
-      // Accéder au document de l'iframe
-      const doc = iframeRef.contentDocument;
-      iframeContent = doc.documentElement.outerHTML; // Stocker tout le contenu de l'iframe
-      console.log('Contenu de l\'iframe récupéré:', iframeContent);
-    } else {
-      console.error('Impossible d\'accéder au contenu de l\'iframe.');
-    }
-  };
-</script>
+# Route 1 : automatiquement protégée
+@app.get("/secure-data")
+def secure_route():
+    return {"message": "Vous avez accès aux données sécurisées !"}
 
-<template>
-  <div>
-    <!-- Iframe -->
-    <iframe
-      bind:this={iframeRef}
-      src="/path-to-your-html-file.html"
-      style="width: 100%; height: 500px; border: 1px solid #ccc;"
-    ></iframe>
-
-    <!-- Bouton pour récupérer le contenu -->
-    <button on:click={getIframeContent}>Récupérer le contenu rempli</button>
-
-    <!-- Afficher le contenu récupéré -->
-    {#if iframeContent}
-      <h3>Contenu de l'iframe :</h3>
-      <pre>{iframeContent}</pre>
-    {/if}
-  </div>
-</template>
-
-Explications
-	1.	Référence à l’iframe :
-	•	bind:this={iframeRef} attache une référence à l’iframe pour y accéder via le DOM.
-	2.	Accès au contenu de l’iframe :
-	•	iframeRef.contentDocument donne accès au contenu interne de l’iframe.
-	•	doc.documentElement.outerHTML récupère tout le HTML de l’iframe (incluant les modifications dynamiques).
-	3.	Stocker dans une variable :
-	•	Le contenu de l’iframe est stocké dans la variable iframeContent.
-	•	Cette variable peut être utilisée ailleurs dans votre application.
-	4.	Bouton de récupération :
-	•	Lorsque l’utilisateur clique sur le bouton, la fonction getIframeContent est appelée, ce qui récupère et stocke le contenu de l’iframe.
-	5.	Affichage :
-	•	Le contenu HTML récupéré est affiché dans une balise <pre> pour une meilleure lisibilité.
-
-Points à Noter
-	1.	Politique de sécurité CORS :
-	•	Si le fichier HTML chargé dans l’iframe provient d’un domaine différent, vous risquez de rencontrer des problèmes de sécurité (CORS).
-	•	Pour éviter cela, assurez-vous que le fichier est hébergé sur le même domaine ou utilisez les en-têtes CORS appropriés.
-	2.	Contenu dynamique :
-	•	Si le contenu de l’iframe est modifié dynamiquement par du JavaScript, vous récupérerez également ces modifications avec documentElement.outerHTML.
-	3.	Tests :
-	•	Assurez-vous que le chemin vers le fichier HTML (src) est correct et que le contenu est accessible.
-
-Exemple d’Usage
-	•	Placez un fichier HTML dans le dossier static/ (par exemple, static/test.html) avec du contenu et des modifications dynamiques.
-	•	Utilisez ce code pour charger le fichier, interagir avec l’iframe et récupérer son contenu mis à jour.
-
-Dites-moi si vous avez des problèmes ou besoin d’un ajustement !
+# Route 2 : aussi protégée automatiquement
+@app.get("/another-endpoint")
+def another_route():
+    return {"message": "Encore une route protégée !"}
