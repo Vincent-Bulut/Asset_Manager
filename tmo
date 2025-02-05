@@ -1,139 +1,62 @@
 
-La répétition des options dans les listes déroulantes (<select>) peut être causée par plusieurs raisons dans votre code. Voici quelques pistes et leurs solutions :
+Non, si vous avez déjà défini la clé API dans les Extra de votre connexion Airflow (fastapi_api), vous n’avez pas besoin de la repasser dans headers dans SimpleHttpOperator.
 
-1. Problème dans la Réinitialisation du Contenu de l’Iframe
+Cas où la clé API est définie dans Extra de la connexion
 
-Lorsque vous réinjectez du contenu HTML dans l’iframe, il se peut que les anciennes options ne soient pas nettoyées, et les nouvelles options soient ajoutées en double.
+Dans Airflow > Admin > Connections, si vous configurez Extra ainsi :
 
-Solution :
+{
+    "headers": {
+        "X-API-Key": "your-secret-api-key"
+    },
+    "verify": "/opt/airflow/certs/ca.pem"
+}
 
-Avant d’ajouter de nouvelles options ou de réinjecter du contenu, assurez-vous que l’iframe est réinitialisée. Modifiez injectContentIntoIframe :
+Alors, dans votre DAG, vous n’avez plus besoin de spécifier les headers dans SimpleHttpOperator :
 
-const injectContentIntoIframe = (content) => {
-  if (iframeRef && iframeRef.contentDocument) {
-    const iframeDoc = iframeRef.contentDocument;
+from airflow import DAG
+from airflow.providers.http.operators.http import SimpleHttpOperator
+from airflow.utils.dates import days_ago
 
-    // Réinitialisez complètement le contenu de l'iframe avant d'écrire
-    iframeDoc.open();
-    iframeDoc.write(""); // Vide l'iframe
-    iframeDoc.close();
+default_args = {
+    "owner": "airflow",
+    "start_date": days_ago(1),
+}
 
-    // Injectez le nouveau contenu
-    iframeDoc.open();
-    iframeDoc.write(content);
-    iframeDoc.close();
-  } else {
-    console.error("Impossible d'accéder au document de l'iframe");
-  }
-};
+with DAG("fastapi_https_operator",
+         default_args=default_args,
+         schedule_interval=None,
+         catchup=False) as dag:
 
-2. Manipulation Incorrecte des Options dans <select>
+    call_secure_api_task = SimpleHttpOperator(
+        task_id="call_secure_api",
+        http_conn_id="fastapi_api",  # Connexion définie avec Extra
+        endpoint="data",
+        method="GET",
+        response_filter=lambda response: response.json(),
+        log_response=True
+    )
 
-Dans la fonction où vous manipulez les options des <select>, les options existantes pourraient ne pas être supprimées avant d’ajouter de nouvelles options.
+    call_secure_api_task
 
-Solution :
+Cas où la clé API n’est PAS définie dans la connexion
 
-Assurez-vous que vous supprimez toutes les options existantes avant de manipuler ou d’ajouter de nouvelles options :
+Si vous ne l’avez pas mise dans Extra, alors vous devez passer explicitement headers dans SimpleHttpOperator :
 
-const updateSelectOptions = (input) => {
-  if (input.tagName === "SELECT") {
-    const options = input.querySelectorAll("option");
-    options.forEach(option => option.remove()); // Supprime toutes les anciennes options
+call_secure_api_task = SimpleHttpOperator(
+    task_id="call_secure_api",
+    http_conn_id="fastapi_api",
+    endpoint="data",
+    method="GET",
+    headers={"X-API-Key": "your-secret-api-key"},  # Clé API ajoutée ici
+    response_filter=lambda response: response.json(),
+    log_response=True,
+    extra_options={"verify": "/opt/airflow/certs/ca.pem"}  # Vérification SSL
+)
 
-    // Ajoutez ici les nouvelles options si nécessaire
-    const newOption = document.createElement("option");
-    newOption.value = "nouvelleValeur";
-    newOption.text = "Nouvelle Option";
-    input.appendChild(newOption);
-  }
-};
+Recommandation
+	•	Bonne pratique : Définir la clé API dans la connexion Airflow (Extra) → Cela évite d’exposer la clé API dans le code du DAG.
+	•	Si la clé API est dans Extra : Pas besoin de la passer dans headers du DAG.
+	•	Si la clé API est absente de Extra : La passer directement dans headers dans SimpleHttpOperator.
 
-3. Appel Répété à getIframeContent ou injectContentIntoIframe
-
-Si getIframeContent ou injectContentIntoIframe est appelé plusieurs fois sans contrôle, cela peut entraîner des manipulations répétées.
-
-Solution :
-
-Ajoutez un contrôle pour éviter les appels répétitifs :
-
-let isContentInjected = false;
-
-const injectContentIntoIframe = (content) => {
-  if (isContentInjected) return; // Empêche une nouvelle injection si déjà effectué
-
-  if (iframeRef && iframeRef.contentDocument) {
-    const iframeDoc = iframeRef.contentDocument;
-    iframeDoc.open();
-    iframeDoc.write(content);
-    iframeDoc.close();
-
-    isContentInjected = true; // Marque comme injecté
-  }
-};
-
-4. Contenu HTML Initial avec des Doublons
-
-Si votre contenu HTML contient déjà des doublons dans les listes déroulantes (provenant de l’API ou d’un fichier), ils seront rendus tels quels dans l’iframe.
-
-Solution :
-
-Vérifiez que le contenu HTML injecté est propre et sans doublons avant de l’injecter :
-
-const cleanHtmlContent = (content) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(content, "text/html");
-
-  doc.querySelectorAll("select").forEach(select => {
-    const options = select.querySelectorAll("option");
-    const seenValues = new Set();
-
-    options.forEach(option => {
-      if (seenValues.has(option.value)) {
-        option.remove(); // Supprime les doublons
-      } else {
-        seenValues.add(option.value);
-      }
-    });
-  });
-
-  return doc.documentElement.outerHTML;
-};
-
-5. L’Iframe Récupère le Contenu en Cache
-
-Si vous ne réinitialisez pas l’iframe correctement, ou si l’API retourne plusieurs fois le même contenu non nettoyé, les listes déroulantes accumuleront les doublons.
-
-Solution :
-
-Ajoutez un timestamp ou un paramètre unique pour éviter de récupérer un contenu mis en cache :
-
-const fetchHtmlFromApi = async () => {
-  try {
-    const response = await fetch(`/folder/16/html-content?_=${Date.now()}`);
-    const htmlData = await response.text();
-
-    injectContentIntoIframe(htmlData);
-  } catch (error) {
-    console.error("Erreur lors de l'appel à fetchHtmlFromApi :", error);
-  }
-};
-
-6. Vérifiez le Contenu Directement dans le DOM
-
-Pour déboguer, ajoutez un log pour vérifier si les doublons proviennent de la source ou sont générés par le JavaScript :
-
-const debugSelectOptions = () => {
-  const selects = iframeRef.contentDocument.querySelectorAll("select");
-  selects.forEach((select, index) => {
-    console.log(`Liste déroulante ${index + 1} :`, select.innerHTML);
-  });
-};
-
-Résumé des Solutions
-	1.	Nettoyez le contenu de l’iframe avant chaque injection.
-	2.	Supprimez les options existantes dans les <select> avant d’en ajouter de nouvelles.
-	3.	Vérifiez que les appels répétitifs aux fonctions d’injection sont contrôlés.
-	4.	Assurez-vous que l’API ou la source HTML n’a pas de doublons.
-	5.	Ajoutez un débogage pour inspecter directement le contenu des listes déroulantes.
-
-Avec ces ajustements, vous devriez résoudre les problèmes de répétitions dans vos listes déroulantes. Dites-moi si vous avez besoin d’aide supplémentaire !
+Si vous avez une gestion avancée des secrets, vous pouvez aussi utiliser Airflow Variables ou un backend de secrets (Vault, AWS Secrets Manager, etc.) pour stocker la clé API de manière sécurisée.
