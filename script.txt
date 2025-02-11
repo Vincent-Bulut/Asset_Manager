@@ -1,31 +1,26 @@
-from fastapi import FastAPI, Depends, HTTPException, Security
-from fastapi.security.api_key import APIKeyHeader
-import os
 
-app = FastAPI()
 
-# Définition de la clé API attendue (idéalement stockée dans une variable d’environnement)
-API_KEY = os.getenv("API_KEY", "your-secret-key")
-API_KEY_NAME = "X-API-Key"
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 
-# Déclaration du header de la clé API
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=True)
+def duplicate_traders_to_new_structure(session: Session, old_struct_id: int, new_struct_id: int):
+    try:
+        # Récupérer les traders liés à l'ancienne structure
+        traders = session.execute(
+            select(TraderAllocation._id_trd).where(TraderAllocation.id_struct == old_struct_id)
+        ).scalars().all()
 
-# Dépendance pour vérifier la clé API
-def verify_api_key(api_key: str = Security(api_key_header)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Accès interdit : Clé API invalide")
-    return api_key
+        # Créer une nouvelle ligne pour chaque trader avec le nouvel id_struct
+        new_allocations = [
+            TraderAllocation(_id_trd=trader_id, id_struct=new_struct_id) for trader_id in traders
+        ]
 
-# 🔥 Appliquer la dépendance globalement à TOUTES les routes 🔥
-app = FastAPI(dependencies=[Depends(verify_api_key)])
+        # Ajouter toutes les nouvelles lignes en une seule transaction
+        session.add_all(new_allocations)
+        session.commit()
 
-# Route 1 : automatiquement protégée
-@app.get("/secure-data")
-def secure_route():
-    return {"message": "Vous avez accès aux données sécurisées !"}
+        print(f"Ajouté {len(new_allocations)} traders à la nouvelle structure {new_struct_id}")
 
-# Route 2 : aussi protégée automatiquement
-@app.get("/another-endpoint")
-def another_route():
-    return {"message": "Encore une route protégée !"}
+    except Exception as e:
+        session.rollback()
+        print(f"Erreur lors de l'ajout des traders : {e}")
