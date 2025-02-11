@@ -1,16 +1,16 @@
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select, cast, Date
+from sqlalchemy import select
 from datetime import datetime
 
 def get_active_trader_allocations(session: Session):
-    today = datetime.utcnow().date()  # Date actuelle sans l'heure
+    today = datetime.utcnow().strftime("%Y-%m-%d")  # Convertir la date actuelle en string "YYYY-MM-DD"
 
-    # Requête pour récupérer les TraderAllocations avec une structure active
+    # Requête pour récupérer les TraderAllocations avec une structure non expirée
     stmt = (
         select(TraderAllocation)
         .join(Structure, TraderAllocation.id_struct == Structure._id_structure)
-        .where(cast(Structure.end_date, Date) > today)  # Convertir la string en date avant comparaison
+        .where(Structure.end_date > today)  # Comparaison directe de strings
     )
 
     # Exécuter la requête
