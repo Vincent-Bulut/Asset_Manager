@@ -1,26 +1,63 @@
 
-
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from datetime import datetime
 
-def duplicate_traders_to_new_structure(session: Session, old_struct_id: int, new_struct_id: int):
+def insert_trader_times_two_months(session: Session, new_struct_id: int, start_date: str):
     try:
-        # Récupérer les traders liés à l'ancienne structure
+        # Convertir start_date en objet datetime
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        time_month = start_dt.month
+        time_year = start_dt.year
+
+        # Calcul du mois suivant
+        if time_month == 12:
+            next_month = 1
+            next_year = time_year + 1
+        else:
+            next_month = time_month + 1
+            next_year = time_year
+
+        # Récupérer tous les traders liés à la nouvelle structure
         traders = session.execute(
-            select(TraderAllocation._id_trd).where(TraderAllocation.id_struct == old_struct_id)
+            select(TraderAllocation._id_trd)
+            .where(TraderAllocation.id_struct == new_struct_id)
         ).scalars().all()
 
-        # Créer une nouvelle ligne pour chaque trader avec le nouvel id_struct
-        new_allocations = [
-            TraderAllocation(_id_trd=trader_id, id_struct=new_struct_id) for trader_id in traders
-        ]
+        if not traders:
+            print(f"Aucun trader trouvé pour la structure {new_struct_id}")
+            return
+        
+        # Créer les entrées `TraderTimes` pour les 2 mois
+        new_trader_times = []
+        for trader_id in traders:
+            new_trader_times.append(
+                TraderTimes(
+                    id_trader=trader_id,
+                    id_structure=new_struct_id,
+                    time_month=time_month,
+                    time_year=time_year,
+                    time_value=0.0,  # Valeur par défaut, modifiable selon besoin
+                    timestamp=datetime.utcnow()
+                )
+            )
+            new_trader_times.append(
+                TraderTimes(
+                    id_trader=trader_id,
+                    id_structure=new_struct_id,
+                    time_month=next_month,
+                    time_year=next_year,
+                    time_value=0.0,  # Valeur par défaut
+                    timestamp=datetime.utcnow()
+                )
+            )
 
-        # Ajouter toutes les nouvelles lignes en une seule transaction
-        session.add_all(new_allocations)
+        # Insérer en batch
+        session.add_all(new_trader_times)
         session.commit()
 
-        print(f"Ajouté {len(new_allocations)} traders à la nouvelle structure {new_struct_id}")
+        print(f"Insertion de {len(new_trader_times)} entrées dans TraderTimes pour la structure {new_struct_id}")
 
     except Exception as e:
         session.rollback()
-        print(f"Erreur lors de l'ajout des traders : {e}")
+        print(f"Erreur lors de l'insertion des trader_times : {e}")
