@@ -1,26 +1,26 @@
 
-from sqlalchemy.orm import Session
-from sqlalchemy import select
-from datetime import datetime
+from pydantic import BaseModel, field_validator, model_validator
+from datetime import date
 
-def get_active_trader_allocations(session: Session):
-    today = datetime.utcnow().strftime("%Y-%m-%d")  # Convertir la date actuelle en string "YYYY-MM-DD"
+class RequestStructureNovation(BaseModel):
+    old_structure_id: int
+    new_cdr_name: str
+    new_ps_type: str
+    new_structure_trading_entities: str
+    new_structure_start_date: date
+    new_structure_end_date: date = "2100-12-31"
+    old_structure_end_date: date
 
-    # Requête pour récupérer les TraderAllocations avec une structure non expirée
-    stmt = (
-        select(TraderAllocation)
-        .join(Structure, TraderAllocation.id_struct == Structure._id_structure)
-        .where(Structure.end_date > today)  # Comparaison directe de strings
-    )
+    @model_validator(mode="before")
+    def validate_dates(cls, values):
+        old_end = values.get("old_structure_end_date")
+        new_start = values.get("new_structure_start_date")
+        new_end = values.get("new_structure_end_date")
 
-    # Exécuter la requête
-    result = session.execute(stmt).scalars().all()
-    
-    return result  # Retourne la liste des objets TraderAllocation
+        if not old_end or not new_start or not new_end:
+            raise ValueError("Les dates ne peuvent pas être nulles.")
 
-# Exemple d'utilisation
-session = Session()
-active_allocations = get_active_trader_allocations(session)
+        if not (old_end < new_start < new_end):
+            raise ValueError("La règle `old_structure_end_date < new_structure_start_date < new_structure_end_date` n'est pas respectée.")
 
-for allocation in active_allocations:
-    print(f"Trader {allocation._id_trd} - Structure {allocation.id_struct}")
+        return values  # Retourne les valeurs validées
