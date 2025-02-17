@@ -1,62 +1,12 @@
 
-Non, si vous avez déjà défini la clé API dans les Extra de votre connexion Airflow (fastapi_api), vous n’avez pas besoin de la repasser dans headers dans SimpleHttpOperator.
-
-Cas où la clé API est définie dans Extra de la connexion
-
-Dans Airflow > Admin > Connections, si vous configurez Extra ainsi :
-
-{
-    "headers": {
-        "X-API-Key": "your-secret-api-key"
-    },
-    "verify": "/opt/airflow/certs/ca.pem"
-}
-
-Alors, dans votre DAG, vous n’avez plus besoin de spécifier les headers dans SimpleHttpOperator :
-
-from airflow import DAG
-from airflow.providers.http.operators.http import SimpleHttpOperator
-from airflow.utils.dates import days_ago
-
-default_args = {
-    "owner": "airflow",
-    "start_date": days_ago(1),
-}
-
-with DAG("fastapi_https_operator",
-         default_args=default_args,
-         schedule_interval=None,
-         catchup=False) as dag:
-
-    call_secure_api_task = SimpleHttpOperator(
-        task_id="call_secure_api",
-        http_conn_id="fastapi_api",  # Connexion définie avec Extra
-        endpoint="data",
-        method="GET",
-        response_filter=lambda response: response.json(),
-        log_response=True
-    )
-
-    call_secure_api_task
-
-Cas où la clé API n’est PAS définie dans la connexion
-
-Si vous ne l’avez pas mise dans Extra, alors vous devez passer explicitement headers dans SimpleHttpOperator :
-
-call_secure_api_task = SimpleHttpOperator(
-    task_id="call_secure_api",
-    http_conn_id="fastapi_api",
-    endpoint="data",
-    method="GET",
-    headers={"X-API-Key": "your-secret-api-key"},  # Clé API ajoutée ici
-    response_filter=lambda response: response.json(),
-    log_response=True,
-    extra_options={"verify": "/opt/airflow/certs/ca.pem"}  # Vérification SSL
-)
-
-Recommandation
-	•	Bonne pratique : Définir la clé API dans la connexion Airflow (Extra) → Cela évite d’exposer la clé API dans le code du DAG.
-	•	Si la clé API est dans Extra : Pas besoin de la passer dans headers du DAG.
-	•	Si la clé API est absente de Extra : La passer directement dans headers dans SimpleHttpOperator.
-
-Si vous avez une gestion avancée des secrets, vous pouvez aussi utiliser Airflow Variables ou un backend de secrets (Vault, AWS Secrets Manager, etc.) pour stocker la clé API de manière sécurisée.
+SELECT 
+    PNL1.Date_Arrete, 
+    Month(PNL1.Date_Arrete) AS Mois, 
+    Year(PNL1.Date_Arrete) AS Annee, 
+    PNL1.PNL_YTD, 
+    IIf(Month(PNL1.Date_Arrete) = 1, PNL1.PNL_YTD, 
+        PNL1.PNL_YTD - Nz(PNL2.PNL_YTD, 0)) AS PNL_Mensuel
+FROM PNL_Table AS PNL1
+LEFT JOIN PNL_Table AS PNL2 
+ON PNL1.Date_Arrete = DateAdd("m", 1, PNL2.Date_Arrete)
+ORDER BY PNL1.Date_Arrete;
