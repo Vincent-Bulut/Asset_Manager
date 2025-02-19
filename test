@@ -1,30 +1,34 @@
 
-from airflow import DAG
-from airflow.providers.http.operators.http import SimpleHttpOperator
-from airflow.utils.dates import days_ago
-import json
+<script>
+    import axios from "axios";
 
-# Définition du DAG
-dag = DAG(
-    'dynamic_date_fastapi_call',
-    default_args={'owner': 'airflow'},
-    schedule_interval=None,  # Exécution manuelle
-    start_date=days_ago(1),
-    catchup=False
-)
+    let id_folder = 1;  // ID de test
+    let xmlContent = "";
 
-# Task pour appeler l'API avec la date du jour comme path parameter
-call_api_task = SimpleHttpOperator(
-    task_id='call_api_post',
-    http_conn_id='my_api_connection',  # Connexion HTTP
-    endpoint='/process/{{ ds }}',  # Injection de la date via Jinja
-    method='POST',
-    data=json.dumps({"key": "value"}),  # Payload JSON
-    headers={"Content-Type": "application/json"},
-    response_filter=lambda response: response.json(),  # Transformation de la réponse
-    log_response=True,
-    dag=dag
-)
+    async function downloadXML() {
+        try {
+            const response = await axios.get(`http://127.0.0.1:8000/get_xml/${id_folder}`, {
+                responseType: "blob" // Important pour gérer le fichier XML
+            });
 
-# Lancer la tâche
-call_api_task
+            // Convertir le blob en un objet URL pour le téléchargement
+            const blob = new Blob([response.data], { type: "application/xml" });
+            const url = window.URL.createObjectURL(blob);
+
+            // Créer un lien pour télécharger le fichier
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `file_${id_folder}.xml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Libérer l'URL de l'objet
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Erreur lors du téléchargement du fichier XML :", error);
+        }
+    }
+</script>
+
+<button on:click={downloadXML}>Télécharger XML</button>
