@@ -1,12 +1,24 @@
 
 SELECT 
-    PNL1.Date_Arrete, 
-    Month(PNL1.Date_Arrete) AS Mois, 
-    Year(PNL1.Date_Arrete) AS Annee, 
-    PNL1.PNL_YTD, 
-    IIf(Month(PNL1.Date_Arrete) = 1, PNL1.PNL_YTD, 
-        PNL1.PNL_YTD - Nz(PNL2.PNL_YTD, 0)) AS PNL_Mensuel
-FROM PNL_Table AS PNL1
-LEFT JOIN PNL_Table AS PNL2 
-ON PNL1.Date_Arrete = DateAdd("m", 1, PNL2.Date_Arrete)
-ORDER BY PNL1.Date_Arrete;
+    R.CDR,
+    R.Y,
+    R.Start_Date AS Ref_Start_Date,
+    R.End_Date AS Ref_End_Date,
+    S.Start_Date AS Source_Start_Date,
+    S.End_Date AS Source_End_Date,
+    S.Other_Columns -- Ajoutez les colonnes nécessaires
+FROM 
+    Référentiel AS R
+INNER JOIN 
+    AutreSource AS S
+ON 
+    R.CDR = S.CDR
+    AND R.Y = S.Y
+    AND (
+        (S.Start_Date BETWEEN R.Start_Date AND R.End_Date) OR
+        (S.End_Date BETWEEN R.Start_Date AND R.End_Date) OR
+        (R.Start_Date BETWEEN S.Start_Date AND S.End_Date) OR
+        (R.End_Date BETWEEN S.Start_Date AND S.End_Date)
+    )
+ORDER BY 
+    R.CDR, R.Y, S.Start_Date;
