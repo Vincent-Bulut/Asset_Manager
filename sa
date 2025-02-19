@@ -1,4 +1,7 @@
 
-from sqlalchemy.inspection import inspect
 
-df = pd.DataFrame([{c.key: getattr(obj, c.key) for c in inspect(obj).mapper.column_attrs} for obj in query_result])
+SELECT MSysObjects.Name AS TableName, MSysColumns.Name AS ColumnName
+FROM MSysObjects 
+INNER JOIN MSysColumns 
+ON MSysObjects.Id = MSysColumns.Id
+WHERE MSysObjects.Name = "NomDeVotreTable";
