@@ -1,25 +1,23 @@
 
-SELECT ID, "1" AS Mois, Jan AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "2" AS Mois, Feb AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "3" AS Mois, Mar AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "4" AS Mois, Apr AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "5" AS Mois, May AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "6" AS Mois, Jun AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "7" AS Mois, Jul AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "8" AS Mois, Aug AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "9" AS Mois, Sep AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "10" AS Mois, Oct AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "11" AS Mois, Nov AS Valeur, code_facture_clean FROM X
-UNION ALL
-SELECT ID, "12" AS Mois, Dec AS Valeur, code_facture_clean FROM X
-ORDER BY ID, Mois;
+
+SELECT 
+    CDR,
+    Start_Date,
+    End_Date,
+    (
+        IIF(Month(Start_Date) <= 1 AND Month(End_Date) >= 1, [JAN_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 2 AND Month(End_Date) >= 2, [FEV_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 3 AND Month(End_Date) >= 3, [MARS_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 4 AND Month(End_Date) >= 4, [AVR_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 5 AND Month(End_Date) >= 5, [MAI_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 6 AND Month(End_Date) >= 6, [JUIN_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 7 AND Month(End_Date) >= 7, [JUILLET_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 8 AND Month(End_Date) >= 8, [AOUT_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 9 AND Month(End_Date) >= 9, [SEPT_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 10 AND Month(End_Date) >= 10, [OCT_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 11 AND Month(End_Date) >= 11, [NOV_TRADER_TIME], 0) +
+        IIF(Month(Start_Date) <= 12 AND Month(End_Date) >= 12, [DEC_TRADER_TIME], 0)
+    ) / 
+    (Month(End_Date) - Month(Start_Date) + 1) 
+    AS AVERAGE_TRADER_TIME
+FROM TradersTimes_clean;
