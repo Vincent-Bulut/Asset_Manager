@@ -1,7 +1,25 @@
 
-
-SELECT MSysObjects.Name AS TableName, MSysColumns.Name AS ColumnName
-FROM MSysObjects 
-INNER JOIN MSysColumns 
-ON MSysObjects.Id = MSysColumns.Id
-WHERE MSysObjects.Name = "NomDeVotreTable";
+SELECT ID, "1" AS Mois, Jan AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "2" AS Mois, Feb AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "3" AS Mois, Mar AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "4" AS Mois, Apr AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "5" AS Mois, May AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "6" AS Mois, Jun AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "7" AS Mois, Jul AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "8" AS Mois, Aug AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "9" AS Mois, Sep AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "10" AS Mois, Oct AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "11" AS Mois, Nov AS Valeur, code_facture_clean FROM X
+UNION ALL
+SELECT ID, "12" AS Mois, Dec AS Valeur, code_facture_clean FROM X
+ORDER BY ID, Mois;
